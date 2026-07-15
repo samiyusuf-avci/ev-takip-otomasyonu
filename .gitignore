@@ -1,0 +1,23 @@
+# Kök dizin
+node_modules/
+
+# Backend
+/backend/node_modules
+/backend/.env
+/backend/database.sqlite
+
+# Frontend
+/frontend/node_modules
+/frontend/dist
+/frontend/.env.local
+/frontend/.env.development.local
+/frontend/.env.test.local
+/frontend/.env.production.local
+
+# OS dosyaları
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
