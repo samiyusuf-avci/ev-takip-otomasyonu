@@ -23,7 +23,15 @@ const allowedOrigins = [
 app.use(cors({
   origin: function (origin, callback) {
     // Postman gibi araçlar için origin olmayabilir, izin ver
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    const isAllowed = allowedOrigins.indexOf(origin) !== -1 || 
+                      origin.endsWith('.up.railway.app') || 
+                      origin.startsWith('http://localhost:');
+
+    if (isAllowed) {
       callback(null, true);
     } else {
       callback(new Error('CORS politikasından dolayı bu kaynağa erişim engellendi: ' + origin));
