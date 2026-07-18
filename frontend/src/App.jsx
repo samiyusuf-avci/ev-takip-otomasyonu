@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import API from './api';
 import {
   LayoutDashboard,
@@ -24,11 +24,42 @@ import {
   LogOut
 } from 'lucide-react';
 
+// -------------------------------------------------------------
+// YARDIMCI GÖRSEL METOTLAR (Global scope'ta tanımlanarak yeniden oluşturulması engellendi)
+// -------------------------------------------------------------
+const getDaysDiff = (dateStr) => {
+  if (!dateStr) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(dateStr);
+  target.setHours(0, 0, 0, 0);
+  const diff = target - today;
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+};
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+};
+
+const getStatusColor = (days, limit, durum) => {
+  if (durum === 'tuketildi' || durum === 'odendi') return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+  if (durum === 'atildi') return 'text-gray-400 bg-gray-500/10 border-gray-500/20';
+  if (days === null) return 'text-sky-400 bg-sky-500/10 border-sky-500/20';
+  if (days < 0) return 'text-rose-400 bg-rose-500/10 border-rose-500/20 animate-pulse';
+  if (days <= limit) return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+  return 'text-sky-400 bg-sky-500/10 border-sky-500/20';
+};
+
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Toast Zamanlayıcı Referansı (Bellek sızıntısını önler)
+  const toastTimeoutRef = useRef(null);
 
   // Auth Stateleri
   const [user, setUser] = useState(null);
@@ -52,6 +83,30 @@ function App() {
   const [faturaFiltre, setFaturaFiltre] = useState('odenmedi'); // 'hepsi', 'odenmedi', 'odendi'
   const [garantiFiltre, setGarantiFiltre] = useState('aktif'); // 'hepsi', 'aktif', 'gecen'
   const [seciliRutinKlasor, setSeciliRutinKlasor] = useState('hepsi'); // 'hepsi' veya klasor_id
+
+  // Memoized Filtrelenmiş Veri Listeleri (RAM/CPU tüketimini optimize eder)
+  const filteredGidalar = useMemo(() => {
+    return gidalar.filter((g) => gidaFiltre === 'hepsi' || g.durum === gidaFiltre);
+  }, [gidalar, gidaFiltre]);
+
+  const filteredFaturalar = useMemo(() => {
+    return faturalar.filter((f) => faturaFiltre === 'hepsi' || f.durum === faturaFiltre);
+  }, [faturalar, faturaFiltre]);
+
+  const filteredGarantiler = useMemo(() => {
+    return garantiler.filter((garanti) => {
+      const days = getDaysDiff(garanti.garanti_bitis);
+      const isExpired = days !== null && days < 0;
+      if (garantiFiltre === 'hepsi') return true;
+      if (garantiFiltre === 'aktif') return !isExpired;
+      if (garantiFiltre === 'gecen') return isExpired;
+      return true;
+    });
+  }, [garantiler, garantiFiltre]);
+
+  const filteredRutinler = useMemo(() => {
+    return rutinler.filter((r) => seciliRutinKlasor === 'hepsi' || r.klasor_id?.toString() === seciliRutinKlasor);
+  }, [rutinler, seciliRutinKlasor]);
 
   // Form Modalları ve State'leri
   const [showGidaModal, setShowGidaModal] = useState(false);
@@ -82,41 +137,34 @@ function App() {
       onConfirm
     });
   };
-
-  // Veri yükleme ve Auth doğrulama
-  useEffect(() => {
-    if (token) {
-      localStorage.setItem('token', token);
-      verifyUser();
+  const showToast = useCallback((msg, type = 'success') => {
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    if (type === 'success') {
+      setSuccessMsg(msg);
+      toastTimeoutRef.current = setTimeout(() => setSuccessMsg(''), 4000);
     } else {
-      setUser(null);
-      localStorage.removeItem('token');
+      setError(msg);
+      toastTimeoutRef.current = setTimeout(() => setError(''), 4000);
     }
-  }, [token]);
+  }, []);
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('token');
+    setToken(null);
+    setUser(null);
+    setCurrentPage('dashboard');
+    showToast('Oturum kapatıldı.');
+  }, [showToast]);
 
-  useEffect(() => {
-    if (user) {
-      fetchDashboardSummary();
-      fetchData();
-    }
-  }, [currentPage, user]);
-
-  const verifyUser = async () => {
+  const verifyUser = useCallback(async () => {
     try {
       const res = await API.get('/auth/me');
       setUser(res.data);
     } catch (err) {
       handleLogout();
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    setToken(null);
-    setUser(null);
-    setCurrentPage('dashboard');
-    showToast('Oturum kapatıldı.');
-  };
+  }, [handleLogout]);
 
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
@@ -149,7 +197,16 @@ function App() {
     }
   };
 
-  const fetchData = async () => {
+  const fetchDashboardSummary = useCallback(async () => {
+    try {
+      const res = await API.get('/dashboard-summary');
+      setSummary(res.data);
+    } catch (err) {
+      console.error('Dashboard özeti yüklenemedi:', err);
+    }
+  }, []);
+
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -182,26 +239,36 @@ function App() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, fetchDashboardSummary]);
 
-  const fetchDashboardSummary = async () => {
-    try {
-      const res = await API.get('/dashboard-summary');
-      setSummary(res.data);
-    } catch (err) {
-      console.error('Dashboard özeti yüklenemedi:', err);
-    }
-  };
 
-  const showToast = (msg, type = 'success') => {
-    if (type === 'success') {
-      setSuccessMsg(msg);
-      setTimeout(() => setSuccessMsg(''), 4000);
+
+  // Veri yükleme ve Auth doğrulama
+  useEffect(() => {
+    if (token) {
+      localStorage.setItem('token', token);
+      verifyUser();
     } else {
-      setError(msg);
-      setTimeout(() => setError(''), 4000);
+      setUser(null);
+      localStorage.removeItem('token');
     }
-  };
+  }, [token, verifyUser]);
+
+  useEffect(() => {
+    if (user) {
+      fetchDashboardSummary();
+      fetchData();
+    }
+  }, [currentPage, user, fetchDashboardSummary, fetchData]);
+
+  // Toast zamanlayıcılarının temizlenmesi (Component unmount durumunda sızıntıyı önler)
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // -------------------------------------------------------------
   // GIDALAR İŞLEMLERİ
@@ -523,33 +590,7 @@ function App() {
     }
   };
 
-  // -------------------------------------------------------------
-  // YARDIMCI GÖRSEL METOTLAR
-  // -------------------------------------------------------------
-  const getDaysDiff = (dateStr) => {
-    if (!dateStr) return null;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const target = new Date(dateStr);
-    target.setHours(0, 0, 0, 0);
-    const diff = target - today;
-    return Math.ceil(diff / (1000 * 60 * 60 * 24));
-  };
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '-';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
-  };
-
-  const getStatusColor = (days, limit, durum) => {
-    if (durum === 'tuketildi' || durum === 'odendi') return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
-    if (durum === 'atildi') return 'text-gray-400 bg-gray-500/10 border-gray-500/20';
-    if (days === null) return 'text-sky-400 bg-sky-500/10 border-sky-500/20';
-    if (days < 0) return 'text-rose-400 bg-rose-500/10 border-rose-500/20 animate-pulse';
-    if (days <= limit) return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
-    return 'text-sky-400 bg-sky-500/10 border-sky-500/20';
-  };
 
   if (!user) {
     return (
@@ -916,9 +957,7 @@ function App() {
 
             {/* GIDA KARTLARI */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {gidalar
-                .filter((g) => gidaFiltre === 'hepsi' || g.durum === gidaFiltre)
-                .map((gida) => {
+              {filteredGidalar.map((gida) => {
                   const days = getDaysDiff(gida.skt);
                   const statusClass = getStatusColor(days, gida.hatirlatma_gun_kala, gida.durum);
                   return (
@@ -1039,9 +1078,7 @@ function App() {
 
             {/* FATURA KARTLARI */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {faturalar
-                .filter((f) => faturaFiltre === 'hepsi' || f.durum === faturaFiltre)
-                .map((fatura) => {
+              {filteredFaturalar.map((fatura) => {
                   const days = getDaysDiff(fatura.son_odeme_tarihi);
                   const statusClass = getStatusColor(days, fatura.hatirlatma_gun_kala, fatura.durum);
                   return (
@@ -1148,16 +1185,7 @@ function App() {
 
             {/* GARANTİ KARTLARI */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {garantiler
-                .filter((garanti) => {
-                  const days = getDaysDiff(garanti.garanti_bitis);
-                  const isExpired = days !== null && days < 0;
-                  if (garantiFiltre === 'hepsi') return true;
-                  if (garantiFiltre === 'aktif') return !isExpired;
-                  if (garantiFiltre === 'gecen') return isExpired;
-                  return true;
-                })
-                .map((garanti) => {
+              {filteredGarantiler.map((garanti) => {
                   const days = getDaysDiff(garanti.garanti_bitis);
                   const isExpired = days !== null && days < 0;
                   const statusClass = getStatusColor(days, garanti.hatirlatma_gun_kala, 'bekliyor');
@@ -1222,14 +1250,7 @@ function App() {
                     </div>
                   );
                 })}
-              {garantiler.filter((g) => {
-                const days = getDaysDiff(g.garanti_bitis);
-                const isExpired = days !== null && days < 0;
-                if (garantiFiltre === 'hepsi') return true;
-                if (garantiFiltre === 'aktif') return !isExpired;
-                if (garantiFiltre === 'gecen') return isExpired;
-                return true;
-              }).length === 0 && (
+              {filteredGarantiler.length === 0 && (
                   <div className="col-span-full py-8 text-center glass-panel rounded-2xl border-white/5">
                     <p className="text-gray-500 text-sm">Gösterilecek garanti kaydı bulunmuyor.</p>
                   </div>
@@ -1311,9 +1332,7 @@ function App() {
 
             {/* GÖREV KARTLARI */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {rutinler
-                .filter((r) => seciliRutinKlasor === 'hepsi' || r.klasor_id?.toString() === seciliRutinKlasor)
-                .map((rutin) => {
+              {filteredRutinler.map((rutin) => {
                   let nextDate = null;
                   let days = null;
                   if (rutin.son_yapilma_tarihi) {
