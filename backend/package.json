@@ -4,8 +4,8 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "go run .",
+    "dev": "go run ."
   },
   "dependencies": {
     "axios": "^1.7.2",
