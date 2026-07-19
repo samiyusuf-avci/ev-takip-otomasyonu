@@ -11,6 +11,7 @@ import {
   Trash2,
   Edit,
   CheckCircle,
+  XCircle,
   AlertTriangle,
   Gauge,
   Bell,
@@ -706,8 +707,35 @@ function App() {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
-      {/* SOL NAVİGASYON (DEKSTOP) */}
-      <aside className="w-full md:w-64 glass-panel md:min-h-screen p-5 flex flex-col justify-between border-b md:border-b-0 md:border-r border-white/10">
+
+      {/* MOBİL HEADER (Sadece küçük ekranlarda görünür) */}
+      <header className="md:hidden mobile-header fixed top-0 left-0 right-0 z-40 glass-panel border-b border-white/10 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 bg-purple-500/20 text-purple-400 rounded-lg border border-purple-500/30">
+            <RefreshCw className="w-4 h-4 animate-[spin_6s_linear_infinite]" />
+          </div>
+          <div>
+            <h1 className="text-sm font-bold text-white leading-tight">Akıllı Yaşam</h1>
+            <p className="text-[9px] text-purple-400/70 font-medium">Ev Takip Otomasyonu</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleTriggerDailyReport}
+            disabled={loading}
+            title="Bildirim Test Et"
+            className="p-2 rounded-xl bg-purple-600/10 hover:bg-purple-600/20 text-purple-400 border border-purple-500/20 transition-all cursor-pointer"
+          >
+            <Bell className="w-4 h-4" />
+          </button>
+          <div className="w-8 h-8 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 font-bold text-xs flex items-center justify-center">
+            {user.isim ? user.isim.charAt(0).toUpperCase() : 'U'}
+          </div>
+        </div>
+      </header>
+
+      {/* SOL NAVİGASYON (Sadece desktop'ta görünür) */}
+      <aside className="hidden md:flex w-64 glass-panel min-h-screen p-5 flex-col justify-between border-r border-white/10">
         <div>
           <div className="flex items-center gap-3 mb-8 px-2">
             <div className="p-2.5 bg-purple-500/20 text-purple-400 rounded-xl border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.3)]">
@@ -779,7 +807,7 @@ function App() {
       </aside>
 
       {/* ANA İÇERİK BÖLGESİ */}
-      <main className="flex-1 p-6 md:p-10 pb-24 md:pb-10 overflow-y-auto">
+      <main className="flex-1 p-4 pt-20 md:pt-10 md:p-10 pb-28 md:pb-10 overflow-y-auto">
         {/* TOAST / BİLDİRİM BANNERLARI */}
         {successMsg && (
           <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center gap-2.5 text-sm animate-fade-in">
@@ -798,19 +826,19 @@ function App() {
             PAGE: DASHBOARD
            ------------------------------------------------------------- */}
         {currentPage === 'dashboard' && (
-          <div className="space-y-8">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="space-y-4 md:space-y-8">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 md:gap-4">
               <div>
-                <h2 className="text-3xl font-bold text-white tracking-tight">Hoş Geldiniz 🏠</h2>
-                <p className="text-gray-400 mt-1">Evinizin tüm düzenini ve yaklaşan son teslim tarihlerini buradan yönetin.</p>
+                <h2 className="text-xl md:text-3xl font-bold text-white tracking-tight">Hoş Geldiniz 🏠</h2>
+                <p className="text-gray-400 mt-0.5 text-xs md:text-base">Evinizin tüm düzenini buradan yönetin.</p>
               </div>
-              <div className="text-sm font-semibold py-2 px-4 rounded-xl bg-white/5 border border-white/10 text-purple-400">
+              <div className="text-xs font-semibold py-1.5 px-3 rounded-xl bg-white/5 border border-white/10 text-purple-400">
                 📅 Bugün: {formatDate(new Date().toISOString().split('T')[0])}
               </div>
             </div>
 
             {/* İSTATİSTİK KARTLARI */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
               {[
                 {
                   title: 'Gıda Maddeleri',
@@ -820,6 +848,7 @@ function App() {
                   icon: Apple,
                   color: 'from-amber-500/20 to-orange-500/20',
                   iconColor: 'text-amber-400',
+                  iconBg: 'bg-amber-500/10 border-amber-500/20',
                   page: 'gidalar'
                 },
                 {
@@ -831,6 +860,7 @@ function App() {
                   icon: Receipt,
                   color: 'from-rose-500/20 to-red-500/20',
                   iconColor: 'text-rose-400',
+                  iconBg: 'bg-rose-500/10 border-rose-500/20',
                   page: 'faturalar'
                 },
                 {
@@ -841,6 +871,7 @@ function App() {
                   icon: ShieldCheck,
                   color: 'from-cyan-500/20 to-sky-500/20',
                   iconColor: 'text-cyan-400',
+                  iconBg: 'bg-cyan-500/10 border-cyan-500/20',
                   page: 'garantiler'
                 },
                 {
@@ -851,6 +882,7 @@ function App() {
                   icon: RefreshCw,
                   color: 'from-purple-500/20 to-indigo-500/20',
                   iconColor: 'text-purple-400',
+                  iconBg: 'bg-purple-500/10 border-purple-500/20',
                   page: 'rutinler'
                 }
               ].map((card, i) => {
@@ -859,29 +891,29 @@ function App() {
                   <div
                     key={i}
                     onClick={() => setCurrentPage(card.page)}
-                    className="glass-panel glass-panel-hover p-6 rounded-2xl cursor-pointer flex flex-col justify-between relative overflow-hidden"
+                    className="glass-panel glass-panel-hover p-3 md:p-6 rounded-2xl cursor-pointer flex flex-col justify-between relative overflow-hidden"
                   >
-                    <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${card.color} opacity-40 blur-2xl rounded-full -mr-5 -mt-5`}></div>
-                    <div className="flex justify-between items-start mb-4">
-                      <div className={`p-3 bg-white/5 rounded-xl border border-white/10 ${card.iconColor}`}>
-                        <CardIcon className="w-6 h-6" />
+                    <div className={`absolute top-0 right-0 w-16 h-16 md:w-24 md:h-24 bg-gradient-to-br ${card.color} opacity-40 blur-2xl rounded-full -mr-3 -mt-3 md:-mr-5 md:-mt-5`}></div>
+                    <div className="flex justify-between items-start mb-2 md:mb-4">
+                      <div className={`p-2 md:p-3 ${card.iconBg} rounded-xl border ${card.iconColor}`}>
+                        <CardIcon className="w-4 h-4 md:w-6 md:h-6" />
                       </div>
                       {card.alerts > 0 && (
-                        <span className="flex items-center gap-1 py-1 px-2.5 rounded-full text-xs font-semibold bg-rose-500/10 border border-rose-500/20 text-rose-400 animate-pulse">
-                          <AlertTriangle className="w-3.5 h-3.5" />
-                          {card.alerts} UYARI
+                        <span className="flex items-center gap-0.5 py-0.5 px-1.5 md:gap-1 md:py-1 md:px-2.5 rounded-full text-[10px] md:text-xs font-bold bg-rose-500/10 border border-rose-500/20 text-rose-400 animate-pulse">
+                          <AlertTriangle className="w-2.5 h-2.5 md:w-3.5 md:h-3.5" />
+                          {card.alerts}
                         </span>
                       )}
                     </div>
                     <div>
-                      <h3 className="text-gray-400 text-sm font-semibold uppercase tracking-wider">{card.title}</h3>
-                      <div className="flex items-baseline gap-2 mt-1">
-                        <span className="text-3xl font-extrabold text-white">{card.count}</span>
-                        {card.extra && <span className="text-lg font-bold text-gray-300">({card.extra})</span>}
+                      <h3 className="text-gray-400 text-[10px] md:text-sm font-semibold uppercase tracking-wider leading-tight">{card.title}</h3>
+                      <div className="flex items-baseline gap-1 mt-0.5 md:mt-1">
+                        <span className="text-2xl md:text-3xl font-extrabold text-white">{card.count}</span>
+                        {card.extra && <span className="text-xs md:text-lg font-bold text-gray-300 hidden sm:inline">({card.extra})</span>}
                       </div>
-                      <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                        <Info className="w-3.5 h-3.5 text-gray-600" />
-                        {card.alerts} {card.alertText}
+                      <p className="text-[10px] text-gray-500 mt-1 flex items-center gap-0.5">
+                        <Info className="w-3 h-3 text-gray-600 flex-shrink-0" />
+                        <span className="truncate">{card.alerts} {card.alertText}</span>
                       </p>
                     </div>
                   </div>
@@ -919,23 +951,23 @@ function App() {
             PAGE: GIDALAR
            ------------------------------------------------------------- */}
         {currentPage === 'gidalar' && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="space-y-4 md:space-y-6">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-3xl font-bold text-white tracking-tight">Gıda Son Kullanma Takibi 🥑</h2>
-                <p className="text-gray-400 mt-1">Gıdaların son tüketim tarihlerini kaydedin ve bozulmadan önce bildirim alın.</p>
+                <h2 className="text-lg md:text-3xl font-bold text-white tracking-tight">Gıda Son Kullanma Takibi 🥑</h2>
+                <p className="text-gray-400 mt-0.5 text-xs md:text-base hidden md:block">Gıdaların son tüketim tarihlerini kaydedin ve bozulmadan önce bildirim alın.</p>
               </div>
               <button
                 onClick={() => { setEditingGida(null); setGidaForm({ urun_adi: '', kategori: '', skt: '', hatirlatma_gun_kala: 3, durum: 'bekliyor' }); setShowGidaModal(true); }}
-                className="flex items-center gap-2 py-3 px-5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl transition-all duration-200 glow-btn shadow-[0_4px_20px_rgba(168,85,247,0.25)] cursor-pointer"
+                className="flex items-center gap-1.5 py-2 px-3 md:py-3 md:px-5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-sm transition-all duration-200 glow-btn shadow-[0_4px_20px_rgba(168,85,247,0.25)] cursor-pointer flex-shrink-0"
               >
-                <Plus className="w-5 h-5" />
-                Gıda Ekle
+                <Plus className="w-4 h-4" />
+                <span>Ekle</span>
               </button>
             </div>
 
             {/* FİLTRE TABLARI */}
-            <div className="flex border-b border-white/10">
+            <div className="flex overflow-x-auto filter-tabs-scroll border-b border-white/10">
               {[
                 { id: 'hepsi', label: 'Tüm Gıdalar' },
                 { id: 'bekliyor', label: 'Bekleyenler ⏰' },
@@ -945,7 +977,7 @@ function App() {
                 <button
                   key={tab.id}
                   onClick={() => setGidaFiltre(tab.id)}
-                  className={`py-3 px-5 border-b-2 font-semibold text-sm transition-all duration-200 ${gidaFiltre === tab.id
+                  className={`py-3 px-5 border-b-2 font-semibold text-sm whitespace-nowrap transition-all duration-200 flex-shrink-0 ${gidaFiltre === tab.id
                     ? 'border-purple-500 text-purple-400 bg-purple-500/5'
                     : 'border-transparent text-gray-400 hover:text-gray-200'
                     }`}
@@ -956,80 +988,101 @@ function App() {
             </div>
 
             {/* GIDA KARTLARI */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="space-y-2 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
               {filteredGidalar.map((gida) => {
                   const days = getDaysDiff(gida.skt);
                   const statusClass = getStatusColor(days, gida.hatirlatma_gun_kala, gida.durum);
                   return (
-                    <div key={gida.id} className="glass-panel p-5 rounded-2xl flex flex-col justify-between border-white/5 relative overflow-hidden">
-                      {/* Kart Arkaplan Işıması */}
-                      {days !== null && days <= gida.hatirlatma_gun_kala && gida.durum === 'bekliyor' && (
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full"></div>
-                      )}
+                    <div key={gida.id} className="glass-panel rounded-xl md:rounded-2xl border-white/5 relative overflow-hidden">
 
-                      <div>
-                        <div className="flex justify-between items-start mb-3">
-                          <span className="text-xs font-semibold py-1 px-2.5 rounded-lg bg-white/5 border border-white/10 text-purple-300">
-                            {gida.kategori || 'Genel'}
-                          </span>
-                          <span className={`text-xs font-bold py-1 px-2.5 rounded-lg border ${statusClass}`}>
-                            {gida.durum === 'tuketildi'
-                              ? 'Tüketildi'
-                              : gida.durum === 'atildi'
-                                ? 'Atıldı'
-                                : days === 0
-                                  ? 'Bugün Son!'
-                                  : days < 0
-                                    ? `${Math.abs(days)} Gün Geçti`
-                                    : `${days} Gün Kaldı`}
-                          </span>
+                      {/* MOBİL: Kompakt yatay liste görünümü */}
+                      <div className="md:hidden flex items-center gap-3 p-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-xs font-semibold text-purple-300 bg-purple-500/10 px-1.5 py-0.5 rounded-md">
+                              {gida.kategori || 'Genel'}
+                            </span>
+                            <span className={`text-[10px] font-bold py-0.5 px-1.5 rounded-md border ${statusClass}`}>
+                              {gida.durum === 'tuketildi' ? 'Tüketildi' : gida.durum === 'atildi' ? 'Atıldı' : days === 0 ? 'Bugün Son!' : days < 0 ? `${Math.abs(days)}g geçti` : `${days}g kaldı`}
+                            </span>
+                          </div>
+                          <h3 className="text-sm font-bold text-white truncate">{gida.urun_adi}</h3>
+                          <p className="text-[10px] text-gray-500 mt-0.5">{formatDate(gida.skt)}</p>
                         </div>
-
-                        <h3 className="text-lg font-bold text-white mb-2">{gida.urun_adi}</h3>
-
-                        <div className="space-y-1.5 text-sm text-gray-400">
-                          <div className="flex justify-between">
-                            <span>S.K.T:</span>
-                            <span className="font-semibold text-gray-300">{formatDate(gida.skt)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Hatırlatma Limiti:</span>
-                            <span className="font-semibold text-gray-300">{gida.hatirlatma_gun_kala} Gün Kala</span>
-                          </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          {gida.durum === 'bekliyor' && (
+                            <>
+                              <button
+                                onClick={() => handleUpdateGidaDurum(gida, 'tuketildi')}
+                                className="p-1.5 rounded-lg bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-500/20 transition-all cursor-pointer"
+                                title="Tüketildi"
+                              >
+                                <CheckCircle className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleUpdateGidaDurum(gida, 'atildi')}
+                                className="p-1.5 rounded-lg bg-orange-600/10 hover:bg-orange-600/20 text-orange-400 border border-orange-500/20 transition-all cursor-pointer"
+                                title="Atıldı / Bozuldu"
+                              >
+                                <XCircle className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          )}
+                          <button
+                            onClick={() => handleEditGida(gida)}
+                            className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg border border-white/10 transition-all cursor-pointer"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteGida(gida.id)}
+                            className="p-1.5 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-lg border border-rose-500/20 transition-all cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
 
-                      {/* İşlem Butonları */}
-                      <div className="flex gap-2 mt-5 pt-4 border-t border-white/5">
-                        {gida.durum === 'bekliyor' && (
-                          <>
-                            <button
-                              onClick={() => handleUpdateGidaDurum(gida, 'tuketildi')}
-                              className="flex-1 py-2 rounded-xl bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 font-semibold text-xs border border-emerald-500/20 transition-all cursor-pointer flex justify-center items-center gap-1"
-                            >
-                              <CheckCircle className="w-3.5 h-3.5" /> Tüketildi
-                            </button>
-                            <button
-                              onClick={() => handleUpdateGidaDurum(gida, 'atildi')}
-                              className="flex-1 py-2 rounded-xl bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 font-semibold text-xs border border-rose-500/20 transition-all cursor-pointer flex justify-center items-center gap-1"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" /> Bozuldu/Atıldı
-                            </button>
-                          </>
+                      {/* DESKTOP: Tam kart görünümü */}
+                      <div className="hidden md:flex flex-col justify-between p-5 h-full">
+                        {days !== null && days <= gida.hatirlatma_gun_kala && gida.durum === 'bekliyor' && (
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full"></div>
                         )}
-                        <button
-                          onClick={() => handleEditGida(gida)}
-                          className="p-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl border border-white/10 transition-all cursor-pointer"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteGida(gida.id)}
-                          className="p-2 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-xl border border-rose-500/20 transition-all cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div>
+                          <div className="flex justify-between items-start mb-3">
+                            <span className="text-xs font-semibold py-1 px-2.5 rounded-lg bg-white/5 border border-white/10 text-purple-300">
+                              {gida.kategori || 'Genel'}
+                            </span>
+                            <span className={`text-xs font-bold py-1 px-2.5 rounded-lg border ${statusClass}`}>
+                              {gida.durum === 'tuketildi' ? 'Tüketildi' : gida.durum === 'atildi' ? 'Atıldı' : days === 0 ? 'Bugün Son!' : days < 0 ? `${Math.abs(days)} Gün Geçti` : `${days} Gün Kaldı`}
+                            </span>
+                          </div>
+                          <h3 className="text-lg font-bold text-white mb-2">{gida.urun_adi}</h3>
+                          <div className="space-y-1.5 text-sm text-gray-400">
+                            <div className="flex justify-between"><span>S.K.T:</span><span className="font-semibold text-gray-300">{formatDate(gida.skt)}</span></div>
+                            <div className="flex justify-between"><span>Hatırlatma Limiti:</span><span className="font-semibold text-gray-300">{gida.hatirlatma_gun_kala} Gün Kala</span></div>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 mt-5 pt-4 border-t border-white/5">
+                          {gida.durum === 'bekliyor' && (
+                            <>
+                              <button onClick={() => handleUpdateGidaDurum(gida, 'tuketildi')} className="flex-1 py-2 rounded-xl bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 font-semibold text-xs border border-emerald-500/20 transition-all cursor-pointer flex justify-center items-center gap-1">
+                                <CheckCircle className="w-3.5 h-3.5" /> Tüketildi
+                              </button>
+                              <button onClick={() => handleUpdateGidaDurum(gida, 'atildi')} className="flex-1 py-2 rounded-xl bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 font-semibold text-xs border border-rose-500/20 transition-all cursor-pointer flex justify-center items-center gap-1">
+                                <Trash2 className="w-3.5 h-3.5" /> Atıldı
+                              </button>
+                            </>
+                          )}
+                          <button onClick={() => handleEditGida(gida)} className="p-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl border border-white/10 transition-all cursor-pointer">
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => handleDeleteGida(gida.id)} className="p-2 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-xl border border-rose-500/20 transition-all cursor-pointer">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
+
                     </div>
                   );
                 })}
@@ -1041,23 +1094,23 @@ function App() {
             PAGE: FATURALAR
            ------------------------------------------------------------- */}
         {currentPage === 'faturalar' && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="space-y-4 md:space-y-6">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-3xl font-bold text-white tracking-tight">Fatura Takibi 💸</h2>
-                <p className="text-gray-400 mt-1">Ödemelerinizi unutmayın. Faturaların son ödeme tarihlerini yönetin.</p>
+                <h2 className="text-lg md:text-3xl font-bold text-white tracking-tight">Fatura Takibi 💸</h2>
+                <p className="text-gray-400 mt-0.5 text-xs md:text-base hidden md:block">Faturaların son ödeme tarihlerini yönetin.</p>
               </div>
               <button
                 onClick={() => { setEditingFatura(null); setFaturaForm({ fatura_adi: '', tutar: '', son_odeme_tarihi: '', hatirlatma_gun_kala: 5, durum: 'odenmedi' }); setShowFaturaModal(true); }}
-                className="flex items-center gap-2 py-3 px-5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl transition-all duration-200 glow-btn shadow-[0_4px_20px_rgba(168,85,247,0.25)] cursor-pointer"
+                className="flex items-center gap-1.5 py-2 px-3 md:py-3 md:px-5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-sm transition-all duration-200 glow-btn shadow-[0_4px_20px_rgba(168,85,247,0.25)] cursor-pointer flex-shrink-0"
               >
-                <Plus className="w-5 h-5" />
-                Fatura Ekle
+                <Plus className="w-4 h-4" />
+                <span>Ekle</span>
               </button>
             </div>
 
             {/* FİLTRE TABLARI */}
-            <div className="flex border-b border-white/10">
+            <div className="flex overflow-x-auto filter-tabs-scroll border-b border-white/10">
               {[
                 { id: 'hepsi', label: 'Tüm Faturalar' },
                 { id: 'odenmedi', label: 'Ödenmeyenler 💵' },
@@ -1066,7 +1119,7 @@ function App() {
                 <button
                   key={tab.id}
                   onClick={() => setFaturaFiltre(tab.id)}
-                  className={`py-3 px-5 border-b-2 font-semibold text-sm transition-all duration-200 ${faturaFiltre === tab.id
+                  className={`py-3 px-5 border-b-2 font-semibold text-sm whitespace-nowrap transition-all duration-200 flex-shrink-0 ${faturaFiltre === tab.id
                     ? 'border-purple-500 text-purple-400 bg-purple-500/5'
                     : 'border-transparent text-gray-400 hover:text-gray-200'
                     }`}
@@ -1077,66 +1130,74 @@ function App() {
             </div>
 
             {/* FATURA KARTLARI */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="space-y-2 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
               {filteredFaturalar.map((fatura) => {
                   const days = getDaysDiff(fatura.son_odeme_tarihi);
                   const statusClass = getStatusColor(days, fatura.hatirlatma_gun_kala, fatura.durum);
                   return (
-                    <div key={fatura.id} className="glass-panel p-5 rounded-2xl flex flex-col justify-between border-white/5 relative overflow-hidden">
-                      <div>
-                        <div className="flex justify-between items-start mb-3">
-                          <span className="text-lg font-extrabold text-white flex items-center gap-1">
-                            <DollarSign className="w-5 h-5 text-purple-400" />
-                            {fatura.tutar || 0} <span className="text-sm font-semibold text-gray-400">TL</span>
-                          </span>
-                          <span className={`text-xs font-bold py-1 px-2.5 rounded-lg border ${statusClass}`}>
-                            {fatura.durum === 'odendi'
-                              ? 'Ödendi'
-                              : days === 0
-                                ? 'Son Ödeme Günü!'
-                                : days < 0
-                                  ? `${Math.abs(days)} Gün Gecikti`
-                                  : `${days} Gün Kaldı`}
-                          </span>
-                        </div>
+                    <div key={fatura.id} className="glass-panel rounded-xl md:rounded-2xl border-white/5 relative overflow-hidden">
 
-                        <h3 className="text-lg font-bold text-white mb-2">{fatura.fatura_adi}</h3>
-
-                        <div className="space-y-1.5 text-sm text-gray-400">
-                          <div className="flex justify-between">
-                            <span>Son Ödeme Tarihi:</span>
-                            <span className="font-semibold text-gray-300">{formatDate(fatura.son_odeme_tarihi)}</span>
+                      {/* MOBİL: Kompakt yatay liste */}
+                      <div className="md:hidden flex items-center gap-3 p-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <DollarSign className="w-3 h-3 text-purple-400 flex-shrink-0" />
+                            <span className="text-sm font-extrabold text-white">{fatura.tutar || 0} TL</span>
+                            <span className={`text-[10px] font-bold py-0.5 px-1.5 rounded-md border ${statusClass}`}>
+                              {fatura.durum === 'odendi' ? 'Ödendi' : days === 0 ? 'Bugün!' : days < 0 ? `${Math.abs(days)}g gecikti` : `${days}g kaldı`}
+                            </span>
                           </div>
-                          <div className="flex justify-between">
-                            <span>Hatırlatma Limiti:</span>
-                            <span className="font-semibold text-gray-300">{fatura.hatirlatma_gun_kala} Gün Kala</span>
-                          </div>
+                          <h3 className="text-sm font-bold text-white truncate">{fatura.fatura_adi}</h3>
+                          <p className="text-[10px] text-gray-500 mt-0.5">{formatDate(fatura.son_odeme_tarihi)}</p>
                         </div>
-                      </div>
-
-                      {/* İşlem Butonları */}
-                      <div className="flex gap-2 mt-5 pt-4 border-t border-white/5">
-                        {fatura.durum === 'odenmedi' && (
-                          <button
-                            onClick={() => handlePayFatura(fatura)}
-                            className="flex-1 py-2 rounded-xl bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 font-semibold text-xs border border-emerald-500/20 transition-all cursor-pointer flex justify-center items-center gap-1.5"
-                          >
-                            <CheckCircle className="w-3.5 h-3.5" /> Ödendi İşaretle
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          {fatura.durum === 'odenmedi' && (
+                            <button
+                              onClick={() => handlePayFatura(fatura)}
+                              className="p-1.5 rounded-lg bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-500/20 transition-all cursor-pointer"
+                              title="Ödendi"
+                            >
+                              <CheckCircle className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <button onClick={() => handleEditFatura(fatura)} className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg border border-white/10 transition-all cursor-pointer">
+                            <Edit className="w-3.5 h-3.5" />
                           </button>
-                        )}
-                        <button
-                          onClick={() => handleEditFatura(fatura)}
-                          className="p-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl border border-white/10 transition-all cursor-pointer"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteFatura(fatura.id)}
-                          className="p-2 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-xl border border-rose-500/20 transition-all cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                          <button onClick={() => handleDeleteFatura(fatura.id)} className="p-1.5 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-lg border border-rose-500/20 transition-all cursor-pointer">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
+
+                      {/* DESKTOP: Tam kart */}
+                      <div className="hidden md:flex flex-col justify-between p-5 h-full">
+                        <div>
+                          <div className="flex justify-between items-start mb-3">
+                            <span className="text-lg font-extrabold text-white flex items-center gap-1">
+                              <DollarSign className="w-5 h-5 text-purple-400" />
+                              {fatura.tutar || 0} <span className="text-sm font-semibold text-gray-400">TL</span>
+                            </span>
+                            <span className={`text-xs font-bold py-1 px-2.5 rounded-lg border ${statusClass}`}>
+                              {fatura.durum === 'odendi' ? 'Ödendi' : days === 0 ? 'Son Ödeme Günü!' : days < 0 ? `${Math.abs(days)} Gün Gecikti` : `${days} Gün Kaldı`}
+                            </span>
+                          </div>
+                          <h3 className="text-lg font-bold text-white mb-2">{fatura.fatura_adi}</h3>
+                          <div className="space-y-1.5 text-sm text-gray-400">
+                            <div className="flex justify-between"><span>Son Ödeme Tarihi:</span><span className="font-semibold text-gray-300">{formatDate(fatura.son_odeme_tarihi)}</span></div>
+                            <div className="flex justify-between"><span>Hatırlatma Limiti:</span><span className="font-semibold text-gray-300">{fatura.hatirlatma_gun_kala} Gün Kala</span></div>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 mt-5 pt-4 border-t border-white/5">
+                          {fatura.durum === 'odenmedi' && (
+                            <button onClick={() => handlePayFatura(fatura)} className="flex-1 py-2 rounded-xl bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 font-semibold text-xs border border-emerald-500/20 transition-all cursor-pointer flex justify-center items-center gap-1.5">
+                              <CheckCircle className="w-3.5 h-3.5" /> Ödendi İşaretle
+                            </button>
+                          )}
+                          <button onClick={() => handleEditFatura(fatura)} className="p-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl border border-white/10 transition-all cursor-pointer"><Edit className="w-4 h-4" /></button>
+                          <button onClick={() => handleDeleteFatura(fatura.id)} className="p-2 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-xl border border-rose-500/20 transition-all cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      </div>
+
                     </div>
                   );
                 })}
@@ -1148,23 +1209,23 @@ function App() {
             PAGE: GARANTİLER
            ------------------------------------------------------------- */}
         {currentPage === 'garantiler' && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="space-y-4 md:space-y-6">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-3xl font-bold text-white tracking-tight">Garanti Belgeleri Takibi 🛡️</h2>
-                <p className="text-gray-400 mt-1">Cihazlarınızın garanti sürelerini kaydedin, bitmeden önce uyarı alın.</p>
+                <h2 className="text-lg md:text-3xl font-bold text-white tracking-tight">Garanti Belgeleri 🛡️</h2>
+                <p className="text-gray-400 mt-0.5 text-xs md:text-base hidden md:block">Cihazlarınızın garanti sürelerini kaydedin, bitmeden önce uyarı alın.</p>
               </div>
               <button
                 onClick={() => { setEditingGaranti(null); setGarantiForm({ cihaz_adi: '', marka_model: '', garanti_bitis: '', hatirlatma_gun_kala: 30, notlar: '' }); setShowGarantiModal(true); }}
-                className="flex items-center gap-2 py-3 px-5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl transition-all duration-200 glow-btn shadow-[0_4px_20px_rgba(168,85,247,0.25)] cursor-pointer"
+                className="flex items-center gap-1.5 py-2 px-3 md:py-3 md:px-5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-sm transition-all duration-200 glow-btn shadow-[0_4px_20px_rgba(168,85,247,0.25)] cursor-pointer flex-shrink-0"
               >
-                <Plus className="w-5 h-5" />
-                Cihaz Garantisi Ekle
+                <Plus className="w-4 h-4" />
+                <span>Ekle</span>
               </button>
             </div>
 
             {/* FİLTRE TABLARI */}
-            <div className="flex border-b border-white/10">
+            <div className="flex overflow-x-auto filter-tabs-scroll border-b border-white/10">
               {[
                 { id: 'hepsi', label: 'Tüm Garantiler' },
                 { id: 'aktif', label: 'Devam Edenler 🛡️' },
@@ -1173,7 +1234,7 @@ function App() {
                 <button
                   key={tab.id}
                   onClick={() => setGarantiFiltre(tab.id)}
-                  className={`py-3 px-5 border-b-2 font-semibold text-sm transition-all duration-200 ${garantiFiltre === tab.id
+                  className={`py-3 px-5 border-b-2 font-semibold text-sm whitespace-nowrap transition-all duration-200 flex-shrink-0 ${garantiFiltre === tab.id
                     ? 'border-purple-500 text-purple-400 bg-purple-500/5'
                     : 'border-transparent text-gray-400 hover:text-gray-200'
                     }`}
@@ -1184,7 +1245,7 @@ function App() {
             </div>
 
             {/* GARANTİ KARTLARI */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="space-y-2 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
               {filteredGarantiler.map((garanti) => {
                   const days = getDaysDiff(garanti.garanti_bitis);
                   const isExpired = days !== null && days < 0;
@@ -1192,61 +1253,55 @@ function App() {
                   return (
                     <div
                       key={garanti.id}
-                      className={`glass-panel p-5 rounded-2xl flex flex-col justify-between border-white/5 relative overflow-hidden transition-all ${isExpired ? 'opacity-60 hover:opacity-90' : ''
-                        }`}
+                      className={`glass-panel rounded-xl md:rounded-2xl border-white/5 relative overflow-hidden transition-all ${isExpired ? 'opacity-60' : ''}`}
                     >
-                      {/* Kart Arkaplan Işıması */}
-                      {days !== null && days <= garanti.hatirlatma_gun_kala && !isExpired && (
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full"></div>
-                      )}
-                      <div>
-                        <div className="flex justify-between items-start mb-3">
-                          <span className="text-xs font-semibold py-1 px-2.5 rounded-lg bg-white/5 border border-white/10 text-purple-300">
-                            {garanti.marka_model || 'Marka Belirtilmemiş'}
-                          </span>
-                          <span className={`text-xs font-bold py-1 px-2.5 rounded-lg border ${statusClass}`}>
-                            {days === 0
-                              ? 'Bugün Bitiyor!'
-                              : isExpired
-                                ? 'Süresi Bitti'
-                                : `${days} Gün Kaldı`}
-                          </span>
+                      {/* MOBİL: Kompakt liste */}
+                      <div className="md:hidden flex items-center gap-3 p-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="text-xs text-purple-300 font-semibold bg-purple-500/10 px-1.5 py-0.5 rounded-md truncate max-w-[100px]">{garanti.marka_model || 'Belirtilmemiş'}</span>
+                            <span className={`text-[10px] font-bold py-0.5 px-1.5 rounded-md border ${statusClass}`}>
+                              {days === 0 ? 'Bugün!' : isExpired ? 'Bitti' : `${days}g kaldı`}
+                            </span>
+                          </div>
+                          <h3 className={`text-sm font-bold truncate ${isExpired ? 'line-through text-gray-400' : 'text-white'}`}>{garanti.cihaz_adi}</h3>
+                          <p className="text-[10px] text-gray-500 mt-0.5">{formatDate(garanti.garanti_bitis)}</p>
                         </div>
-
-                        <h3 className={`text-lg font-bold text-white mb-2 ${isExpired ? 'line-through text-gray-400' : ''}`}>{garanti.cihaz_adi}</h3>
-
-                        <div className="space-y-1.5 text-sm text-gray-400">
-                          <div className="flex justify-between">
-                            <span>Garanti Bitiş Tarihi:</span>
-                            <span className="font-semibold text-gray-300">{formatDate(garanti.garanti_bitis)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Hatırlatma Limiti:</span>
-                            <span className="font-semibold text-gray-300">{garanti.hatirlatma_gun_kala} Gün Kala</span>
-                          </div>
-                          {garanti.notlar && (
-                            <div className="mt-3 p-3 rounded-lg bg-white/5 border border-white/10 text-xs text-gray-400">
-                              {garanti.notlar}
-                            </div>
-                          )}
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <button onClick={() => handleEditGaranti(garanti)} className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg border border-white/10 transition-all cursor-pointer">
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => handleDeleteGaranti(garanti.id)} className="p-1.5 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-lg border border-rose-500/20 transition-all cursor-pointer">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
 
-                      {/* İşlem Butonları */}
-                      <div className="flex gap-2 mt-5 pt-4 border-t border-white/5">
-                        <button
-                          onClick={() => handleEditGaranti(garanti)}
-                          className="flex-1 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 font-semibold text-xs border border-white/10 transition-all cursor-pointer flex justify-center items-center gap-1.5"
-                        >
-                          <Edit className="w-3.5 h-3.5" /> Düzenle
-                        </button>
-                        <button
-                          onClick={() => handleDeleteGaranti(garanti.id)}
-                          className="p-2 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-xl border border-rose-500/20 transition-all cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                      {/* DESKTOP: Tam kart */}
+                      <div className="hidden md:flex flex-col justify-between p-5 h-full">
+                        {days !== null && days <= garanti.hatirlatma_gun_kala && !isExpired && (
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full"></div>
+                        )}
+                        <div>
+                          <div className="flex justify-between items-start mb-3">
+                            <span className="text-xs font-semibold py-1 px-2.5 rounded-lg bg-white/5 border border-white/10 text-purple-300">{garanti.marka_model || 'Marka Belirtilmemiş'}</span>
+                            <span className={`text-xs font-bold py-1 px-2.5 rounded-lg border ${statusClass}`}>
+                              {days === 0 ? 'Bugün Bitiyor!' : isExpired ? 'Süresi Bitti' : `${days} Gün Kaldı`}
+                            </span>
+                          </div>
+                          <h3 className={`text-lg font-bold text-white mb-2 ${isExpired ? 'line-through text-gray-400' : ''}`}>{garanti.cihaz_adi}</h3>
+                          <div className="space-y-1.5 text-sm text-gray-400">
+                            <div className="flex justify-between"><span>Garanti Bitiş Tarihi:</span><span className="font-semibold text-gray-300">{formatDate(garanti.garanti_bitis)}</span></div>
+                            <div className="flex justify-between"><span>Hatırlatma Limiti:</span><span className="font-semibold text-gray-300">{garanti.hatirlatma_gun_kala} Gün Kala</span></div>
+                            {garanti.notlar && (<div className="mt-3 p-3 rounded-lg bg-white/5 border border-white/10 text-xs text-gray-400">{garanti.notlar}</div>)}
+                          </div>
+                        </div>
+                        <div className="flex gap-2 mt-5 pt-4 border-t border-white/5">
+                          <button onClick={() => handleEditGaranti(garanti)} className="flex-1 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 font-semibold text-xs border border-white/10 transition-all cursor-pointer flex justify-center items-center gap-1.5"><Edit className="w-3.5 h-3.5" /> Düzenle</button>
+                          <button onClick={() => handleDeleteGaranti(garanti.id)} className="p-2 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-xl border border-rose-500/20 transition-all cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                        </div>
                       </div>
+
                     </div>
                   );
                 })}
@@ -1263,36 +1318,26 @@ function App() {
             PAGE: RUTİNLER & KLASÖRLER
            ------------------------------------------------------------- */}
         {currentPage === 'rutinler' && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="space-y-4 md:space-y-6">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-3xl font-bold text-white tracking-tight">Rutin Klasörleri ve Görevleri 📅</h2>
-                <p className="text-gray-400 mt-1">Periyodik görevlerinizi (ev rutinleri, araç bakımları vb.) klasörler altında gruplayın.</p>
+                <h2 className="text-lg md:text-3xl font-bold text-white tracking-tight">Rutin Görevler 📅</h2>
+                <p className="text-gray-400 mt-0.5 text-xs md:text-base hidden md:block">Periyodik görevlerinizi klasörler altında gruplayın.</p>
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-2 flex-shrink-0">
                 <button
                   onClick={() => { setKlasorForm({ klasor_adi: '' }); setShowKlasorModal(true); }}
-                  className="flex items-center gap-2 py-3 px-4 bg-white/5 hover:bg-white/10 text-white border border-white/10 font-semibold rounded-xl transition-all duration-200 cursor-pointer"
+                  className="flex items-center gap-1 py-2 px-2.5 md:px-4 bg-white/5 hover:bg-white/10 text-white border border-white/10 font-semibold rounded-xl text-sm transition-all duration-200 cursor-pointer"
                 >
-                  <FolderPlus className="w-5 h-5 text-purple-400" />
-                  Klasör Oluştur
+                  <FolderPlus className="w-4 h-4 text-purple-400" />
+                  <span className="hidden md:inline">Klasör Oluştur</span>
                 </button>
                 <button
-                  onClick={() => {
-                    setEditingRutin(null);
-                    setRutinForm({
-                      klasor_id: seciliRutinKlasor === 'hepsi' ? '' : seciliRutinKlasor,
-                      gorev_adi: '',
-                      periyot_ay: '',
-                      hatirlatma_gun_kala: 15,
-                      son_yapilma_tarihi: ''
-                    });
-                    setShowRutinModal(true);
-                  }}
-                  className="flex items-center gap-2 py-3 px-5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl transition-all duration-200 glow-btn shadow-[0_4px_20px_rgba(168,85,247,0.25)] cursor-pointer"
+                  onClick={() => { setEditingRutin(null); setRutinForm({ klasor_id: seciliRutinKlasor === 'hepsi' ? '' : seciliRutinKlasor, gorev_adi: '', periyot_ay: '', hatirlatma_gun_kala: 15, son_yapilma_tarihi: '' }); setShowRutinModal(true); }}
+                  className="flex items-center gap-1.5 py-2 px-3 md:py-3 md:px-5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-sm transition-all duration-200 glow-btn shadow-[0_4px_20px_rgba(168,85,247,0.25)] cursor-pointer"
                 >
-                  <Plus className="w-5 h-5" />
-                  Görev Ekle
+                  <Plus className="w-4 h-4" />
+                  <span>Ekle</span>
                 </button>
               </div>
             </div>
@@ -1331,7 +1376,7 @@ function App() {
             </div>
 
             {/* GÖREV KARTLARI */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="space-y-2 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
               {filteredRutinler.map((rutin) => {
                   let nextDate = null;
                   let days = null;
@@ -1345,92 +1390,101 @@ function App() {
                   const isKmRoutine = rutin.hedef_km && rutin.mevcut_km;
                   const kmKalan = isKmRoutine ? (rutin.hedef_km - rutin.mevcut_km) : null;
 
-                  // Renk mantığı ve durum tespiti
                   let isOverdue = false;
                   let isWarning = false;
 
-                  if (days !== null && days < 0) {
-                    isOverdue = true;
-                  }
-
+                  if (days !== null && days < 0) isOverdue = true;
                   if (!isOverdue) {
-                    if (days !== null && days <= rutin.hatirlatma_gun_kala) {
-                      isWarning = true;
-                    } else if (!rutin.son_yapilma_tarihi) {
-                      isWarning = true;
-                    }
+                    if (days !== null && days <= rutin.hatirlatma_gun_kala) isWarning = true;
+                    else if (!rutin.son_yapilma_tarihi) isWarning = true;
                   }
 
-                  let statusText = "Durum Stabil ✅";
-                  let statusClass = "text-sky-400 bg-sky-500/10 border-sky-500/20";
-                  let glowColor = "";
+                  let statusText = 'Stabil ✅';
+                  let statusClass = 'text-sky-400 bg-sky-500/10 border-sky-500/20';
+                  let glowColor = '';
 
                   if (isOverdue) {
-                    statusText = "Bakım Gecikti! ⚠️";
-                    statusClass = "text-rose-400 bg-rose-500/10 border-rose-500/20 animate-pulse";
-                    glowColor = "bg-rose-500/10";
+                    statusText = 'Gecikti! ⚠️';
+                    statusClass = 'text-rose-400 bg-rose-500/10 border-rose-500/20 animate-pulse';
+                    glowColor = 'bg-rose-500/10';
                   } else if (isWarning) {
-                    statusText = "Bakım Yaklaştı! ⏰";
-                    statusClass = "text-amber-400 bg-amber-500/10 border-amber-500/20 animate-pulse";
-                    glowColor = "bg-amber-500/5";
+                    statusText = 'Yaklaştı! ⏰';
+                    statusClass = 'text-amber-400 bg-amber-500/10 border-amber-500/20 animate-pulse';
+                    glowColor = 'bg-amber-500/5';
                   }
 
                   return (
-                    <div key={rutin.id} className="glass-panel p-5 rounded-2xl flex flex-col justify-between border-white/5 relative overflow-hidden">
-                      {glowColor && (
-                        <div className={`absolute top-0 right-0 w-32 h-32 ${glowColor} blur-3xl rounded-full`}></div>
-                      )}
-                      <div>
-                        <div className="flex justify-between items-start mb-3">
-                          <span className="text-xs font-semibold py-1 px-2.5 rounded-lg bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                            📂 {rutin.klasor_adi || 'Klasörsüz'}
-                          </span>
-                          <span className={`text-xs font-bold py-1 px-2.5 rounded-lg border ${statusClass}`}>
-                            {statusText}
-                          </span>
+                    <div key={rutin.id} className="glass-panel rounded-xl md:rounded-2xl border-white/5 relative overflow-hidden">
+
+                      {/* MOBİL: Kompakt liste */}
+                      <div className="md:hidden flex items-center gap-3 p-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="text-[10px] font-semibold text-purple-300 bg-purple-500/10 px-1.5 py-0.5 rounded-md truncate max-w-[90px]">
+                              📂 {rutin.klasor_adi || 'Klasörsüz'}
+                            </span>
+                            <span className={`text-[10px] font-bold py-0.5 px-1.5 rounded-md border ${statusClass}`}>
+                              {statusText}
+                            </span>
+                          </div>
+                          <h3 className="text-sm font-bold text-white truncate">{rutin.gorev_adi}</h3>
+                          <p className="text-[10px] text-gray-500 mt-0.5">
+                            {rutin.periyot_ay}ayılık
+                            {nextDate && <span className="ml-1">• {days < 0 ? `${Math.abs(days)}g gecikti` : `${days}g kaldı`}</span>}
+                          </p>
                         </div>
-
-                        <h3 className="text-lg font-bold text-white mb-2">{rutin.gorev_adi}</h3>
-
-                        <div className="space-y-1.5 text-sm text-gray-400">
-                          <div className="flex justify-between">
-                            <span>Periyot:</span>
-                            <span className="font-semibold text-gray-300">{rutin.periyot_ay} Ayda Bir</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Son Yapılma:</span>
-                            <span className="font-semibold text-gray-300">{formatDate(rutin.son_yapilma_tarihi)}</span>
-                          </div>
-                          {nextDate && (
-                            <div className="flex justify-between text-xs text-purple-300 font-medium">
-                              <span>Planlanan Sonraki:</span>
-                              <span>{formatDate(nextDate)} (<span className={days < 0 ? 'text-rose-400 font-bold' : ''}>{days < 0 ? `${Math.abs(days)} Gün Gecikti` : `${days} gün kaldı`}</span>)</span>
-                            </div>
-                          )}
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <button
+                            onClick={() => handleCompleteRutin(rutin.id)}
+                            className="p-1.5 rounded-lg bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-500/20 transition-all cursor-pointer"
+                            title="Yapıldı"
+                          >
+                            <CheckCircle className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => handleEditRutin(rutin)} className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg border border-white/10 transition-all cursor-pointer">
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => handleDeleteRutin(rutin.id)} className="p-1.5 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-lg border border-rose-500/20 transition-all cursor-pointer">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
 
-                      {/* İşlem Butonları */}
-                      <div className="flex gap-2 mt-5 pt-4 border-t border-white/5">
-                        <button
-                          onClick={() => handleCompleteRutin(rutin.id)}
-                          className="flex-1 py-2 rounded-xl bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 font-semibold text-xs border border-emerald-500/20 transition-all cursor-pointer flex justify-center items-center gap-1.5"
-                        >
-                          <CheckCircle className="w-3.5 h-3.5" /> Yapıldı İşaretle
-                        </button>
-                        <button
-                          onClick={() => handleEditRutin(rutin)}
-                          className="p-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl border border-white/10 transition-all cursor-pointer"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteRutin(rutin.id)}
-                          className="p-2 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-xl border border-rose-500/20 transition-all cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                      {/* DESKTOP: Tam kart */}
+                      <div className="hidden md:flex flex-col justify-between p-5 h-full">
+                        {glowColor && (
+                          <div className={`absolute top-0 right-0 w-32 h-32 ${glowColor} blur-3xl rounded-full`}></div>
+                        )}
+                        <div>
+                          <div className="flex justify-between items-start mb-3">
+                            <span className="text-xs font-semibold py-1 px-2.5 rounded-lg bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                              📂 {rutin.klasor_adi || 'Klasörsüz'}
+                            </span>
+                            <span className={`text-xs font-bold py-1 px-2.5 rounded-lg border ${statusClass}`}>
+                              {isOverdue ? 'Bakım Gecikti! ⚠️' : isWarning ? 'Bakım Yaklaştı! ⏰' : 'Durum Stabil ✅'}
+                            </span>
+                          </div>
+                          <h3 className="text-lg font-bold text-white mb-2">{rutin.gorev_adi}</h3>
+                          <div className="space-y-1.5 text-sm text-gray-400">
+                            <div className="flex justify-between"><span>Periyot:</span><span className="font-semibold text-gray-300">{rutin.periyot_ay} Ayda Bir</span></div>
+                            <div className="flex justify-between"><span>Son Yapılma:</span><span className="font-semibold text-gray-300">{formatDate(rutin.son_yapilma_tarihi)}</span></div>
+                            {nextDate && (
+                              <div className="flex justify-between text-xs text-purple-300 font-medium">
+                                <span>Planlanan Sonraki:</span>
+                                <span>{formatDate(nextDate)} (<span className={days < 0 ? 'text-rose-400 font-bold' : ''}>{days < 0 ? `${Math.abs(days)} Gün Gecikti` : `${days} gün kaldı`}</span>)</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex gap-2 mt-5 pt-4 border-t border-white/5">
+                          <button onClick={() => handleCompleteRutin(rutin.id)} className="flex-1 py-2 rounded-xl bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 font-semibold text-xs border border-emerald-500/20 transition-all cursor-pointer flex justify-center items-center gap-1.5">
+                            <CheckCircle className="w-3.5 h-3.5" /> Yapıldı İşaretle
+                          </button>
+                          <button onClick={() => handleEditRutin(rutin)} className="p-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl border border-white/10 transition-all cursor-pointer"><Edit className="w-4 h-4" /></button>
+                          <button onClick={() => handleDeleteRutin(rutin.id)} className="p-2 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-xl border border-rose-500/20 transition-all cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                        </div>
                       </div>
+
                     </div>
                   );
                 })}
@@ -1926,38 +1980,51 @@ function App() {
         </div>
       )}
 
-      {/* MOBİL ALT MENÜ (Sadece küçük ekranlarda görünür) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 glass-panel border-t border-white/10 z-40 px-4 py-2 flex justify-around items-center">
-        {[
-          { id: 'dashboard', icon: LayoutDashboard, label: 'Ana Sayfa' },
-          { id: 'gidalar', icon: Apple, label: 'Gıdalar' },
-          { id: 'faturalar', icon: Receipt, label: 'Faturalar' },
-          { id: 'garantiler', icon: ShieldCheck, label: 'Garantiler' },
-          { id: 'rutinler', icon: RefreshCw, label: 'Rutinler' }
-        ].map((item) => {
-          const Icon = item.icon;
-          const isActive = currentPage === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setCurrentPage(item.id)}
-              className={`flex flex-col items-center gap-0.5 p-1 transition-all ${isActive ? 'text-purple-400' : 'text-gray-500'
+      {/* MOBİL ALT SEKME ÇUBUĞU (Sadece küçük ekranlarda görünür) */}
+      <nav className="md:hidden mobile-bottom-nav fixed bottom-0 left-0 right-0 z-40 glass-panel border-t border-white/10">
+        <div className="flex items-stretch justify-around px-1 py-1">
+          {[
+            { id: 'dashboard', icon: LayoutDashboard, label: 'Ana Sayfa' },
+            { id: 'gidalar', icon: Apple, label: 'Gıdalar' },
+            { id: 'faturalar', icon: Receipt, label: 'Faturalar' },
+            { id: 'garantiler', icon: ShieldCheck, label: 'Garanti' },
+            { id: 'rutinler', icon: RefreshCw, label: 'Rutinler' },
+            { id: 'ayarlar', icon: Settings, label: 'Ayarlar' }
+          ].map((item) => {
+            const Icon = item.icon;
+            const isActive = currentPage === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setCurrentPage(item.id)}
+                className={`relative flex flex-col items-center justify-center gap-0.5 flex-1 py-2 px-0.5 rounded-xl transition-all duration-200 cursor-pointer ${
+                  isActive
+                    ? 'text-purple-400'
+                    : 'text-gray-500 hover:text-gray-300'
                 }`}
-            >
-              <Icon className="w-5 h-5" />
-              <span className="text-[10px] font-semibold">{item.label}</span>
-            </button>
-          );
-        })}
-        <button
-          onClick={() => setCurrentPage('ayarlar')}
-          className={`flex flex-col items-center gap-0.5 p-1 transition-all ${currentPage === 'ayarlar' ? 'text-purple-400' : 'text-gray-500'
-            }`}
-        >
-          <Settings className="w-5 h-5" />
-          <span className="text-[10px] font-semibold">Ayarlar</span>
-        </button>
-      </div>
+              >
+                {/* Aktif göstergesi - üst çizgi */}
+                {isActive && (
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]" />
+                )}
+                {/* İkon arka plan - aktif halde */}
+                <span className={`p-1.5 rounded-lg transition-all duration-200 ${
+                  isActive ? 'bg-purple-500/15' : ''
+                }`}>
+                  <Icon className={`w-4 h-4 transition-all duration-200 ${
+                    isActive ? 'scale-110' : ''
+                  }`} />
+                </span>
+                <span className={`text-[9px] font-semibold leading-none transition-all duration-200 ${
+                  isActive ? 'text-purple-300' : 'text-gray-500'
+                }`}>
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
 
       {/* MODAL: CUSTOM CONFIRM MODAL */}
       {deleteConfirm.show && (

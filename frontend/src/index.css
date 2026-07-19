@@ -7,6 +7,7 @@
     font-family: 'Outfit', 'Inter', sans-serif;
     min-height: 100vh;
     margin: 0;
+    -webkit-overflow-scrolling: touch;
   }
 }
 
@@ -76,4 +77,34 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(192, 132, 252, 0.5);
+}
+
+/* Mobil filtre tabları scrollbar gizle */
+.filter-tabs-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.filter-tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mobil bottom tab bar safe area */
+.mobile-bottom-nav {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Mobil header safe area */
+.mobile-header {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Aktif tab göstergesi animasyonu */
+@keyframes tabPop {
+  0% { transform: scale(0.9) translateY(0); }
+  50% { transform: scale(1.1) translateY(-2px); }
+  100% { transform: scale(1) translateY(0); }
+}
+
+.tab-active-pop {
+  animation: tabPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
