@@ -75,6 +75,7 @@ func main() {
 	api := app.Group("/api", AuthMiddleware(jwtSecret))
 
 	api.Get("/auth/me", h.Me)
+	api.Put("/auth/update-profile", h.UpdateProfile)
 	api.Get("/dashboard-summary", h.GetDashboardSummary)
 
 	// Gıdalar API Rotaları

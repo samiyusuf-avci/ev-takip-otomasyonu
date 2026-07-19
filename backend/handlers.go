@@ -147,6 +147,85 @@ func (h *AppHandler) Me(c *fiber.Ctx) error {
 	return c.JSON(user)
 }
 
+type UpdateProfileReq struct {
+	Isim        string `json:"isim"`
+	Eposta      string `json:"eposta"`
+	MevcutSifre string `json:"mevcut_sifre"`
+	Sifre       string `json:"sifre"`
+}
+
+func (h *AppHandler) UpdateProfile(c *fiber.Ctx) error {
+	userID := c.Locals("userID").(uint)
+	var req UpdateProfileReq
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Geçersiz istek gövdesi."})
+	}
+
+	if req.Isim == "" || req.Eposta == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "İsim ve e-posta alanları boş bırakılamaz."})
+	}
+
+	var user Kullanici
+	if err := h.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Kullanıcı bulunamadı."})
+	}
+
+	epostaLower := strings.ToLower(req.Eposta)
+	if epostaLower != user.Eposta {
+		var existingUser Kullanici
+		err := h.DB.Where("eposta = ? AND id != ?", epostaLower, userID).First(&existingUser).Error
+		if err == nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Bu e-posta adresi başka bir kullanıcı tarafından kullanılıyor."})
+		}
+		user.Eposta = epostaLower
+	}
+
+	user.Isim = req.Isim
+
+	if req.Sifre != "" {
+		if req.MevcutSifre == "" {
+			return c.Status(400).JSON(fiber.Map{"error": "Şifrenizi değiştirmek için lütfen mevcut şifrenizi girin."})
+		}
+
+		// Şifre uzunluğu en az 6 karakter olmalı
+		if len(req.Sifre) < 6 {
+			return c.Status(400).JSON(fiber.Map{"error": "Yeni şifreniz en az 6 karakter olmalıdır."})
+		}
+
+		// Mevcut şifreyi doğrula
+		err := bcrypt.CompareHashAndPassword([]byte(user.Sifre), []byte(req.MevcutSifre))
+		if err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Mevcut şifreniz hatalı."})
+		}
+
+		// Yeni şifrenin mevcut şifreyle aynı olup olmadığını kontrol et
+		errSame := bcrypt.CompareHashAndPassword([]byte(user.Sifre), []byte(req.Sifre))
+		if errSame == nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Yeni şifreniz mevcut şifrenizle aynı olamaz."})
+		}
+
+		// Yeni şifreyi hashle
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Sifre), 10)
+		if err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Şifre şifrelenirken hata oluştu."})
+		}
+		user.Sifre = string(hashedPassword)
+	}
+
+	if err := h.DB.Save(&user).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Profil güncellenirken hata oluştu."})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "Profil başarıyla güncellendi.",
+		"user": fiber.Map{
+			"id":     user.ID,
+			"isim":   user.Isim,
+			"eposta": user.Eposta,
+		},
+	})
+}
+
 // -------------------------------------------------------------
 // DASHBOARD HANDLER
 // -------------------------------------------------------------

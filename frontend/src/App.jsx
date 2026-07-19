@@ -55,6 +55,8 @@ const getStatusColor = (days, limit, durum) => {
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showNotificationMenu, setShowNotificationMenu] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -78,6 +80,21 @@ function App() {
   const [rutinKlasorleri, setRutinKlasorleri] = useState([]);
   const [rutinler, setRutinler] = useState([]);
   const [ayarlar, setAyarlar] = useState({ telegram_token: '', telegram_chat_id: '' });
+  const [profileForm, setProfileForm] = useState({ isim: '', eposta: '', mevcut_sifre: '', sifre: '' });
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setProfileForm({
+        isim: user.isim || '',
+        eposta: user.eposta || '',
+        mevcut_sifre: '',
+        sifre: ''
+      });
+      setShowPasswordForm(false);
+    }
+  }, [user]);
 
   // Filtre Durumları
   const [gidaFiltre, setGidaFiltre] = useState('bekliyor'); // 'hepsi', 'bekliyor', 'tuketildi', 'atildi'
@@ -195,6 +212,44 @@ function App() {
       setAuthError(err.response?.data?.error || 'Giriş veya kayıt başarısız.');
     } finally {
       setAuthLoading(false);
+    }
+  };
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    
+    // Frontend şifre uzunluk doğrulaması
+    if (showPasswordForm) {
+      if (!profileForm.mevcut_sifre || !profileForm.sifre) {
+        showToast('Lütfen tüm şifre alanlarını doldurun.', 'error');
+        document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      if (profileForm.sifre.length < 6) {
+        showToast('Yeni şifreniz en az 6 karakter olmalıdır.', 'error');
+        document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      if (profileForm.mevcut_sifre === profileForm.sifre) {
+        showToast('Yeni şifreniz mevcut şifrenizle aynı olamaz.', 'error');
+        document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+    }
+
+    setProfileLoading(true);
+    try {
+      const res = await API.put('/auth/update-profile', profileForm);
+      setUser(res.data.user);
+      setProfileForm(prev => ({ ...prev, mevcut_sifre: '', sifre: '' }));
+      setShowPasswordForm(false);
+      showToast('Hesap bilgileriniz başarıyla güncellendi!');
+      document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      showToast(err.response?.data?.error || 'Profil güncellenirken hata oluştu.', 'error');
+      document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
+    } finally {
+      setProfileLoading(false);
     }
   };
 
@@ -721,17 +776,94 @@ function App() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={handleTriggerDailyReport}
-            disabled={loading}
+            onClick={() => setShowNotificationMenu(!showNotificationMenu)}
             title="Bildirim Test Et"
             className="p-2 rounded-xl bg-purple-600/10 hover:bg-purple-600/20 text-purple-400 border border-purple-500/20 transition-all cursor-pointer"
           >
             <Bell className="w-4 h-4" />
           </button>
-          <div className="w-8 h-8 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 font-bold text-xs flex items-center justify-center">
+          <button
+            onClick={() => setShowProfileMenu(!showProfileMenu)}
+            title="Hesap Ayarları"
+            className="w-8 h-8 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 active:scale-95 border border-purple-500/20 text-purple-400 font-bold text-xs flex items-center justify-center transition-all cursor-pointer"
+          >
             {user.isim ? user.isim.charAt(0).toUpperCase() : 'U'}
-          </div>
+          </button>
         </div>
+
+        {/* Floating Bildirim Test Açıklama Pop-up */}
+        {showNotificationMenu && (
+          <>
+            {/* Click-away backdrop */}
+            <div 
+              className="fixed inset-0 z-40 bg-transparent w-screen h-screen"
+              onClick={() => setShowNotificationMenu(false)}
+            />
+            
+            <div className="absolute right-14 top-16 z-50 w-64 bg-[#13141f] border border-white/10 p-4 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.8)] animate-scale-in flex flex-col gap-3">
+              <div className="flex items-center gap-2 pb-2 border-b border-white/5 text-purple-400">
+                <Bell className="w-4 h-4 animate-bounce" />
+                <h4 className="text-xs font-bold text-white">Sistem Bildirim Testi 🔔</h4>
+              </div>
+              
+              <p className="text-[10px] text-gray-400 leading-relaxed">
+                Yaklaşan tüm görevleri ve son tarihleri tarayarak Telegram'a anlık durum raporu gönderir.
+              </p>
+
+              <button
+                onClick={async () => {
+                  setShowNotificationMenu(false);
+                  await handleTriggerDailyReport();
+                }}
+                disabled={loading}
+                className="w-full py-2 px-3 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1 shadow-[0_4px_12px_rgba(168,85,247,0.2)]"
+              >
+                {loading ? 'Gönderiliyor...' : 'Raporu Şimdi Gönder'}
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Floating Profil / Hesap Bilgileri Pop-up */}
+        {showProfileMenu && (
+          <>
+            {/* Click-away backdrop (tüm ekranı kaplar ve tıklanınca kapatır) */}
+            <div 
+              className="fixed inset-0 z-40 bg-transparent w-screen h-screen"
+              onClick={() => setShowProfileMenu(false)}
+            />
+            
+            <div className="absolute right-4 top-16 z-50 w-64 bg-[#13141f] border border-white/10 p-4 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.8)] animate-scale-in flex flex-col gap-3">
+              <div className="flex items-center gap-2.5 pb-2.5 border-b border-white/5">
+                <div className="w-9 h-9 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 font-extrabold text-sm flex items-center justify-center flex-shrink-0">
+                  {user.isim ? user.isim.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-white truncate leading-none">{user.isim}</p>
+                  <p className="text-[10px] text-gray-400 truncate mt-1">{user.eposta}</p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <button
+                  onClick={() => { setCurrentPage('ayarlar'); setShowProfileMenu(false); }}
+                  className="w-full flex items-center gap-2 py-2 px-3 text-xs text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left"
+                >
+                  <Settings className="w-3.5 h-3.5 text-gray-400" />
+                  Ayarlar ve Hesap Yönetimi
+                </button>
+                
+                <button
+                  onClick={() => { handleLogout(); setShowProfileMenu(false); }}
+                  className="w-full flex items-center gap-2 py-2 px-3 text-xs text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all text-left border border-rose-500/10"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Oturumu Kapat
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </header>
 
       {/* SOL NAVİGASYON (Sadece desktop'ta görünür) */}
@@ -808,17 +940,17 @@ function App() {
 
       {/* ANA İÇERİK BÖLGESİ */}
       <main className="flex-1 p-4 pt-20 md:pt-10 md:p-10 pb-28 md:pb-10 overflow-y-auto">
-        {/* TOAST / BİLDİRİM BANNERLARI */}
+        {/* TOAST / BİLDİRİM BANNERLARI (Fixed & Her zaman görünür) */}
         {successMsg && (
-          <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center gap-2.5 text-sm animate-fade-in">
+          <div className="fixed top-20 md:top-6 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm p-4 rounded-xl bg-emerald-950 border border-emerald-500/30 text-emerald-400 flex items-center gap-2.5 text-sm shadow-[0_10px_30px_rgba(16,185,129,0.2)] animate-scale-in">
             <CheckCircle className="w-5 h-5 flex-shrink-0" />
-            <span>{successMsg}</span>
+            <span className="font-semibold">{successMsg}</span>
           </div>
         )}
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center gap-2.5 text-sm animate-fade-in">
-            <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-            <span>{error}</span>
+          <div className="fixed top-20 md:top-6 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm p-4 rounded-xl bg-rose-950 border border-rose-500/30 text-rose-400 flex items-center gap-2.5 text-sm shadow-[0_10px_30px_rgba(244,63,94,0.2)] animate-scale-in">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0 animate-pulse" />
+            <span className="font-semibold">{error}</span>
           </div>
         )}
 
@@ -1382,9 +1514,11 @@ function App() {
                   let days = null;
                   if (rutin.son_yapilma_tarihi) {
                     const last = new Date(rutin.son_yapilma_tarihi);
-                    last.setMonth(last.getMonth() + rutin.periyot_ay);
-                    nextDate = last.toISOString().split('T')[0];
-                    days = getDaysDiff(nextDate);
+                    if (!isNaN(last.getTime())) {
+                      last.setMonth(last.getMonth() + parseInt(rutin.periyot_ay || 1, 10));
+                      nextDate = last.toISOString().split('T')[0];
+                      days = getDaysDiff(nextDate);
+                    }
                   }
 
                   const isKmRoutine = rutin.hedef_km && rutin.mevcut_km;
@@ -1496,47 +1630,47 @@ function App() {
             PAGE: AYARLAR
            ------------------------------------------------------------- */}
         {currentPage === 'ayarlar' && (
-          <div className="space-y-6 max-w-2xl">
+          <div className="space-y-4 md:space-y-6 max-w-2xl">
             <div>
-              <h2 className="text-3xl font-bold text-white tracking-tight">Sistem Ayarları ⚙️</h2>
-              <p className="text-gray-400 mt-1">Telegram bot entegrasyonu ve manuel kontrol tetikleyicileri.</p>
+              <h2 className="text-lg md:text-3xl font-bold text-white tracking-tight">Sistem Ayarları ⚙️</h2>
+              <p className="text-xs md:text-sm text-gray-400 mt-0.5">Telegram bot entegrasyonu ve kontrol tetikleyicileri.</p>
             </div>
 
             {/* Telegram Bot Ayarları */}
-            <div className="glass-panel p-6 rounded-2xl border-white/5">
-              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <Bell className="w-5 h-5 text-purple-400" /> Telegram Bildirim Yapılandırması
+            <div className="glass-panel p-4 md:p-6 rounded-2xl border-white/5">
+              <h3 className="text-sm md:text-lg font-bold text-white mb-3 md:mb-4 flex items-center gap-2">
+                <Bell className="w-4 h-4 md:w-5 md:h-5 text-purple-400" /> Telegram Bildirim Yapılandırması
               </h3>
 
-              <form onSubmit={handleSaveAyarlar} className="space-y-4">
+              <form onSubmit={handleSaveAyarlar} className="space-y-3.5">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-300 mb-1.5">Telegram Bot Token</label>
+                  <label className="block text-xs md:text-sm font-semibold text-gray-300 mb-1">Telegram Bot Token</label>
                   <input
                     type="password"
                     placeholder="Botunuzun Token Kodu (örn: 123456:ABC-DEF...)"
                     value={ayarlar.telegram_token}
                     onChange={(e) => setAyarlar({ ...ayarlar, telegram_token: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white text-sm outline-none focus:border-purple-500 transition-all"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none focus:border-purple-500 transition-all"
                   />
-                  <p className="text-xs text-gray-500 mt-1">@BotFather üzerinden aldığınız tokenı buraya yapıştırın.</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">@BotFather üzerinden aldığınız token.</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-300 mb-1.5">Telegram Chat ID</label>
+                  <label className="block text-xs md:text-sm font-semibold text-gray-300 mb-1">Telegram Chat ID</label>
                   <input
                     type="text"
                     placeholder="Alıcı Sohbet/Grup ID (örn: 987654321)"
                     value={ayarlar.telegram_chat_id}
                     onChange={(e) => setAyarlar({ ...ayarlar, telegram_chat_id: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white text-sm outline-none focus:border-purple-500 transition-all"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none focus:border-purple-500 transition-all"
                   />
-                  <p className="text-xs text-gray-500 mt-1">@userinfobot veya @GetMyChatID_Bot yardımıyla Chat ID bilginizi öğrenebilirsiniz.</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">Kişisel veya grup sohbet kimliğiniz (Chat ID).</p>
                 </div>
 
-                <div className="flex gap-3 pt-2">
+                <div className="flex flex-col sm:flex-row gap-2 pt-1">
                   <button
                     type="submit"
-                    className="flex-1 py-3 px-5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl transition-all cursor-pointer text-center glow-btn"
+                    className="flex-1 py-2 md:py-3 px-4 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center glow-btn"
                   >
                     Ayarları Kaydet
                   </button>
@@ -1544,7 +1678,7 @@ function App() {
                     type="button"
                     onClick={handleTestTelegram}
                     disabled={loading}
-                    className="py-3 px-5 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold rounded-xl transition-all cursor-pointer text-center"
+                    className="py-2 md:py-3 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center"
                   >
                     Bağlantıyı Test Et
                   </button>
@@ -1553,43 +1687,128 @@ function App() {
             </div>
 
             {/* Manuel Tetikleyici Paneli */}
-            <div className="glass-panel p-6 rounded-2xl border-white/5">
-              <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
-                <RefreshCw className="w-5 h-5 text-emerald-400" /> Sistem Test Araçları
+            <div className="glass-panel p-4 md:p-6 rounded-2xl border-white/5">
+              <h3 className="text-sm md:text-lg font-bold text-white mb-1.5 flex items-center gap-2">
+                <RefreshCw className="w-4 h-4 md:w-5 md:h-5 text-emerald-400" /> Sistem Test Araçları
               </h3>
-              <p className="text-sm text-gray-400 mb-4">
-                Süresi yaklaşan görevlerin ve son kullanma tarihli ürünlerin kontrolünü gece yarısını beklemeden şimdi tetikleyebilirsiniz.
+              <p className="text-[10px] md:text-sm text-gray-400 mb-3 leading-relaxed">
+                Süresi yaklaşan görevlerin ve son kullanma tarihli ürünlerin kontrolünü gece yarısını beklemeden şimdi tetikleyin.
               </p>
 
               <button
                 onClick={handleTriggerDailyReport}
                 disabled={loading}
-                className="py-3 px-5 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-500/20 font-semibold rounded-xl transition-all cursor-pointer text-sm"
+                className="py-2 md:py-2.5 px-4 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-500/20 font-semibold rounded-xl transition-all cursor-pointer text-xs"
               >
                 Bildirim Taramasını Manuel Başlat
               </button>
             </div>
 
             {/* Hesap Yönetimi (Mobil & Genel) */}
-            <div className="glass-panel p-6 rounded-2xl border-white/5">
-              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <User className="w-5 h-5 text-purple-400" /> Hesap Yönetimi
+            <div className="glass-panel p-4 md:p-6 rounded-2xl border-white/5">
+              <h3 className="text-sm md:text-lg font-bold text-white mb-3 md:mb-4 flex items-center gap-2">
+                <User className="w-4 h-4 md:w-5 md:h-5 text-purple-400" /> Hesap Yönetimi
               </h3>
-              <div className="flex flex-col sm:flex-row justify-between sm:items-center p-4 rounded-xl bg-white/5 border border-white/10 gap-3">
+              
+              <form onSubmit={handleUpdateProfile} className="space-y-3.5">
                 <div>
-                  <p className="text-sm font-bold text-white">{user.isim}</p>
-                  <p className="text-xs text-gray-400">{user.eposta}</p>
+                  <label className="block text-xs md:text-sm font-semibold text-gray-300 mb-1">Ad Soyad</label>
+                  <input
+                    type="text"
+                    required
+                    value={profileForm.isim}
+                    onChange={(e) => setProfileForm({ ...profileForm, isim: e.target.value })}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none focus:border-purple-500 transition-all"
+                  />
                 </div>
-                <button
-                  onClick={handleLogout}
-                  className="py-2.5 px-4 rounded-xl bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 border border-rose-500/20 font-semibold text-xs transition-all cursor-pointer text-center"
-                >
-                  Oturumu Kapat
-                </button>
-              </div>
+
+                <div>
+                  <label className="block text-xs md:text-sm font-semibold text-gray-300 mb-1">E-posta Adresi</label>
+                  <input
+                    type="email"
+                    required
+                    value={profileForm.eposta}
+                    onChange={(e) => setProfileForm({ ...profileForm, eposta: e.target.value })}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none focus:border-purple-500 transition-all"
+                  />
+                </div>
+
+                {/* Şifre Değiştirme Butonu & Alanları */}
+                {!showPasswordForm ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordForm(true)}
+                    className="py-2 px-3 bg-white/5 hover:bg-white/10 text-white border border-white/10 font-semibold rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Lock className="w-3.5 h-3.5 text-purple-400" />
+                    Şifre Değiştir
+                  </button>
+                ) : (
+                  <div className="p-3.5 rounded-xl bg-black/20 border border-white/5 space-y-3 animate-fade-in relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowPasswordForm(false);
+                        setProfileForm(prev => ({ ...prev, mevcut_sifre: '', sifre: '' }));
+                      }}
+                      className="absolute right-3 top-3 text-[10px] text-gray-500 hover:text-gray-400 font-semibold cursor-pointer"
+                    >
+                      İptal Et
+                    </button>
+                    <h4 className="text-xs font-bold text-purple-300 flex items-center gap-1">
+                      <Lock className="w-3.5 h-3.5" /> Güvenli Şifre Değişimi
+                    </h4>
+                    <div>
+                      <label className="block text-[10px] text-gray-400 mb-1 font-semibold">Mevcut Şifre *</label>
+                      <input
+                        type="password"
+                        required={showPasswordForm}
+                        placeholder="Mevcut şifreniz"
+                        value={profileForm.mevcut_sifre}
+                        onChange={(e) => setProfileForm({ ...profileForm, mevcut_sifre: e.target.value })}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-white text-xs outline-none focus:border-purple-500 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-gray-400 mb-1 font-semibold">Yeni Şifre *</label>
+                      <input
+                        type="password"
+                        required={showPasswordForm}
+                        placeholder="En az 6 karakter girin"
+                        value={profileForm.sifre}
+                        onChange={(e) => setProfileForm({ ...profileForm, sifre: e.target.value })}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-white text-xs outline-none focus:border-purple-500 transition-all"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                  <button
+                    type="submit"
+                    disabled={
+                      profileLoading || 
+                      (!(showPasswordForm && profileForm.mevcut_sifre !== '' && profileForm.sifre !== '') &&
+                       profileForm.isim === (user?.isim || '') && 
+                       profileForm.eposta === (user?.eposta || ''))
+                    }
+                    className="flex-1 py-2 md:py-2.5 px-4 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center glow-btn"
+                  >
+                    {profileLoading ? 'Güncelleniyor...' : 'Bilgileri Güncelle'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="py-2 md:py-2.5 px-4 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 border border-rose-500/20 font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center"
+                  >
+                    Oturumu Kapat
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
+
       </main>
 
       {/* -------------------------------------------------------------
