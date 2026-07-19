@@ -709,7 +709,7 @@ function App() {
     <div className="min-h-screen flex flex-col md:flex-row">
 
       {/* MOBİL HEADER (Sadece küçük ekranlarda görünür) */}
-      <header className="md:hidden mobile-header fixed top-0 left-0 right-0 z-40 glass-panel border-b border-white/10 px-4 py-3 flex items-center justify-between">
+      <header className="md:hidden mobile-header fixed top-0 left-0 right-0 z-40 border-b border-white/15 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="p-1.5 bg-purple-500/20 text-purple-400 rounded-lg border border-purple-500/30">
             <RefreshCw className="w-4 h-4 animate-[spin_6s_linear_infinite]" />
@@ -1981,7 +1981,7 @@ function App() {
       )}
 
       {/* MOBİL ALT SEKME ÇUBUĞU (Sadece küçük ekranlarda görünür) */}
-      <nav className="md:hidden mobile-bottom-nav fixed bottom-0 left-0 right-0 z-40 glass-panel border-t border-white/10">
+      <nav className="md:hidden mobile-bottom-nav fixed bottom-0 left-0 right-0 z-40 border-t border-white/15">
         <div className="flex items-stretch justify-around px-1 py-1">
           {[
             { id: 'dashboard', icon: LayoutDashboard, label: 'Ana Sayfa' },
@@ -1996,6 +1996,7 @@ function App() {
             return (
               <button
                 key={item.id}
+                id={`mobile-nav-${item.id}`}
                 onClick={() => setCurrentPage(item.id)}
                 className={`relative flex flex-col items-center justify-center gap-0.5 flex-1 py-2 px-0.5 rounded-xl transition-all duration-200 cursor-pointer ${
                   isActive
