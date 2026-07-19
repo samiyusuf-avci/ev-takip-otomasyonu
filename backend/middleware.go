@@ -22,6 +22,7 @@ func SetupCORS() fiber.Handler {
 	allowedOrigins := []string{
 		"http://localhost:5173",
 		"http://localhost:3000",
+		"https://evtakip.vercel.app",
 	}
 
 	return func(c *fiber.Ctx) error {
