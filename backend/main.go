@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 
 	"github.com/glebarez/sqlite"
 	"github.com/gofiber/fiber/v2"
@@ -20,6 +22,13 @@ func main() {
 	port := getEnv("PORT", "5000")
 	jwtSecret := getEnv("JWT_SECRET", "gizli_anahtar_123")
 	dbPath := getEnv("DATABASE_PATH", "database.sqlite")
+
+	// Veritabanı dosyasının bulunacağı dizinin varlığından emin ol
+	if dir := filepath.Dir(dbPath); dir != "." && dir != "" {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			log.Fatalf("Veritabanı klasörü oluşturulamadı (%s): %v", dir, err)
+		}
+	}
 
 	// Veritabanı bağlantısını aç (CGO gerektirmeyen pure-Go SQLite)
 	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})

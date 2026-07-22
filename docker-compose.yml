@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ev_takip_backend
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - JWT_SECRET=${JWT_SECRET:-gizli_anahtar_123}
+      - DATABASE_PATH=/app/data/database.sqlite
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+    volumes:
+      # Veritabanı sıfırlanmasını engellemek için kalıcı hacim (Persistent Volume)
+      - backend_db_data:/app/data
+    restart: always
+
+volumes:
+  backend_db_data:
+    driver: local

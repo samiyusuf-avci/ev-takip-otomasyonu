@@ -21,6 +21,11 @@ RUN apk --no-cache add ca-certificates tzdata
 
 WORKDIR /app
 
+# Kalıcı veritabanı dizini oluştur ve tanımla
+RUN mkdir -p /app/data
+ENV DATABASE_PATH=/app/data/database.sqlite
+VOLUME ["/app/data"]
+
 # Derlenen çalıştırılabilir dosyayı builder aşamasından kopyala
 COPY --from=builder /app/server .
 

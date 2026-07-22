@@ -1,0 +1,12 @@
+# Docker build sırasında kopyalanmaması gereken dosyalar
+database.sqlite*
+*.sqlite
+*.sqlite3
+*.db
+data/
+node_modules
+.env
+.git
+server
+server.exe
+backend.exe

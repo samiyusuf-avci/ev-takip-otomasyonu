@@ -1,10 +1,21 @@
 # Kök dizin
 node_modules/
 
-# Backend
+# Backend & Veritabanı (SQLite Verilerinin Git'e girmesini kesin olarak engelle)
 /backend/node_modules
 /backend/.env
+*.sqlite
+*.sqlite3
+*.db
+*.sqlite-shm
+*.sqlite-wal
+database.sqlite
 /backend/database.sqlite
+/backend/data/
+/data/
+/backend/server
+/backend/server.exe
+/backend/backend.exe
 
 # Frontend
 /frontend/node_modules
@@ -14,9 +25,11 @@ node_modules/
 /frontend/.env.test.local
 /frontend/.env.production.local
 
-# OS dosyaları
+# OS ve Editör dosyaları
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/
 
 # Logs
 *.log
