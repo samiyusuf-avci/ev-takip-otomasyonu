@@ -1104,24 +1104,36 @@ function App() {
             </div>
 
             {/* FİLTRE TABLARI */}
-            <div className="flex overflow-x-auto filter-tabs-scroll border-b border-white/10">
+            <div className="p-1 bg-white/[0.04] backdrop-blur-xl border border-white/10 rounded-xl flex items-center gap-1 overflow-x-auto filter-tabs-scroll shadow-inner">
               {[
-                { id: 'hepsi', label: 'Tüm Gıdalar' },
-                { id: 'bekliyor', label: 'Bekleyenler ⏰' },
-                { id: 'tuketildi', label: 'Tüketilenler ✅' },
-                { id: 'atildi', label: 'Atılanlar 🗑️' }
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setGidaFiltre(tab.id)}
-                  className={`py-3 px-5 border-b-2 font-semibold text-sm whitespace-nowrap transition-all duration-200 flex-shrink-0 ${gidaFiltre === tab.id
-                    ? 'border-purple-500 text-purple-400 bg-purple-500/5'
-                    : 'border-transparent text-gray-400 hover:text-gray-200'
+                { id: 'hepsi', mobileLabel: 'Tümü', label: 'Tüm Gıdalar', count: Array.isArray(gidalar) ? gidalar.length : 0 },
+                { id: 'bekliyor', mobileLabel: 'Bekleyen ⏰', label: 'Bekleyenler ⏰', count: Array.isArray(gidalar) ? gidalar.filter(g => g.durum === 'bekliyor').length : 0 },
+                { id: 'tuketildi', mobileLabel: 'Tüketilen ✅', label: 'Tüketilenler ✅', count: Array.isArray(gidalar) ? gidalar.filter(g => g.durum === 'tuketildi').length : 0 },
+                { id: 'atildi', mobileLabel: 'Atılan 🗑️', label: 'Atılanlar 🗑️', count: Array.isArray(gidalar) ? gidalar.filter(g => g.durum === 'atildi').length : 0 }
+              ].map((tab) => {
+                const isActive = gidaFiltre === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setGidaFiltre(tab.id)}
+                    className={`flex-1 md:flex-initial px-2 py-1.5 md:px-3.5 md:py-2 rounded-lg md:rounded-xl text-[11px] sm:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1 md:gap-1.5 cursor-pointer flex-shrink-0 select-none ${
+                      isActive
+                        ? 'bg-purple-600 text-white shadow-[0_2px_12px_rgba(147,51,234,0.4)] font-bold scale-[1.01]'
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
                     }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+                  >
+                    <span className="hidden md:inline">{tab.label}</span>
+                    <span className="md:hidden">{tab.mobileLabel}</span>
+                    <span
+                      className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.2 md:py-0.5 rounded-full font-bold transition-colors ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-white/10 text-gray-400'
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* GIDA KARTLARI */}
@@ -1252,23 +1264,35 @@ function App() {
             </div>
 
             {/* FİLTRE TABLARI */}
-            <div className="flex overflow-x-auto filter-tabs-scroll border-b border-white/10">
+            <div className="p-1 bg-white/[0.04] backdrop-blur-xl border border-white/10 rounded-xl flex items-center gap-1 overflow-x-auto filter-tabs-scroll shadow-inner">
               {[
-                { id: 'hepsi', label: 'Tüm Faturalar' },
-                { id: 'odenmedi', label: 'Ödenmeyenler 💵' },
-                { id: 'odendi', label: 'Ödenenler ✅' }
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setFaturaFiltre(tab.id)}
-                  className={`py-3 px-5 border-b-2 font-semibold text-sm whitespace-nowrap transition-all duration-200 flex-shrink-0 ${faturaFiltre === tab.id
-                    ? 'border-purple-500 text-purple-400 bg-purple-500/5'
-                    : 'border-transparent text-gray-400 hover:text-gray-200'
+                { id: 'hepsi', mobileLabel: 'Tümü', label: 'Tüm Faturalar', count: Array.isArray(faturalar) ? faturalar.length : 0 },
+                { id: 'odenmedi', mobileLabel: 'Ödenmeyen 💵', label: 'Ödenmeyenler 💵', count: Array.isArray(faturalar) ? faturalar.filter(f => f.durum === 'odenmedi').length : 0 },
+                { id: 'odendi', mobileLabel: 'Ödenen ✅', label: 'Ödenenler ✅', count: Array.isArray(faturalar) ? faturalar.filter(f => f.durum === 'odendi').length : 0 }
+              ].map((tab) => {
+                const isActive = faturaFiltre === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setFaturaFiltre(tab.id)}
+                    className={`flex-1 md:flex-initial px-2 py-1.5 md:px-3.5 md:py-2 rounded-lg md:rounded-xl text-[11px] sm:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1 md:gap-1.5 cursor-pointer flex-shrink-0 select-none ${
+                      isActive
+                        ? 'bg-purple-600 text-white shadow-[0_2px_12px_rgba(147,51,234,0.4)] font-bold scale-[1.01]'
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
                     }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+                  >
+                    <span className="hidden md:inline">{tab.label}</span>
+                    <span className="md:hidden">{tab.mobileLabel}</span>
+                    <span
+                      className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.2 md:py-0.5 rounded-full font-bold transition-colors ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-white/10 text-gray-400'
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* FATURA KARTLARI */}
@@ -1372,23 +1396,35 @@ function App() {
             </div>
 
             {/* FİLTRE TABLARI */}
-            <div className="flex overflow-x-auto filter-tabs-scroll border-b border-white/10">
+            <div className="p-1 bg-white/[0.04] backdrop-blur-xl border border-white/10 rounded-xl flex items-center gap-1 overflow-x-auto filter-tabs-scroll shadow-inner">
               {[
-                { id: 'hepsi', label: 'Tüm Garantiler' },
-                { id: 'aktif', label: 'Devam Edenler 🛡️' },
-                { id: 'gecen', label: 'Süresi Dolanlar ⏰' }
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setGarantiFiltre(tab.id)}
-                  className={`py-3 px-5 border-b-2 font-semibold text-sm whitespace-nowrap transition-all duration-200 flex-shrink-0 ${garantiFiltre === tab.id
-                    ? 'border-purple-500 text-purple-400 bg-purple-500/5'
-                    : 'border-transparent text-gray-400 hover:text-gray-200'
+                { id: 'hepsi', mobileLabel: 'Tümü', label: 'Tüm Garantiler', count: Array.isArray(garantiler) ? garantiler.length : 0 },
+                { id: 'aktif', mobileLabel: 'Devam Eden 🛡️', label: 'Devam Edenler 🛡️', count: Array.isArray(garantiler) ? garantiler.filter(g => { const d = getDaysDiff(g.garanti_bitis); return d === null || d >= 0; }).length : 0 },
+                { id: 'gecen', mobileLabel: 'Süresi Dolan ⏰', label: 'Süresi Dolanlar ⏰', count: Array.isArray(garantiler) ? garantiler.filter(g => { const d = getDaysDiff(g.garanti_bitis); return d !== null && d < 0; }).length : 0 }
+              ].map((tab) => {
+                const isActive = garantiFiltre === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setGarantiFiltre(tab.id)}
+                    className={`flex-1 md:flex-initial px-2 py-1.5 md:px-3.5 md:py-2 rounded-lg md:rounded-xl text-[11px] sm:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1 md:gap-1.5 cursor-pointer flex-shrink-0 select-none ${
+                      isActive
+                        ? 'bg-purple-600 text-white shadow-[0_2px_12px_rgba(147,51,234,0.4)] font-bold scale-[1.01]'
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
                     }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
+                  >
+                    <span className="hidden md:inline">{tab.label}</span>
+                    <span className="md:hidden">{tab.mobileLabel}</span>
+                    <span
+                      className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.2 md:py-0.5 rounded-full font-bold transition-colors ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-white/10 text-gray-400'
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* GARANTİ KARTLARI */}
@@ -1490,38 +1526,57 @@ function App() {
             </div>
 
             {/* KLASÖR YÖNETİMİ & SEÇİM BARBARI */}
-            <div className="flex overflow-x-auto filter-tabs-scroll gap-2.5 pb-3 border-b border-white/10">
+            <div className="p-1 bg-white/[0.04] backdrop-blur-xl border border-white/10 rounded-xl flex items-center gap-1 overflow-x-auto filter-tabs-scroll shadow-inner">
               <button
                 onClick={() => setSeciliRutinKlasor('hepsi')}
-                className={`py-2 px-4 rounded-xl text-sm font-semibold border transition-all cursor-pointer flex-shrink-0 ${seciliRutinKlasor === 'hepsi'
-                  ? 'bg-purple-600/20 text-purple-300 border-purple-500/30'
-                  : 'bg-white/5 text-gray-400 border-white/5 hover:text-white'
-                  }`}
+                className={`px-2.5 py-1.5 md:px-3.5 md:py-2 rounded-lg md:rounded-xl text-[11px] sm:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1 md:gap-1.5 cursor-pointer flex-shrink-0 select-none ${
+                  seciliRutinKlasor === 'hepsi'
+                    ? 'bg-purple-600 text-white shadow-[0_2px_12px_rgba(147,51,234,0.4)] font-bold scale-[1.01]'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
               >
-                Hepsi
+                <span>Hepsi</span>
+                <span
+                  className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.2 md:py-0.5 rounded-full font-bold transition-colors ${
+                    seciliRutinKlasor === 'hepsi' ? 'bg-white/20 text-white' : 'bg-white/10 text-gray-400'
+                  }`}
+                >
+                  {Array.isArray(rutinler) ? rutinler.length : 0}
+                </span>
               </button>
-              {Array.isArray(rutinKlasorleri) && rutinKlasorleri.map((klasor) => (
-                klasor && klasor.id ? (
+              {Array.isArray(rutinKlasorleri) && rutinKlasorleri.map((klasor) => {
+                if (!klasor || !klasor.id) return null;
+                const isSelected = seciliRutinKlasor === klasor.id.toString();
+                const count = Array.isArray(rutinler) ? rutinler.filter(r => r.klasor_id === klasor.id || r.klasor_id === klasor.id.toString()).length : 0;
+                return (
                   <div key={klasor.id} className="relative flex items-center group flex-shrink-0">
                     <button
                       onClick={() => setSeciliRutinKlasor(klasor.id.toString())}
-                      className={`py-2 pl-4 pr-10 rounded-xl text-sm font-semibold border transition-all cursor-pointer ${seciliRutinKlasor === klasor.id.toString()
-                        ? 'bg-purple-600/20 text-purple-300 border-purple-500/30'
-                        : 'bg-white/5 text-gray-400 border-white/5 hover:text-white'
-                        }`}
+                      className={`px-2.5 py-1.5 pl-2.5 pr-7 md:px-3.5 md:py-2 md:pr-8 rounded-lg md:rounded-xl text-[11px] sm:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-1 md:gap-1.5 cursor-pointer select-none ${
+                        isSelected
+                          ? 'bg-purple-600 text-white shadow-[0_2px_12px_rgba(147,51,234,0.4)] font-bold scale-[1.01]'
+                          : 'text-gray-400 hover:text-white hover:bg-white/5'
+                      }`}
                     >
-                      📂 {klasor.klasor_adi}
+                      <span>📂 {klasor.klasor_adi}</span>
+                      <span
+                        className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.2 md:py-0.5 rounded-full font-bold transition-colors ${
+                          isSelected ? 'bg-white/20 text-white' : 'bg-white/10 text-gray-400'
+                        }`}
+                      >
+                        {count}
+                      </span>
                     </button>
                     <button
                       onClick={() => handleDeleteKlasor(klasor.id)}
-                      className="absolute right-2 text-rose-500 hover:text-rose-400 p-1 rounded hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      className="absolute right-1 text-rose-400 hover:text-rose-300 p-0.5 rounded hover:bg-white/10 opacity-75 group-hover:opacity-100 transition-opacity cursor-pointer"
                       title="Klasörü Sil"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-3 h-3 md:w-3.5 md:h-3.5" />
                     </button>
                   </div>
-                ) : null
-              ))}
+                );
+              })}
             </div>
 
             {/* GÖREV KARTLARI */}

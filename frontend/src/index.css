@@ -79,10 +79,13 @@
   background: rgba(192, 132, 252, 0.5);
 }
 
-/* Mobil filtre tabları scrollbar gizle */
+/* Mobil filtre tabları kaydırma & scrollbar gizleme */
 .filter-tabs-scroll {
   scrollbar-width: none;
   -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  touch-action: pan-x;
 }
 .filter-tabs-scroll::-webkit-scrollbar {
   display: none;
