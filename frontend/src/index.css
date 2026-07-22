@@ -91,7 +91,7 @@
 /* Mobil bottom tab bar safe area */
 .mobile-bottom-nav {
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  background: #0a0b12;
+  background: rgba(10, 11, 18, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.8);
@@ -100,7 +100,7 @@
 /* Mobil header safe area */
 .mobile-header {
   padding-top: calc(10px + env(safe-area-inset-top, 0px));
-  background: #0a0b12;
+  background: rgba(10, 11, 18, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);

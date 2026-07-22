@@ -30,9 +30,11 @@ import {
 // -------------------------------------------------------------
 const getDaysDiff = (dateStr) => {
   if (!dateStr) return null;
+  const safeStr = typeof dateStr === 'string' ? dateStr.replace(' ', 'T') : dateStr;
+  const target = new Date(safeStr);
+  if (isNaN(target.getTime())) return null;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const target = new Date(dateStr);
   target.setHours(0, 0, 0, 0);
   const diff = target - today;
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
@@ -40,7 +42,9 @@ const getDaysDiff = (dateStr) => {
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '-';
-  const date = new Date(dateStr);
+  const safeStr = typeof dateStr === 'string' ? dateStr.replace(' ', 'T') : dateStr;
+  const date = new Date(safeStr);
+  if (isNaN(date.getTime())) return '-';
   return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
 };
 
@@ -123,7 +127,8 @@ function App() {
   }, [garantiler, garantiFiltre]);
 
   const filteredRutinler = useMemo(() => {
-    return rutinler.filter((r) => seciliRutinKlasor === 'hepsi' || r.klasor_id?.toString() === seciliRutinKlasor);
+    if (!Array.isArray(rutinler)) return [];
+    return rutinler.filter((r) => r && (seciliRutinKlasor === 'hepsi' || r.klasor_id?.toString() === seciliRutinKlasor));
   }, [rutinler, seciliRutinKlasor]);
 
   // Form Modalları ve State'leri
@@ -270,18 +275,18 @@ function App() {
         await fetchDashboardSummary();
       } else if (currentPage === 'gidalar') {
         const res = await API.get('/gidalar');
-        setGidalar(res.data);
+        setGidalar(Array.isArray(res.data) ? res.data : []);
       } else if (currentPage === 'faturalar') {
         const res = await API.get('/faturalar');
-        setFaturalar(res.data);
+        setFaturalar(Array.isArray(res.data) ? res.data : []);
       } else if (currentPage === 'garantiler') {
         const res = await API.get('/garantiler');
-        setGarantiler(res.data);
+        setGarantiler(Array.isArray(res.data) ? res.data : []);
       } else if (currentPage === 'rutinler') {
         const foldersRes = await API.get('/rutin_klasorleri');
         const routinesRes = await API.get('/rutinler');
-        setRutinKlasorleri(foldersRes.data);
-        setRutinler(routinesRes.data);
+        setRutinKlasorleri(Array.isArray(foldersRes.data) ? foldersRes.data : []);
+        setRutinler(Array.isArray(routinesRes.data) ? routinesRes.data : []);
       } else if (currentPage === 'ayarlar') {
         const res = await API.get('/ayarlar');
         setAyarlar({
@@ -1218,6 +1223,11 @@ function App() {
                     </div>
                   );
                 })}
+              {filteredGidalar.length === 0 && (
+                <div className="col-span-full py-8 text-center glass-panel rounded-2xl border-white/5">
+                  <p className="text-gray-500 text-sm">Gösterilecek gıda kaydı bulunmuyor.</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1333,6 +1343,11 @@ function App() {
                     </div>
                   );
                 })}
+              {filteredFaturalar.length === 0 && (
+                <div className="col-span-full py-8 text-center glass-panel rounded-2xl border-white/5">
+                  <p className="text-gray-500 text-sm">Gösterilecek fatura kaydı bulunmuyor.</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1475,49 +1490,60 @@ function App() {
             </div>
 
             {/* KLASÖR YÖNETİMİ & SEÇİM BARBARI */}
-            <div className="flex flex-wrap gap-2.5 pb-4 border-b border-white/10">
+            <div className="flex overflow-x-auto filter-tabs-scroll gap-2.5 pb-3 border-b border-white/10">
               <button
                 onClick={() => setSeciliRutinKlasor('hepsi')}
-                className={`py-2 px-4 rounded-xl text-sm font-semibold border transition-all cursor-pointer ${seciliRutinKlasor === 'hepsi'
+                className={`py-2 px-4 rounded-xl text-sm font-semibold border transition-all cursor-pointer flex-shrink-0 ${seciliRutinKlasor === 'hepsi'
                   ? 'bg-purple-600/20 text-purple-300 border-purple-500/30'
                   : 'bg-white/5 text-gray-400 border-white/5 hover:text-white'
                   }`}
               >
                 Hepsi
               </button>
-              {rutinKlasorleri.map((klasor) => (
-                <div key={klasor.id} className="relative flex items-center group">
-                  <button
-                    onClick={() => setSeciliRutinKlasor(klasor.id.toString())}
-                    className={`py-2 pl-4 pr-10 rounded-xl text-sm font-semibold border transition-all cursor-pointer ${seciliRutinKlasor === klasor.id.toString()
-                      ? 'bg-purple-600/20 text-purple-300 border-purple-500/30'
-                      : 'bg-white/5 text-gray-400 border-white/5 hover:text-white'
-                      }`}
-                  >
-                    📂 {klasor.klasor_adi}
-                  </button>
-                  <button
-                    onClick={() => handleDeleteKlasor(klasor.id)}
-                    className="absolute right-2 text-rose-500 hover:text-rose-400 p-1 rounded hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                    title="Klasörü Sil"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+              {Array.isArray(rutinKlasorleri) && rutinKlasorleri.map((klasor) => (
+                klasor && klasor.id ? (
+                  <div key={klasor.id} className="relative flex items-center group flex-shrink-0">
+                    <button
+                      onClick={() => setSeciliRutinKlasor(klasor.id.toString())}
+                      className={`py-2 pl-4 pr-10 rounded-xl text-sm font-semibold border transition-all cursor-pointer ${seciliRutinKlasor === klasor.id.toString()
+                        ? 'bg-purple-600/20 text-purple-300 border-purple-500/30'
+                        : 'bg-white/5 text-gray-400 border-white/5 hover:text-white'
+                        }`}
+                    >
+                      📂 {klasor.klasor_adi}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteKlasor(klasor.id)}
+                      className="absolute right-2 text-rose-500 hover:text-rose-400 p-1 rounded hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      title="Klasörü Sil"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : null
               ))}
             </div>
 
             {/* GÖREV KARTLARI */}
             <div className="space-y-2 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
               {filteredRutinler.map((rutin) => {
+                  if (!rutin || !rutin.id) return null;
                   let nextDate = null;
                   let days = null;
                   if (rutin.son_yapilma_tarihi) {
-                    const last = new Date(rutin.son_yapilma_tarihi);
-                    if (!isNaN(last.getTime())) {
-                      last.setMonth(last.getMonth() + parseInt(rutin.periyot_ay || 1, 10));
-                      nextDate = last.toISOString().split('T')[0];
-                      days = getDaysDiff(nextDate);
+                    const safeStr = typeof rutin.son_yapilma_tarihi === 'string' ? rutin.son_yapilma_tarihi.replace(' ', 'T') : rutin.son_yapilma_tarihi;
+                    const last = new Date(safeStr);
+                    const periyot = parseInt(rutin.periyot_ay, 10) || 1;
+                    if (!isNaN(last.getTime()) && !isNaN(periyot)) {
+                      last.setMonth(last.getMonth() + periyot);
+                      if (!isNaN(last.getTime())) {
+                        try {
+                          nextDate = last.toISOString().split('T')[0];
+                          days = getDaysDiff(nextDate);
+                        } catch (e) {
+                          console.error("Date formatting error:", e);
+                        }
+                      }
                     }
                   }
 
@@ -1529,7 +1555,7 @@ function App() {
 
                   if (days !== null && days < 0) isOverdue = true;
                   if (!isOverdue) {
-                    if (days !== null && days <= rutin.hatirlatma_gun_kala) isWarning = true;
+                    if (days !== null && days <= (rutin.hatirlatma_gun_kala || 15)) isWarning = true;
                     else if (!rutin.son_yapilma_tarihi) isWarning = true;
                   }
 
@@ -1563,8 +1589,8 @@ function App() {
                           </div>
                           <h3 className="text-sm font-bold text-white truncate">{rutin.gorev_adi}</h3>
                           <p className="text-[10px] text-gray-500 mt-0.5">
-                            {rutin.periyot_ay}ayılık
-                            {nextDate && <span className="ml-1">• {days < 0 ? `${Math.abs(days)}g gecikti` : `${days}g kaldı`}</span>}
+                            {rutin.periyot_ay} Ayda Bir
+                            {nextDate && days !== null && <span className="ml-1">• {days < 0 ? `${Math.abs(days)}g gecikti` : `${days}g kaldı`}</span>}
                           </p>
                         </div>
                         <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -1605,7 +1631,7 @@ function App() {
                             {nextDate && (
                               <div className="flex justify-between text-xs text-purple-300 font-medium">
                                 <span>Planlanan Sonraki:</span>
-                                <span>{formatDate(nextDate)} (<span className={days < 0 ? 'text-rose-400 font-bold' : ''}>{days < 0 ? `${Math.abs(days)} Gün Gecikti` : `${days} gün kaldı`}</span>)</span>
+                                <span>{formatDate(nextDate)} (<span className={days !== null && days < 0 ? 'text-rose-400 font-bold' : ''}>{days !== null ? (days < 0 ? `${Math.abs(days)} Gün Gecikti` : `${days} gün kaldı`) : '-'}</span>)</span>
                               </div>
                             )}
                           </div>
@@ -1622,6 +1648,11 @@ function App() {
                     </div>
                   );
                 })}
+              {filteredRutinler.length === 0 && (
+                <div className="col-span-full py-8 text-center glass-panel rounded-2xl border-white/5">
+                  <p className="text-gray-500 text-sm">Gösterilecek rutin görev bulunmuyor.</p>
+                </div>
+              )}
             </div>
           </div>
         )}
