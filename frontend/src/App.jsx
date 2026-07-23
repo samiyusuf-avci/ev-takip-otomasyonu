@@ -23,7 +23,8 @@ import {
   Mail,
   Lock,
   LogOut,
-  Send
+  Send,
+  MoreVertical
 } from 'lucide-react';
 
 // -------------------------------------------------------------
@@ -167,8 +168,10 @@ function App() {
   const [garantiForm, setGarantiForm] = useState({ cihaz_adi: '', marka_model: '', garanti_bitis: '', hatirlatma_gun_kala: 30, notlar: '' });
   const [editingGaranti, setEditingGaranti] = useState(null);
 
+  const [showKlasorYonetimModal, setShowKlasorYonetimModal] = useState(false);
   const [showKlasorModal, setShowKlasorModal] = useState(false);
   const [klasorForm, setKlasorForm] = useState({ klasor_adi: '' });
+  const [editingKlasor, setEditingKlasor] = useState(null);
 
   const [showRutinModal, setShowRutinModal] = useState(false);
   const [rutinForm, setRutinForm] = useState({ klasor_id: '', gorev_adi: '', periyot_ay: '', hatirlatma_gun_kala: 15, son_yapilma_tarihi: '' });
@@ -556,14 +559,26 @@ function App() {
   const handleSaveKlasor = async (e) => {
     e.preventDefault();
     try {
-      await API.post('/rutin_klasorleri', klasorForm);
-      showToast('Rutin klasörü oluşturuldu.');
+      if (editingKlasor) {
+        await API.put(`/rutin_klasorleri/${editingKlasor.id}`, klasorForm);
+        showToast('Klasör adı güncellendi.');
+      } else {
+        await API.post('/rutin_klasorleri', klasorForm);
+        showToast('Rutin klasörü oluşturuldu.');
+      }
       setShowKlasorModal(false);
+      setEditingKlasor(null);
       setKlasorForm({ klasor_adi: '' });
       fetchData();
     } catch (err) {
-      showToast('Klasör oluşturulurken hata oluştu.', 'error');
+      showToast('Klasör kaydedilirken hata oluştu.', 'error');
     }
+  };
+
+  const handleEditKlasor = (klasor) => {
+    setEditingKlasor(klasor);
+    setKlasorForm({ klasor_adi: klasor.klasor_adi });
+    setShowKlasorModal(true);
   };
 
   const handleDeleteKlasor = (id) => {
@@ -1180,7 +1195,7 @@ function App() {
             </div>
 
             {/* FİLTRE TABLARI */}
-            <div className="p-1 bg-white/[0.04] backdrop-blur-xl border border-white/10 rounded-xl flex items-center gap-1 overflow-x-auto filter-tabs-scroll shadow-inner w-full min-w-0">
+            <div className="p-1.5 bg-black/30 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center gap-1.5 overflow-x-auto filter-tabs-scroll shadow-inner w-full min-w-0">
               {[
                 { id: 'hepsi', mobileLabel: 'Tümü', label: 'Tüm Gıdalar', count: Array.isArray(gidalar) ? gidalar.length : 0 },
                 { id: 'bekliyor', mobileLabel: 'Bekleyen ⏰', label: 'Bekleyenler ⏰', count: Array.isArray(gidalar) ? gidalar.filter(g => g.durum === 'bekliyor').length : 0 },
@@ -1192,17 +1207,17 @@ function App() {
                   <button
                     key={tab.id}
                     onClick={() => setGidaFiltre(tab.id)}
-                    className={`flex-1 md:flex-initial px-1.5 py-1.5 xs:px-2 md:px-3.5 md:py-2 rounded-lg md:rounded-xl text-[10.5px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-0.5 sm:gap-1.5 cursor-pointer select-none ${
+                    className={`flex-1 md:flex-initial px-2.5 py-2 xs:px-3 md:px-4 md:py-2 rounded-xl text-[11px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer select-none border ${
                       isActive
-                        ? 'bg-purple-600 text-white shadow-[0_2px_12px_rgba(147,51,234,0.4)] font-bold scale-[1.01]'
-                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                        ? 'bg-purple-600 text-white border-purple-400/30 shadow-[0_2px_14px_rgba(147,51,234,0.45)] font-bold scale-[1.01]'
+                        : 'bg-white/[0.05] border-white/10 text-gray-300 hover:bg-purple-500/20 hover:border-purple-500/30 hover:text-purple-200'
                     }`}
                   >
                     <span className="hidden md:inline">{tab.label}</span>
                     <span className="md:hidden">{tab.mobileLabel}</span>
                     <span
-                      className={`text-[9px] sm:text-[10px] md:text-xs px-1 py-0.2 sm:px-1.5 md:py-0.5 rounded-full font-bold transition-colors ${
-                        isActive ? 'bg-white/20 text-white' : 'bg-white/10 text-gray-400'
+                      className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-bold transition-colors ${
+                        isActive ? 'bg-white/20 text-white border border-white/20' : 'bg-white/10 text-gray-300 border border-white/5'
                       }`}
                     >
                       {tab.count}
@@ -1340,7 +1355,7 @@ function App() {
             </div>
 
             {/* FİLTRE TABLARI */}
-            <div className="p-1 bg-white/[0.04] backdrop-blur-xl border border-white/10 rounded-xl flex items-center gap-1 overflow-x-auto filter-tabs-scroll shadow-inner w-full min-w-0">
+            <div className="p-1.5 bg-black/30 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center gap-1.5 overflow-x-auto filter-tabs-scroll shadow-inner w-full min-w-0">
               {[
                 { id: 'hepsi', mobileLabel: 'Tümü', label: 'Tüm Faturalar', count: Array.isArray(faturalar) ? faturalar.length : 0 },
                 { id: 'odenmedi', mobileLabel: 'Ödenmeyen 💵', label: 'Ödenmeyenler 💵', count: Array.isArray(faturalar) ? faturalar.filter(f => f.durum === 'odenmedi').length : 0 },
@@ -1351,17 +1366,17 @@ function App() {
                   <button
                     key={tab.id}
                     onClick={() => setFaturaFiltre(tab.id)}
-                    className={`flex-1 md:flex-initial px-1.5 py-1.5 xs:px-2 md:px-3.5 md:py-2 rounded-lg md:rounded-xl text-[10.5px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-0.5 sm:gap-1.5 cursor-pointer select-none ${
+                    className={`flex-1 md:flex-initial px-2.5 py-2 xs:px-3 md:px-4 md:py-2 rounded-xl text-[11px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer select-none border ${
                       isActive
-                        ? 'bg-purple-600 text-white shadow-[0_2px_12px_rgba(147,51,234,0.4)] font-bold scale-[1.01]'
-                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                        ? 'bg-purple-600 text-white border-purple-400/30 shadow-[0_2px_14px_rgba(147,51,234,0.45)] font-bold scale-[1.01]'
+                        : 'bg-white/[0.05] border-white/10 text-gray-300 hover:bg-purple-500/20 hover:border-purple-500/30 hover:text-purple-200'
                     }`}
                   >
                     <span className="hidden md:inline">{tab.label}</span>
                     <span className="md:hidden">{tab.mobileLabel}</span>
                     <span
-                      className={`text-[9px] sm:text-[10px] md:text-xs px-1 py-0.2 sm:px-1.5 md:py-0.5 rounded-full font-bold transition-colors ${
-                        isActive ? 'bg-white/20 text-white' : 'bg-white/10 text-gray-400'
+                      className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-bold transition-colors ${
+                        isActive ? 'bg-white/20 text-white border border-white/20' : 'bg-white/10 text-gray-300 border border-white/5'
                       }`}
                     >
                       {tab.count}
@@ -1472,7 +1487,7 @@ function App() {
             </div>
 
             {/* FİLTRE TABLARI */}
-            <div className="p-1 bg-white/[0.04] backdrop-blur-xl border border-white/10 rounded-xl flex items-center gap-1 overflow-x-auto filter-tabs-scroll shadow-inner w-full min-w-0">
+            <div className="p-1.5 bg-black/30 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center gap-1.5 overflow-x-auto filter-tabs-scroll shadow-inner w-full min-w-0">
               {[
                 { id: 'hepsi', mobileLabel: 'Tümü', label: 'Tüm Garantiler', count: Array.isArray(garantiler) ? garantiler.length : 0 },
                 { id: 'aktif', mobileLabel: 'Devam Eden 🛡️', label: 'Devam Edenler 🛡️', count: Array.isArray(garantiler) ? garantiler.filter(g => { const d = getDaysDiff(g.garanti_bitis); return d === null || d >= 0; }).length : 0 },
@@ -1483,17 +1498,17 @@ function App() {
                   <button
                     key={tab.id}
                     onClick={() => setGarantiFiltre(tab.id)}
-                    className={`flex-1 md:flex-initial px-1.5 py-1.5 xs:px-2 md:px-3.5 md:py-2 rounded-lg md:rounded-xl text-[10.5px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-0.5 sm:gap-1.5 cursor-pointer select-none ${
+                    className={`flex-1 md:flex-initial px-2.5 py-2 xs:px-3 md:px-4 md:py-2 rounded-xl text-[11px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer select-none border ${
                       isActive
-                        ? 'bg-purple-600 text-white shadow-[0_2px_12px_rgba(147,51,234,0.4)] font-bold scale-[1.01]'
-                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                        ? 'bg-purple-600 text-white border-purple-400/30 shadow-[0_2px_14px_rgba(147,51,234,0.45)] font-bold scale-[1.01]'
+                        : 'bg-white/[0.05] border-white/10 text-gray-300 hover:bg-purple-500/20 hover:border-purple-500/30 hover:text-purple-200'
                     }`}
                   >
                     <span className="hidden md:inline">{tab.label}</span>
                     <span className="md:hidden">{tab.mobileLabel}</span>
                     <span
-                      className={`text-[9px] sm:text-[10px] md:text-xs px-1 py-0.2 sm:px-1.5 md:py-0.5 rounded-full font-bold transition-colors ${
-                        isActive ? 'bg-white/20 text-white' : 'bg-white/10 text-gray-400'
+                      className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-bold transition-colors ${
+                        isActive ? 'bg-white/20 text-white border border-white/20' : 'bg-white/10 text-gray-300 border border-white/5'
                       }`}
                     >
                       {tab.count}
@@ -1585,11 +1600,11 @@ function App() {
               </div>
               <div className="flex gap-2 flex-shrink-0">
                 <button
-                  onClick={() => { setKlasorForm({ klasor_adi: '' }); setShowKlasorModal(true); }}
-                  className="flex items-center gap-1 py-2 px-2.5 md:px-4 bg-white/5 hover:bg-white/10 text-white border border-white/10 font-semibold rounded-xl text-sm transition-all duration-200 cursor-pointer"
+                  onClick={() => setShowKlasorYonetimModal(true)}
+                  className="flex items-center gap-1.5 py-2 px-2.5 md:px-4 bg-white/5 hover:bg-white/10 text-white border border-white/10 font-semibold rounded-xl text-sm transition-all duration-200 cursor-pointer"
                 >
-                  <FolderPlus className="w-4 h-4 text-purple-400" />
-                  <span className="hidden md:inline">Klasör Oluştur</span>
+                  <Settings className="w-4 h-4 text-purple-400" />
+                  <span className="hidden md:inline">Klasör Yönetimi</span>
                 </button>
                 <button
                   onClick={() => { setEditingRutin(null); setRutinForm({ klasor_id: seciliRutinKlasor === 'hepsi' ? '' : seciliRutinKlasor, gorev_adi: '', periyot_ay: '', hatirlatma_gun_kala: 15, son_yapilma_tarihi: '' }); setShowRutinModal(true); }}
@@ -1602,19 +1617,19 @@ function App() {
             </div>
 
             {/* KLASÖR YÖNETİMİ & SEÇİM BARBARI */}
-            <div className="p-1 bg-white/[0.04] backdrop-blur-xl border border-white/10 rounded-xl flex items-center gap-1 overflow-x-auto filter-tabs-scroll shadow-inner w-full min-w-0">
+            <div className="p-1.5 bg-black/30 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center gap-1.5 overflow-x-auto filter-tabs-scroll shadow-inner w-full min-w-0">
               <button
                 onClick={() => setSeciliRutinKlasor('hepsi')}
-                className={`px-2 py-1.5 sm:px-3.5 sm:py-2 rounded-lg md:rounded-xl text-[10.5px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-0.5 sm:gap-1.5 cursor-pointer flex-shrink-0 select-none ${
+                className={`px-2.5 py-2 sm:px-4 sm:py-2 rounded-xl text-[11px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer flex-shrink-0 select-none border ${
                   seciliRutinKlasor === 'hepsi'
-                    ? 'bg-purple-600 text-white shadow-[0_2px_12px_rgba(147,51,234,0.4)] font-bold scale-[1.01]'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    ? 'bg-purple-600 text-white border-purple-400/30 shadow-[0_2px_14px_rgba(147,51,234,0.45)] font-bold scale-[1.01]'
+                    : 'bg-white/[0.05] border-white/10 text-gray-300 hover:bg-purple-500/20 hover:border-purple-500/30 hover:text-purple-200'
                 }`}
               >
                 <span>Hepsi</span>
                 <span
-                  className={`text-[9px] sm:text-[10px] md:text-xs px-1 py-0.2 sm:px-1.5 md:py-0.5 rounded-full font-bold transition-colors ${
-                    seciliRutinKlasor === 'hepsi' ? 'bg-white/20 text-white' : 'bg-white/10 text-gray-400'
+                  className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-bold transition-colors ${
+                    seciliRutinKlasor === 'hepsi' ? 'bg-white/20 text-white border border-white/20' : 'bg-white/10 text-gray-300 border border-white/5'
                   }`}
                 >
                   {Array.isArray(rutinler) ? rutinler.length : 0}
@@ -1625,32 +1640,24 @@ function App() {
                 const isSelected = seciliRutinKlasor === klasor.id.toString();
                 const count = Array.isArray(rutinler) ? rutinler.filter(r => r.klasor_id === klasor.id || r.klasor_id === klasor.id.toString()).length : 0;
                 return (
-                  <div key={klasor.id} className="relative flex items-center group flex-shrink-0">
-                    <button
-                      onClick={() => setSeciliRutinKlasor(klasor.id.toString())}
-                      className={`px-2 py-1.5 pl-2 pr-6 sm:px-3.5 sm:py-2 sm:pr-8 rounded-lg md:rounded-xl text-[10.5px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-0.5 sm:gap-1.5 cursor-pointer select-none ${
-                        isSelected
-                          ? 'bg-purple-600 text-white shadow-[0_2px_12px_rgba(147,51,234,0.4)] font-bold scale-[1.01]'
-                          : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  <button
+                    key={klasor.id}
+                    onClick={() => setSeciliRutinKlasor(klasor.id.toString())}
+                    className={`px-2.5 py-2 sm:px-4 sm:py-2 rounded-xl text-[11px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 cursor-pointer flex-shrink-0 select-none border ${
+                      isSelected
+                        ? 'bg-purple-600 text-white border-purple-400/30 shadow-[0_2px_14px_rgba(147,51,234,0.45)] font-bold scale-[1.01]'
+                        : 'bg-white/[0.05] border-white/10 text-gray-300 hover:bg-purple-500/20 hover:border-purple-500/30 hover:text-purple-200'
+                    }`}
+                  >
+                    <span>📂 {klasor.klasor_adi}</span>
+                    <span
+                      className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-bold transition-colors ${
+                        isSelected ? 'bg-white/20 text-white border border-white/20' : 'bg-white/10 text-gray-300 border border-white/5'
                       }`}
                     >
-                      <span>📂 {klasor.klasor_adi}</span>
-                      <span
-                        className={`text-[9px] sm:text-[10px] md:text-xs px-1 py-0.2 sm:px-1.5 md:py-0.5 rounded-full font-bold transition-colors ${
-                          isSelected ? 'bg-white/20 text-white' : 'bg-white/10 text-gray-400'
-                        }`}
-                      >
-                        {count}
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => handleDeleteKlasor(klasor.id)}
-                      className="absolute right-1 text-rose-400 hover:text-rose-300 p-0.5 rounded hover:bg-white/10 opacity-75 group-hover:opacity-100 transition-opacity cursor-pointer"
-                      title="Klasörü Sil"
-                    >
-                      <Trash2 className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                    </button>
-                  </div>
+                      {count}
+                    </span>
+                  </button>
                 );
               })}
             </div>
@@ -2369,11 +2376,97 @@ function App() {
         </div>
       )}
 
-      {/* MODAL: KLASÖR OLUŞTUR */}
+      {/* MODAL: KLASÖR YÖNETİMİ */}
+      {showKlasorYonetimModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="glass-panel w-full max-w-md p-6 rounded-3xl relative border border-white/10 shadow-2xl animate-scale-in">
+            <div className="flex items-center justify-between mb-5 border-b border-white/10 pb-3">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <FolderPlus className="w-5 h-5 text-purple-400" /> Klasör Yönetimi 📂
+              </h3>
+              <button
+                onClick={() => setShowKlasorYonetimModal(false)}
+                className="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-2.5 max-h-[55vh] overflow-y-auto pr-1">
+              {Array.isArray(rutinKlasorleri) && rutinKlasorleri.length > 0 ? (
+                rutinKlasorleri.map((klasor) => {
+                  const count = Array.isArray(rutinler) ? rutinler.filter(r => r.klasor_id === klasor.id || r.klasor_id === klasor.id.toString()).length : 0;
+                  return (
+                    <div
+                      key={klasor.id}
+                      className="flex items-center justify-between p-3 rounded-2xl bg-white/[0.04] border border-white/10 hover:border-purple-500/30 transition-all"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="text-base">📂</span>
+                        <div className="truncate">
+                          <h4 className="text-sm font-bold text-white truncate">{klasor.klasor_adi}</h4>
+                          <p className="text-[11px] text-gray-400">{count} rutin görev</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <button
+                          onClick={() => {
+                            setShowKlasorYonetimModal(false);
+                            handleEditKlasor(klasor);
+                          }}
+                          className="p-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/20 transition-all cursor-pointer flex items-center gap-1 text-xs font-semibold"
+                          title="Klasör Adını Düzenle"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                          <span>Düzenle</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setShowKlasorYonetimModal(false);
+                            handleDeleteKlasor(klasor.id);
+                          }}
+                          className="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-all cursor-pointer flex items-center gap-1 text-xs font-semibold"
+                          title="Klasörü Sil"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Sil</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center py-6 text-gray-400 text-sm">
+                  Henüz bir rutin klasörü eklenmemiş.
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5 pt-3 border-t border-white/10 flex gap-3">
+              <button
+                onClick={() => {
+                  setShowKlasorYonetimModal(false);
+                  setEditingKlasor(null);
+                  setKlasorForm({ klasor_adi: '' });
+                  setShowKlasorModal(true);
+                }}
+                className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-sm transition-all cursor-pointer flex items-center justify-center gap-2 glow-btn"
+              >
+                <FolderPlus className="w-4 h-4" />
+                <span>Yeni Klasör Oluştur</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: KLASÖR OLUŞTUR / DÜZENLE */}
       {showKlasorModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
           <div className="glass-panel w-full max-w-sm p-6 rounded-3xl relative">
-            <h3 className="text-xl font-bold text-white mb-4">Yeni Rutin Klasörü 📂</h3>
+            <h3 className="text-xl font-bold text-white mb-4">{editingKlasor ? 'Klasör Adını Düzenle 📂' : 'Yeni Rutin Klasörü 📂'}</h3>
             <form onSubmit={handleSaveKlasor} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-400 mb-1">Klasör Adı *</label>
@@ -2390,7 +2483,7 @@ function App() {
               <div className="flex gap-3 pt-3">
                 <button
                   type="button"
-                  onClick={() => setShowKlasorModal(false)}
+                  onClick={() => { setShowKlasorModal(false); setEditingKlasor(null); }}
                   className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl font-semibold border border-white/10 transition-all cursor-pointer text-sm"
                 >
                   Vazgeç
@@ -2399,7 +2492,7 @@ function App() {
                   type="submit"
                   className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-semibold transition-all cursor-pointer text-sm glow-btn"
                 >
-                  Oluştur
+                  {editingKlasor ? 'Güncelle' : 'Oluştur'}
                 </button>
               </div>
             </form>

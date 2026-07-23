@@ -623,6 +623,36 @@ func (h *AppHandler) CreateRutinKlasor(c *fiber.Ctx) error {
 	return c.Status(201).JSON(klasor)
 }
 
+func (h *AppHandler) UpdateRutinKlasor(c *fiber.Ctx) error {
+	userID := c.Locals("userID").(uint)
+	id, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Geçersiz ID."})
+	}
+
+	var updateData RutinKlasor
+	if err := c.BodyParser(&updateData); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Geçersiz veri biçimi."})
+	}
+
+	if updateData.KlasorAdi == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Klasör adı gereklidir."})
+	}
+
+	var klasor RutinKlasor
+	if err := h.DB.Where("id = ? AND kullanici_id = ?", id, userID).First(&klasor).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Klasör bulunamadı."})
+	}
+
+	klasor.KlasorAdi = updateData.KlasorAdi
+
+	if err := h.DB.Save(&klasor).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{"message": "Klasör adı başarıyla güncellendi.", "klasor": klasor})
+}
+
 func (h *AppHandler) DeleteRutinKlasor(c *fiber.Ctx) error {
 	userID := c.Locals("userID").(uint)
 	id, err := strconv.Atoi(c.Params("id"))

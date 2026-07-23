@@ -108,6 +108,7 @@ func main() {
 	// Rutin Klasörleri API Rotaları
 	api.Get("/rutin_klasorleri", h.GetRutinKlasorleri)
 	api.Post("/rutin_klasorleri", h.CreateRutinKlasor)
+	api.Put("/rutin_klasorleri/:id", h.UpdateRutinKlasor)
 	api.Delete("/rutin_klasorleri/:id", h.DeleteRutinKlasor)
 
 	// Rutinler API Rotaları
