@@ -141,7 +141,9 @@ func checkAndNotify(db *gorm.DB) (bool, int, int, error) {
 				days, err := getDaysRemaining(gida.SKT)
 				if err == nil {
 					if days < 0 {
-						gidaAlerts = append(gidaAlerts, fmt.Sprintf("⚠️ <b>%s</b> (S.K.T. %d gün geçti!)", gida.UrunAdi, -days))
+						if days == -1 {
+							gidaAlerts = append(gidaAlerts, fmt.Sprintf("⚠️ <b>%s</b> (S.K.T. 1 gün geçti!)", gida.UrunAdi))
+						}
 					} else if days <= gida.HatirlatmaGunKala {
 						if days == 0 {
 							gidaAlerts = append(gidaAlerts, fmt.Sprintf("⏰ <b>%s</b> (Bugün son gün!)", gida.UrunAdi))
@@ -169,7 +171,9 @@ func checkAndNotify(db *gorm.DB) (bool, int, int, error) {
 						tutar = *fatura.Tutar
 					}
 					if days < 0 {
-						faturaAlerts = append(faturaAlerts, fmt.Sprintf("⚠️ <b>%s</b> (Son ödeme tarihi %d gün geçti! Tutar: %.2f TL)", fatura.FaturaAdi, -days, tutar))
+						if days == -1 {
+							faturaAlerts = append(faturaAlerts, fmt.Sprintf("⚠️ <b>%s</b> (Son ödeme tarihi 1 gün geçti! Tutar: %.2f TL)", fatura.FaturaAdi, tutar))
+						}
 					} else if days <= fatura.HatirlatmaGunKala {
 						if days == 0 {
 							faturaAlerts = append(faturaAlerts, fmt.Sprintf("💵 <b>%s</b> (Bugün son ödeme günü! - Tutar: %.2f TL)", fatura.FaturaAdi, tutar))
@@ -193,7 +197,9 @@ func checkAndNotify(db *gorm.DB) (bool, int, int, error) {
 				days, err := getDaysRemaining(garanti.GarantiBitis)
 				if err == nil {
 					if days < 0 {
-						garantiAlerts = append(garantiAlerts, fmt.Sprintf("⚠️ <b>%s</b> (%s) - Garanti süresi %d gün önce bitti!", garanti.CihazAdi, garanti.MarkaModel, -days))
+						if days == -1 {
+							garantiAlerts = append(garantiAlerts, fmt.Sprintf("⚠️ <b>%s</b> (%s) - Garanti süresi 1 gün önce bitti!", garanti.CihazAdi, garanti.MarkaModel))
+						}
 					} else if days <= garanti.HatirlatmaGunKala {
 						garantiAlerts = append(garantiAlerts, fmt.Sprintf("🔌 <b>%s</b> (%s) - Garanti bitimine %d gün kaldı.", garanti.CihazAdi, garanti.MarkaModel, days))
 					}
@@ -226,7 +232,9 @@ func checkAndNotify(db *gorm.DB) (bool, int, int, error) {
 						diffDays := int(math.Round(nextDate.Sub(today).Hours() / 24.0))
 						if diffDays <= rutin.HatirlatmaGunKala {
 							if diffDays < 0 {
-								rutinAlerts = append(rutinAlerts, fmt.Sprintf("🔁 <b>%s%s</b> (Zamanı %d gün geçti!)", folderText, rutin.GorevAdi, -diffDays))
+								if diffDays == -1 {
+									rutinAlerts = append(rutinAlerts, fmt.Sprintf("🔁 <b>%s%s</b> (Zamanı 1 gün geçti!)", folderText, rutin.GorevAdi))
+								}
 							} else if diffDays == 0 {
 								rutinAlerts = append(rutinAlerts, fmt.Sprintf("🔁 <b>%s%s</b> (Yapılmasına bugün son!)", folderText, rutin.GorevAdi))
 							} else {

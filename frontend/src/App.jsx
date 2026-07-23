@@ -185,7 +185,7 @@ function App() {
           const days = getDaysDiff(gida.skt);
           if (days !== null) {
             const limit = gida.hatirlatma_gun_kala ?? 3;
-            if (days < 0 || days <= limit) {
+            if ((days < 0 && days >= -7) || (days >= 0 && days <= limit)) {
               const isOverdue = days < 0;
               const isToday = days === 0;
               list.push({
@@ -223,7 +223,7 @@ function App() {
           const days = getDaysDiff(fatura.son_odeme_tarihi);
           if (days !== null) {
             const limit = fatura.hatirlatma_gun_kala ?? 5;
-            if (days < 0 || days <= limit) {
+            if ((days < 0 && days >= -7) || (days >= 0 && days <= limit)) {
               const isOverdue = days < 0;
               const isToday = days === 0;
               const tutarText = fatura.tutar ? `${fatura.tutar} TL` : 'Tutar Belirtilmedi';
@@ -261,7 +261,7 @@ function App() {
         const days = getDaysDiff(garanti.garanti_bitis);
         if (days !== null) {
           const limit = garanti.hatirlatma_gun_kala ?? 30;
-          if (days < 0 || days <= limit) {
+          if ((days < 0 && days >= -7) || (days >= 0 && days <= limit)) {
             const isOverdue = days < 0;
             const isToday = days === 0;
             list.push({
@@ -332,7 +332,7 @@ function App() {
             }
             nextDate.setHours(0, 0, 0, 0);
             const diffDays = Math.ceil((nextDate - today) / (1000 * 60 * 60 * 24));
-            if (diffDays < 0 || diffDays <= limit) {
+            if ((diffDays < 0 && diffDays >= -7) || (diffDays >= 0 && diffDays <= limit)) {
               const isOverdue = diffDays < 0;
               const isToday = diffDays === 0;
               list.push({
