@@ -1104,7 +1104,7 @@ function App() {
             </div>
 
             {/* FİLTRE TABLARI */}
-            <div className="p-1 bg-white/[0.04] backdrop-blur-xl border border-white/10 rounded-xl flex items-center gap-1 overflow-x-auto filter-tabs-scroll shadow-inner">
+            <div className="p-1 bg-white/[0.04] backdrop-blur-xl border border-white/10 rounded-xl flex items-center gap-1 overflow-x-auto filter-tabs-scroll shadow-inner w-full min-w-0">
               {[
                 { id: 'hepsi', mobileLabel: 'Tümü', label: 'Tüm Gıdalar', count: Array.isArray(gidalar) ? gidalar.length : 0 },
                 { id: 'bekliyor', mobileLabel: 'Bekleyen ⏰', label: 'Bekleyenler ⏰', count: Array.isArray(gidalar) ? gidalar.filter(g => g.durum === 'bekliyor').length : 0 },
@@ -1116,7 +1116,7 @@ function App() {
                   <button
                     key={tab.id}
                     onClick={() => setGidaFiltre(tab.id)}
-                    className={`flex-1 md:flex-initial px-2 py-1.5 md:px-3.5 md:py-2 rounded-lg md:rounded-xl text-[11px] sm:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1 md:gap-1.5 cursor-pointer flex-shrink-0 select-none ${
+                    className={`flex-1 md:flex-initial px-1.5 py-1.5 xs:px-2 md:px-3.5 md:py-2 rounded-lg md:rounded-xl text-[10.5px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-0.5 sm:gap-1.5 cursor-pointer select-none ${
                       isActive
                         ? 'bg-purple-600 text-white shadow-[0_2px_12px_rgba(147,51,234,0.4)] font-bold scale-[1.01]'
                         : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -1125,7 +1125,7 @@ function App() {
                     <span className="hidden md:inline">{tab.label}</span>
                     <span className="md:hidden">{tab.mobileLabel}</span>
                     <span
-                      className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.2 md:py-0.5 rounded-full font-bold transition-colors ${
+                      className={`text-[9px] sm:text-[10px] md:text-xs px-1 py-0.2 sm:px-1.5 md:py-0.5 rounded-full font-bold transition-colors ${
                         isActive ? 'bg-white/20 text-white' : 'bg-white/10 text-gray-400'
                       }`}
                     >
@@ -1264,7 +1264,7 @@ function App() {
             </div>
 
             {/* FİLTRE TABLARI */}
-            <div className="p-1 bg-white/[0.04] backdrop-blur-xl border border-white/10 rounded-xl flex items-center gap-1 overflow-x-auto filter-tabs-scroll shadow-inner">
+            <div className="p-1 bg-white/[0.04] backdrop-blur-xl border border-white/10 rounded-xl flex items-center gap-1 overflow-x-auto filter-tabs-scroll shadow-inner w-full min-w-0">
               {[
                 { id: 'hepsi', mobileLabel: 'Tümü', label: 'Tüm Faturalar', count: Array.isArray(faturalar) ? faturalar.length : 0 },
                 { id: 'odenmedi', mobileLabel: 'Ödenmeyen 💵', label: 'Ödenmeyenler 💵', count: Array.isArray(faturalar) ? faturalar.filter(f => f.durum === 'odenmedi').length : 0 },
@@ -1275,7 +1275,7 @@ function App() {
                   <button
                     key={tab.id}
                     onClick={() => setFaturaFiltre(tab.id)}
-                    className={`flex-1 md:flex-initial px-2 py-1.5 md:px-3.5 md:py-2 rounded-lg md:rounded-xl text-[11px] sm:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1 md:gap-1.5 cursor-pointer flex-shrink-0 select-none ${
+                    className={`flex-1 md:flex-initial px-1.5 py-1.5 xs:px-2 md:px-3.5 md:py-2 rounded-lg md:rounded-xl text-[10.5px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-0.5 sm:gap-1.5 cursor-pointer select-none ${
                       isActive
                         ? 'bg-purple-600 text-white shadow-[0_2px_12px_rgba(147,51,234,0.4)] font-bold scale-[1.01]'
                         : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -1284,7 +1284,7 @@ function App() {
                     <span className="hidden md:inline">{tab.label}</span>
                     <span className="md:hidden">{tab.mobileLabel}</span>
                     <span
-                      className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.2 md:py-0.5 rounded-full font-bold transition-colors ${
+                      className={`text-[9px] sm:text-[10px] md:text-xs px-1 py-0.2 sm:px-1.5 md:py-0.5 rounded-full font-bold transition-colors ${
                         isActive ? 'bg-white/20 text-white' : 'bg-white/10 text-gray-400'
                       }`}
                     >
@@ -1396,7 +1396,7 @@ function App() {
             </div>
 
             {/* FİLTRE TABLARI */}
-            <div className="p-1 bg-white/[0.04] backdrop-blur-xl border border-white/10 rounded-xl flex items-center gap-1 overflow-x-auto filter-tabs-scroll shadow-inner">
+            <div className="p-1 bg-white/[0.04] backdrop-blur-xl border border-white/10 rounded-xl flex items-center gap-1 overflow-x-auto filter-tabs-scroll shadow-inner w-full min-w-0">
               {[
                 { id: 'hepsi', mobileLabel: 'Tümü', label: 'Tüm Garantiler', count: Array.isArray(garantiler) ? garantiler.length : 0 },
                 { id: 'aktif', mobileLabel: 'Devam Eden 🛡️', label: 'Devam Edenler 🛡️', count: Array.isArray(garantiler) ? garantiler.filter(g => { const d = getDaysDiff(g.garanti_bitis); return d === null || d >= 0; }).length : 0 },
@@ -1407,7 +1407,7 @@ function App() {
                   <button
                     key={tab.id}
                     onClick={() => setGarantiFiltre(tab.id)}
-                    className={`flex-1 md:flex-initial px-2 py-1.5 md:px-3.5 md:py-2 rounded-lg md:rounded-xl text-[11px] sm:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1 md:gap-1.5 cursor-pointer flex-shrink-0 select-none ${
+                    className={`flex-1 md:flex-initial px-1.5 py-1.5 xs:px-2 md:px-3.5 md:py-2 rounded-lg md:rounded-xl text-[10.5px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-0.5 sm:gap-1.5 cursor-pointer select-none ${
                       isActive
                         ? 'bg-purple-600 text-white shadow-[0_2px_12px_rgba(147,51,234,0.4)] font-bold scale-[1.01]'
                         : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -1416,7 +1416,7 @@ function App() {
                     <span className="hidden md:inline">{tab.label}</span>
                     <span className="md:hidden">{tab.mobileLabel}</span>
                     <span
-                      className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.2 md:py-0.5 rounded-full font-bold transition-colors ${
+                      className={`text-[9px] sm:text-[10px] md:text-xs px-1 py-0.2 sm:px-1.5 md:py-0.5 rounded-full font-bold transition-colors ${
                         isActive ? 'bg-white/20 text-white' : 'bg-white/10 text-gray-400'
                       }`}
                     >
@@ -1526,10 +1526,10 @@ function App() {
             </div>
 
             {/* KLASÖR YÖNETİMİ & SEÇİM BARBARI */}
-            <div className="p-1 bg-white/[0.04] backdrop-blur-xl border border-white/10 rounded-xl flex items-center gap-1 overflow-x-auto filter-tabs-scroll shadow-inner">
+            <div className="p-1 bg-white/[0.04] backdrop-blur-xl border border-white/10 rounded-xl flex items-center gap-1 overflow-x-auto filter-tabs-scroll shadow-inner w-full min-w-0">
               <button
                 onClick={() => setSeciliRutinKlasor('hepsi')}
-                className={`px-2.5 py-1.5 md:px-3.5 md:py-2 rounded-lg md:rounded-xl text-[11px] sm:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1 md:gap-1.5 cursor-pointer flex-shrink-0 select-none ${
+                className={`px-2 py-1.5 sm:px-3.5 sm:py-2 rounded-lg md:rounded-xl text-[10.5px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-0.5 sm:gap-1.5 cursor-pointer flex-shrink-0 select-none ${
                   seciliRutinKlasor === 'hepsi'
                     ? 'bg-purple-600 text-white shadow-[0_2px_12px_rgba(147,51,234,0.4)] font-bold scale-[1.01]'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -1537,7 +1537,7 @@ function App() {
               >
                 <span>Hepsi</span>
                 <span
-                  className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.2 md:py-0.5 rounded-full font-bold transition-colors ${
+                  className={`text-[9px] sm:text-[10px] md:text-xs px-1 py-0.2 sm:px-1.5 md:py-0.5 rounded-full font-bold transition-colors ${
                     seciliRutinKlasor === 'hepsi' ? 'bg-white/20 text-white' : 'bg-white/10 text-gray-400'
                   }`}
                 >
@@ -1552,7 +1552,7 @@ function App() {
                   <div key={klasor.id} className="relative flex items-center group flex-shrink-0">
                     <button
                       onClick={() => setSeciliRutinKlasor(klasor.id.toString())}
-                      className={`px-2.5 py-1.5 pl-2.5 pr-7 md:px-3.5 md:py-2 md:pr-8 rounded-lg md:rounded-xl text-[11px] sm:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-1 md:gap-1.5 cursor-pointer select-none ${
+                      className={`px-2 py-1.5 pl-2 pr-6 sm:px-3.5 sm:py-2 sm:pr-8 rounded-lg md:rounded-xl text-[10.5px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-0.5 sm:gap-1.5 cursor-pointer select-none ${
                         isSelected
                           ? 'bg-purple-600 text-white shadow-[0_2px_12px_rgba(147,51,234,0.4)] font-bold scale-[1.01]'
                           : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -1560,7 +1560,7 @@ function App() {
                     >
                       <span>📂 {klasor.klasor_adi}</span>
                       <span
-                        className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.2 md:py-0.5 rounded-full font-bold transition-colors ${
+                        className={`text-[9px] sm:text-[10px] md:text-xs px-1 py-0.2 sm:px-1.5 md:py-0.5 rounded-full font-bold transition-colors ${
                           isSelected ? 'bg-white/20 text-white' : 'bg-white/10 text-gray-400'
                         }`}
                       >
