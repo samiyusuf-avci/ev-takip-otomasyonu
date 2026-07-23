@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import API from './api';
+import DatePicker from './components/DatePicker';
 import {
   LayoutDashboard,
   Apple,
@@ -30,6 +31,21 @@ import {
 // -------------------------------------------------------------
 // YARDIMCI GÖRSEL METOTLAR (Global scope'ta tanımlanarak yeniden oluşturulması engellendi)
 // -------------------------------------------------------------
+const formatInputDate = (dateStr) => {
+  if (!dateStr) return '';
+  if (typeof dateStr === 'string') {
+    const cleaned = dateStr.trim();
+    const match = cleaned.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (match) return match[1];
+  }
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '';
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
 const getDaysDiff = (dateStr) => {
   if (!dateStr) return null;
   const safeStr = typeof dateStr === 'string' ? dateStr.replace(' ', 'T') : dateStr;
@@ -52,7 +68,7 @@ const formatDate = (dateStr) => {
 
 const getStatusColor = (days, limit, durum) => {
   if (durum === 'tuketildi' || durum === 'odendi') return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
-  if (durum === 'atildi') return 'text-gray-400 bg-gray-500/10 border-gray-500/20';
+  if (durum === 'atildi') return 'text-orange-400 bg-orange-500/10 border-orange-500/20';
   if (days === null) return 'text-sky-400 bg-sky-500/10 border-sky-500/20';
   if (days < 0) return 'text-rose-400 bg-rose-500/10 border-rose-500/20 animate-pulse';
   if (days <= limit) return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
@@ -300,12 +316,20 @@ function App() {
           });
         } else {
           const safeStr = typeof rutin.son_yapilma_tarihi === 'string' ? rutin.son_yapilma_tarihi.replace(' ', 'T') : rutin.son_yapilma_tarihi;
-          const lastDate = new Date(safeStr);
-          if (!isNaN(lastDate.getTime())) {
-            const nextDate = new Date(lastDate);
-            nextDate.setMonth(nextDate.getMonth() + (rutin.periyot_ay || 1));
+          const inputDate = new Date(safeStr);
+          if (!isNaN(inputDate.getTime())) {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
+            const compareDate = new Date(inputDate);
+            compareDate.setHours(0, 0, 0, 0);
+
+            let nextDate;
+            if (compareDate > today) {
+              nextDate = compareDate;
+            } else {
+              nextDate = new Date(inputDate);
+              nextDate.setMonth(nextDate.getMonth() + (rutin.periyot_ay || 1));
+            }
             nextDate.setHours(0, 0, 0, 0);
             const diffDays = Math.ceil((nextDate - today) / (1000 * 60 * 60 * 24));
             if (diffDays < 0 || diffDays <= limit) {
@@ -630,7 +654,7 @@ function App() {
     setGidaForm({
       urun_adi: gida.urun_adi,
       kategori: gida.kategori,
-      skt: gida.skt,
+      skt: formatInputDate(gida.skt),
       hatirlatma_gun_kala: gida.hatirlatma_gun_kala,
       durum: gida.durum
     });
@@ -690,7 +714,7 @@ function App() {
     setFaturaForm({
       fatura_adi: fatura.fatura_adi,
       tutar: fatura.tutar,
-      son_odeme_tarihi: fatura.son_odeme_tarihi,
+      son_odeme_tarihi: formatInputDate(fatura.son_odeme_tarihi),
       hatirlatma_gun_kala: fatura.hatirlatma_gun_kala,
       durum: fatura.durum
     });
@@ -750,7 +774,7 @@ function App() {
     setGarantiForm({
       cihaz_adi: garanti.cihaz_adi,
       marka_model: garanti.marka_model,
-      garanti_bitis: garanti.garanti_bitis,
+      garanti_bitis: formatInputDate(garanti.garanti_bitis),
       hatirlatma_gun_kala: garanti.hatirlatma_gun_kala,
       notlar: garanti.notlar
     });
@@ -855,7 +879,7 @@ function App() {
       gorev_adi: rutin.gorev_adi,
       periyot_ay: rutin.periyot_ay,
       hatirlatma_gun_kala: rutin.hatirlatma_gun_kala,
-      son_yapilma_tarihi: rutin.son_yapilma_tarihi || ''
+      son_yapilma_tarihi: formatInputDate(rutin.son_yapilma_tarihi)
     });
     setShowRutinModal(true);
   };
@@ -1678,7 +1702,7 @@ function App() {
                               <button onClick={() => handleUpdateGidaDurum(gida, 'tuketildi')} className="flex-1 py-2 rounded-xl bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 font-semibold text-xs border border-emerald-500/20 transition-all cursor-pointer flex justify-center items-center gap-1">
                                 <CheckCircle className="w-3.5 h-3.5" /> Tüketildi
                               </button>
-                              <button onClick={() => handleUpdateGidaDurum(gida, 'atildi')} className="flex-1 py-2 rounded-xl bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 font-semibold text-xs border border-rose-500/20 transition-all cursor-pointer flex justify-center items-center gap-1">
+                              <button onClick={() => handleUpdateGidaDurum(gida, 'atildi')} className="flex-1 py-2 rounded-xl bg-orange-600/10 hover:bg-orange-600/20 text-orange-400 font-semibold text-xs border border-orange-500/20 transition-all cursor-pointer flex justify-center items-center gap-1">
                                 <Trash2 className="w-3.5 h-3.5" /> Atıldı
                               </button>
                             </>
@@ -2037,18 +2061,33 @@ function App() {
                   if (!rutin || !rutin.id) return null;
                   let nextDate = null;
                   let days = null;
+                  let displayLastDone = 'Henüz Yapılmadı';
+
                   if (rutin.son_yapilma_tarihi) {
                     const safeStr = typeof rutin.son_yapilma_tarihi === 'string' ? rutin.son_yapilma_tarihi.replace(' ', 'T') : rutin.son_yapilma_tarihi;
-                    const last = new Date(safeStr);
+                    const inputDate = new Date(safeStr);
                     const periyot = parseInt(rutin.periyot_ay, 10) || 1;
-                    if (!isNaN(last.getTime()) && !isNaN(periyot)) {
-                      last.setMonth(last.getMonth() + periyot);
-                      if (!isNaN(last.getTime())) {
-                        try {
-                          nextDate = last.toISOString().split('T')[0];
-                          days = getDaysDiff(nextDate);
-                        } catch (e) {
-                          console.error("Date formatting error:", e);
+                    if (!isNaN(inputDate.getTime()) && !isNaN(periyot)) {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const compareDate = new Date(inputDate);
+                      compareDate.setHours(0, 0, 0, 0);
+
+                      if (compareDate > today) {
+                        displayLastDone = 'Henüz Yapılmadı';
+                        nextDate = safeStr.split('T')[0];
+                        days = getDaysDiff(nextDate);
+                      } else {
+                        displayLastDone = formatDate(rutin.son_yapilma_tarihi);
+                        const calcNext = new Date(inputDate);
+                        calcNext.setMonth(calcNext.getMonth() + periyot);
+                        if (!isNaN(calcNext.getTime())) {
+                          try {
+                            nextDate = calcNext.toISOString().split('T')[0];
+                            days = getDaysDiff(nextDate);
+                          } catch (e) {
+                            console.error("Date formatting error:", e);
+                          }
                         }
                       }
                     }
@@ -2134,7 +2173,7 @@ function App() {
                           <h3 className="text-lg font-bold text-white mb-2">{rutin.gorev_adi}</h3>
                           <div className="space-y-1.5 text-sm text-gray-400">
                             <div className="flex justify-between"><span>Periyot:</span><span className="font-semibold text-gray-300">{rutin.periyot_ay} Ayda Bir</span></div>
-                            <div className="flex justify-between"><span>Son Yapılma:</span><span className="font-semibold text-gray-300">{formatDate(rutin.son_yapilma_tarihi)}</span></div>
+                            <div className="flex justify-between"><span>Son Yapılma:</span><span className="font-semibold text-gray-300">{displayLastDone}</span></div>
                             {nextDate && (
                               <div className="flex justify-between text-xs text-purple-300 font-medium">
                                 <span>Planlanan Sonraki:</span>
@@ -2256,7 +2295,7 @@ function App() {
                       <button
                         type="button"
                         onClick={() => setIsEditingTelegram(true)}
-                        className="flex-1 py-2 md:py-3 px-4 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-2 glow-btn"
+                        className="flex-1 py-2 md:py-2.5 px-4 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-2 glow-btn"
                       >
                         <Edit className="w-4 h-4" />
                         Bilgileri Düzenle
@@ -2266,7 +2305,7 @@ function App() {
                           type="button"
                           onClick={handleTestTelegram}
                           disabled={loading}
-                          className="py-2 md:py-3 px-4 bg-white/5 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed border border-white/10 text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-1.5"
+                          className="w-full sm:w-48 py-2 md:py-2.5 px-4 bg-white/5 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed border border-white/10 text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 flex-shrink-0"
                         >
                           <Send className="w-3.5 h-3.5 text-purple-400" />
                           Bağlantıyı Test Et
@@ -2281,7 +2320,7 @@ function App() {
                           <button
                             type="submit"
                             disabled={!isTelegramChanged || loading}
-                            className="flex-1 py-2 md:py-3 px-4 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center glow-btn flex items-center justify-center gap-2"
+                            className="flex-1 py-2 md:py-2.5 px-4 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center glow-btn flex items-center justify-center gap-2"
                           >
                             <CheckCircle className="w-4 h-4" />
                             Ayarları Kaydet
@@ -2295,7 +2334,7 @@ function App() {
                             setAyarlar(savedAyarlar);
                             setIsEditingTelegram(false);
                           }}
-                          className="py-2 md:py-3 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center"
+                          className="w-full sm:w-48 py-2 md:py-2.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 flex-shrink-0"
                         >
                           Vazgeç
                         </button>
@@ -2420,8 +2459,9 @@ function App() {
                       <button
                         type="button"
                         onClick={handleLogout}
-                        className="py-2 md:py-2.5 px-4 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 border border-rose-500/20 font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center"
+                        className="w-full sm:w-48 py-2 md:py-2.5 px-4 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 border border-rose-500/20 font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 flex-shrink-0"
                       >
+                        <LogOut className="w-3.5 h-3.5 text-rose-400" />
                         Oturumu Kapat
                       </button>
                     </>
@@ -2452,7 +2492,7 @@ function App() {
                           setShowPasswordForm(false);
                           setIsEditingProfile(false);
                         }}
-                        className="py-2 md:py-2.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center"
+                        className="w-full sm:w-48 py-2 md:py-2.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 flex-shrink-0"
                       >
                         Vazgeç
                       </button>
@@ -2501,12 +2541,11 @@ function App() {
 
               <div>
                 <label className="block text-xs font-semibold text-gray-400 mb-1">Son Kullanma Tarihi *</label>
-                <input
-                  type="date"
+                <DatePicker
                   required
                   value={gidaForm.skt}
                   onChange={(e) => setGidaForm({ ...gidaForm, skt: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-3.5 text-white outline-none focus:border-purple-500 text-sm transition-all"
+                  placeholder="Son kullanma tarihi seçin..."
                 />
               </div>
 
@@ -2547,9 +2586,19 @@ function App() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-semibold transition-all cursor-pointer text-sm glow-btn"
+                  disabled={
+                    Boolean(
+                      editingGida &&
+                      gidaForm.urun_adi === editingGida.urun_adi &&
+                      (gidaForm.kategori || '') === (editingGida.kategori || '') &&
+                      gidaForm.skt === formatInputDate(editingGida.skt) &&
+                      Number(gidaForm.hatirlatma_gun_kala) === Number(editingGida.hatirlatma_gun_kala) &&
+                      gidaForm.durum === editingGida.durum
+                    )
+                  }
+                  className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-purple-600 text-white rounded-xl font-semibold transition-all cursor-pointer text-sm glow-btn"
                 >
-                  Kaydet
+                  {editingGida ? 'Güncelle' : 'Kaydet'}
                 </button>
               </div>
             </form>
@@ -2589,12 +2638,11 @@ function App() {
 
               <div>
                 <label className="block text-xs font-semibold text-gray-400 mb-1">Son Ödeme Tarihi *</label>
-                <input
-                  type="date"
+                <DatePicker
                   required
                   value={faturaForm.son_odeme_tarihi}
                   onChange={(e) => setFaturaForm({ ...faturaForm, son_odeme_tarihi: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-3.5 text-white outline-none focus:border-purple-500 text-sm transition-all"
+                  placeholder="Son ödeme tarihi seçin..."
                 />
               </div>
 
@@ -2634,9 +2682,19 @@ function App() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-semibold transition-all cursor-pointer text-sm glow-btn"
+                  disabled={
+                    Boolean(
+                      editingFatura &&
+                      faturaForm.fatura_adi === editingFatura.fatura_adi &&
+                      (faturaForm.tutar === '' ? null : Number(faturaForm.tutar)) === (editingFatura.tutar === null || editingFatura.tutar === undefined ? null : Number(editingFatura.tutar)) &&
+                      faturaForm.son_odeme_tarihi === formatInputDate(editingFatura.son_odeme_tarihi) &&
+                      Number(faturaForm.hatirlatma_gun_kala) === Number(editingFatura.hatirlatma_gun_kala) &&
+                      faturaForm.durum === editingFatura.durum
+                    )
+                  }
+                  className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-purple-600 text-white rounded-xl font-semibold transition-all cursor-pointer text-sm glow-btn"
                 >
-                  Kaydet
+                  {editingFatura ? 'Güncelle' : 'Kaydet'}
                 </button>
               </div>
             </form>
@@ -2675,12 +2733,11 @@ function App() {
 
               <div>
                 <label className="block text-xs font-semibold text-gray-400 mb-1">Garanti Bitiş Tarihi *</label>
-                <input
-                  type="date"
+                <DatePicker
                   required
                   value={garantiForm.garanti_bitis}
                   onChange={(e) => setGarantiForm({ ...garantiForm, garanti_bitis: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-3.5 text-white outline-none focus:border-purple-500 text-sm transition-all"
+                  placeholder="Garanti bitiş tarihi seçin..."
                 />
               </div>
 
@@ -2717,9 +2774,19 @@ function App() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-semibold transition-all cursor-pointer text-sm glow-btn"
+                  disabled={
+                    Boolean(
+                      editingGaranti &&
+                      garantiForm.cihaz_adi === editingGaranti.cihaz_adi &&
+                      (garantiForm.marka_model || '') === (editingGaranti.marka_model || '') &&
+                      garantiForm.garanti_bitis === formatInputDate(editingGaranti.garanti_bitis) &&
+                      Number(garantiForm.hatirlatma_gun_kala) === Number(editingGaranti.hatirlatma_gun_kala) &&
+                      (garantiForm.notlar || '') === (editingGaranti.notlar || '')
+                    )
+                  }
+                  className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-purple-600 text-white rounded-xl font-semibold transition-all cursor-pointer text-sm glow-btn"
                 >
-                  Kaydet
+                  {editingGaranti ? 'Güncelle' : 'Kaydet'}
                 </button>
               </div>
             </form>
@@ -2841,7 +2908,13 @@ function App() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-semibold transition-all cursor-pointer text-sm glow-btn"
+                  disabled={
+                    Boolean(
+                      editingKlasor &&
+                      klasorForm.klasor_adi.trim() === editingKlasor.klasor_adi.trim()
+                    )
+                  }
+                  className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-purple-600 text-white rounded-xl font-semibold transition-all cursor-pointer text-sm glow-btn"
                 >
                   {editingKlasor ? 'Güncelle' : 'Oluştur'}
                 </button>
@@ -2912,11 +2985,10 @@ function App() {
 
               <div>
                 <label className="block text-xs font-semibold text-gray-400 mb-1">Son Yapılma Tarihi (İlk başlangıç için)</label>
-                <input
-                  type="date"
+                <DatePicker
                   value={rutinForm.son_yapilma_tarihi}
                   onChange={(e) => setRutinForm({ ...rutinForm, son_yapilma_tarihi: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-3.5 text-white outline-none focus:border-purple-500 text-sm transition-all"
+                  placeholder="Son yapılma tarihi seçin..."
                 />
               </div>
 
@@ -2930,9 +3002,19 @@ function App() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-semibold transition-all cursor-pointer text-sm glow-btn"
+                  disabled={
+                    Boolean(
+                      editingRutin &&
+                      String(rutinForm.klasor_id || '') === String(editingRutin.klasor_id || '') &&
+                      rutinForm.gorev_adi === editingRutin.gorev_adi &&
+                      Number(rutinForm.periyot_ay) === Number(editingRutin.periyot_ay) &&
+                      Number(rutinForm.hatirlatma_gun_kala) === Number(editingRutin.hatirlatma_gun_kala) &&
+                      rutinForm.son_yapilma_tarihi === formatInputDate(editingRutin.son_yapilma_tarihi)
+                    )
+                  }
+                  className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-purple-600 text-white rounded-xl font-semibold transition-all cursor-pointer text-sm glow-btn"
                 >
-                  Kaydet
+                  {editingRutin ? 'Güncelle' : 'Kaydet'}
                 </button>
               </div>
             </form>

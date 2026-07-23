@@ -46,6 +46,10 @@ func getNextRoutineDate(lastDoneStr string, periodMonths int) (time.Time, error)
 	if err != nil {
 		return time.Time{}, err
 	}
+	today := getTodayZeroTime()
+	if t.After(today) {
+		return t, nil
+	}
 	return t.AddDate(0, periodMonths, 0), nil
 }
 
