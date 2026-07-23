@@ -85,6 +85,9 @@ function App() {
   const [rutinKlasorleri, setRutinKlasorleri] = useState([]);
   const [rutinler, setRutinler] = useState([]);
   const [ayarlar, setAyarlar] = useState({ telegram_token: '', telegram_chat_id: '' });
+  const [savedAyarlar, setSavedAyarlar] = useState({ telegram_token: '', telegram_chat_id: '' });
+  const [isEditingTelegram, setIsEditingTelegram] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({ isim: '', eposta: '', mevcut_sifre: '', sifre: '' });
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -98,8 +101,27 @@ function App() {
         sifre: ''
       });
       setShowPasswordForm(false);
+      setIsEditingProfile(false);
     }
   }, [user]);
+
+  // Sayfa değiştirildiğinde aktif düzenleme modlarını ve henüz kaydedilmemiş form verilerini otomatik iptal et
+  useEffect(() => {
+    setIsEditingProfile(false);
+    setShowPasswordForm(false);
+    if (user) {
+      setProfileForm({
+        isim: user.isim || '',
+        eposta: user.eposta || '',
+        mevcut_sifre: '',
+        sifre: ''
+      });
+    }
+    setAyarlar(savedAyarlar);
+    if (savedAyarlar.telegram_token || savedAyarlar.telegram_chat_id) {
+      setIsEditingTelegram(false);
+    }
+  }, [currentPage]);
 
   // Filtre Durumları
   const [gidaFiltre, setGidaFiltre] = useState('bekliyor'); // 'hepsi', 'bekliyor', 'tuketildi', 'atildi'
@@ -249,6 +271,7 @@ function App() {
       setUser(res.data.user);
       setProfileForm(prev => ({ ...prev, mevcut_sifre: '', sifre: '' }));
       setShowPasswordForm(false);
+      setIsEditingProfile(false);
       showToast('Hesap bilgileriniz başarıyla güncellendi!');
       document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
@@ -262,10 +285,16 @@ function App() {
   const fetchAyarlar = useCallback(async () => {
     try {
       const res = await API.get('/ayarlar');
-      setAyarlar({
-        telegram_token: res.data.telegram_token || '',
-        telegram_chat_id: res.data.telegram_chat_id || ''
-      });
+      const token = res.data.telegram_token || '';
+      const chatId = res.data.telegram_chat_id || '';
+      const loadedAyarlar = { telegram_token: token, telegram_chat_id: chatId };
+      setAyarlar(loadedAyarlar);
+      setSavedAyarlar(loadedAyarlar);
+      if (token || chatId) {
+        setIsEditingTelegram(false);
+      } else {
+        setIsEditingTelegram(true);
+      }
     } catch (err) {
       console.error('Ayarlar yüklenemedi:', err);
     }
@@ -303,10 +332,16 @@ function App() {
         setRutinler(Array.isArray(routinesRes.data) ? routinesRes.data : []);
       } else if (currentPage === 'ayarlar') {
         const res = await API.get('/ayarlar');
-        setAyarlar({
-          telegram_token: res.data.telegram_token || '',
-          telegram_chat_id: res.data.telegram_chat_id || ''
-        });
+        const token = res.data.telegram_token || '';
+        const chatId = res.data.telegram_chat_id || '';
+        const loadedAyarlar = { telegram_token: token, telegram_chat_id: chatId };
+        setAyarlar(loadedAyarlar);
+        setSavedAyarlar(loadedAyarlar);
+        if (token || chatId) {
+          setIsEditingTelegram(false);
+        } else {
+          setIsEditingTelegram(true);
+        }
       }
     } catch (err) {
       setError('Veriler sunucudan yüklenirken hata oluştu.');
@@ -623,7 +658,9 @@ function App() {
     e.preventDefault();
     try {
       await API.post('/ayarlar', ayarlar);
+      setSavedAyarlar(ayarlar);
       showToast('Telegram ayarları başarıyla kaydedildi.');
+      setIsEditingTelegram(false);
     } catch (err) {
       showToast('Ayarlar kaydedilemedi.', 'error');
     }
@@ -1101,10 +1138,10 @@ function App() {
                       <p className="text-sm text-gray-400 mt-1 max-w-2xl">
                         {isTelegramConfigured ? (
                           <>
-                            Telegram botunuz bağlı ve aktif. Sistem her gece saat 00:00'da yaklaşan gıdalarınızı, faturalarınızı, garantilerinizi ve rutin görevlerinizi otomatik olarak tarar. Dilerseniz <span className="hidden md:inline">sol menüdeki</span><span className="inline md:hidden">üst menüdeki</span> "Raporu Şimdi Gönder" butonuna tıklayarak istediğiniz an anlık rapor tetikleyebilirsiniz.
+                            Telegram botunuz bağlı ve aktif. Sistem her gece saat 00:00'da gıdalarınızı, faturalarınızı, garantilerinizi ve rutin görevlerinizi otomatik olarak tarar. Dilerseniz <span className="hidden md:inline">sol menüdeki</span><span className="inline md:hidden">üst menüdeki</span> "Raporu Şimdi Gönder" butonuna tıklayarak istediğiniz an anlık rapor alabilirsiniz.
                           </>
                         ) : (
-                          'Son kullanma tarihi yaklaşan gıdalarınız, son ödeme günü yaklaşan faturalarınız ve zamanı gelen rutin görevleriniz için Telegram üzerinden anlık bildirim almak istiyorsanız bot bilgilerinizi kolayca ekleyebilirsiniz.'
+                          'Gıdalarınız, faturalarınız, garantileriniz ve rutin görevleriniz için Telegram üzerinden anlık bildirim almak istiyorsanız bot bilgilerinizi kolayca ekleyebilirsiniz.'
                         )}
                       </p>
                     </div>
@@ -1763,50 +1800,132 @@ function App() {
 
             {/* Telegram Bot Ayarları */}
             <div className="glass-panel p-4 md:p-6 rounded-2xl border-white/5">
-              <h3 className="text-sm md:text-lg font-bold text-white mb-3 md:mb-4 flex items-center gap-2">
-                <Bell className="w-4 h-4 md:w-5 md:h-5 text-purple-400" /> Telegram Bildirim Yapılandırması
-              </h3>
+              <div className="flex items-center justify-between mb-3 md:mb-4">
+                <h3 className="text-sm md:text-lg font-bold text-white flex items-center gap-2">
+                  <Bell className="w-4 h-4 md:w-5 md:h-5 text-purple-400" /> Telegram Bildirim Yapılandırması
+                </h3>
+                {Boolean(ayarlar.telegram_token || ayarlar.telegram_chat_id) && (
+                  <span className={`text-[10px] md:text-xs font-semibold px-2.5 py-1 rounded-full border flex items-center gap-1.5 ${
+                    isEditingTelegram 
+                      ? 'bg-amber-500/10 text-amber-300 border-amber-500/20' 
+                      : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
+                  }`}>
+                    {isEditingTelegram ? (
+                      <>
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                        Düzenleme Modu
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="w-3 h-3 text-emerald-400" />
+                        Bilgiler Kilitli
+                      </>
+                    )}
+                  </span>
+                )}
+              </div>
 
               <form onSubmit={handleSaveAyarlar} className="space-y-3.5">
                 <div>
-                  <label className="block text-xs md:text-sm font-semibold text-gray-300 mb-1">Telegram Bot Token</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-xs md:text-sm font-semibold text-gray-300">Telegram Bot Token</label>
+                    {!isEditingTelegram && Boolean(ayarlar.telegram_token) && (
+                      <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                        <Lock className="w-3 h-3 text-purple-400" /> Kilitli
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="password"
+                    disabled={!isEditingTelegram}
                     placeholder="Botunuzun Token Kodu (örn: 123456:ABC-DEF...)"
                     value={ayarlar.telegram_token}
                     onChange={(e) => setAyarlar({ ...ayarlar, telegram_token: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none focus:border-purple-500 transition-all"
+                    className={`w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all ${
+                      !isEditingTelegram 
+                        ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none' 
+                        : 'bg-white/5 border-white/10 focus:border-purple-500'
+                    }`}
                   />
                   <p className="text-[10px] text-gray-500 mt-0.5">@BotFather üzerinden aldığınız token.</p>
                 </div>
 
                 <div>
-                  <label className="block text-xs md:text-sm font-semibold text-gray-300 mb-1">Telegram Chat ID</label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-xs md:text-sm font-semibold text-gray-300">Telegram Chat ID</label>
+                    {!isEditingTelegram && Boolean(ayarlar.telegram_chat_id) && (
+                      <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                        <Lock className="w-3 h-3 text-purple-400" /> Kilitli
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="text"
+                    disabled={!isEditingTelegram}
                     placeholder="Alıcı Sohbet/Grup ID (örn: 987654321)"
                     value={ayarlar.telegram_chat_id}
                     onChange={(e) => setAyarlar({ ...ayarlar, telegram_chat_id: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none focus:border-purple-500 transition-all"
+                    className={`w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all ${
+                      !isEditingTelegram 
+                        ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none' 
+                        : 'bg-white/5 border-white/10 focus:border-purple-500'
+                    }`}
                   />
                   <p className="text-[10px] text-gray-500 mt-0.5">Kişisel veya grup sohbet kimliğiniz (Chat ID).</p>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                  <button
-                    type="submit"
-                    className="flex-1 py-2 md:py-3 px-4 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center glow-btn"
-                  >
-                    Ayarları Kaydet
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleTestTelegram}
-                    disabled={loading}
-                    className="py-2 md:py-3 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center"
-                  >
-                    Bağlantıyı Test Et
-                  </button>
+                  {!isEditingTelegram ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingTelegram(true)}
+                        className="flex-1 py-2 md:py-3 px-4 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-2 glow-btn"
+                      >
+                        <Edit className="w-4 h-4" />
+                        Bilgileri Düzenle
+                      </button>
+                      {Boolean(ayarlar.telegram_token && ayarlar.telegram_chat_id) && (
+                        <button
+                          type="button"
+                          onClick={handleTestTelegram}
+                          disabled={loading}
+                          className="py-2 md:py-3 px-4 bg-white/5 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed border border-white/10 text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-1.5"
+                        >
+                          <Send className="w-3.5 h-3.5 text-purple-400" />
+                          Bağlantıyı Test Et
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {(() => {
+                        const isTelegramChanged = ayarlar.telegram_token !== savedAyarlar.telegram_token || ayarlar.telegram_chat_id !== savedAyarlar.telegram_chat_id;
+                        return (
+                          <button
+                            type="submit"
+                            disabled={!isTelegramChanged || loading}
+                            className="flex-1 py-2 md:py-3 px-4 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center glow-btn flex items-center justify-center gap-2"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                            Ayarları Kaydet
+                          </button>
+                        );
+                      })()}
+                      {Boolean(ayarlar.telegram_token || ayarlar.telegram_chat_id) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAyarlar(savedAyarlar);
+                            setIsEditingTelegram(false);
+                          }}
+                          className="py-2 md:py-3 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center"
+                        >
+                          Vazgeç
+                        </button>
+                      )}
+                    </>
+                  )}
                 </div>
               </form>
             </div>
@@ -1831,9 +1950,17 @@ function App() {
 
             {/* Hesap Yönetimi (Mobil & Genel) */}
             <div className="glass-panel p-4 md:p-6 rounded-2xl border-white/5">
-              <h3 className="text-sm md:text-lg font-bold text-white mb-3 md:mb-4 flex items-center gap-2">
-                <User className="w-4 h-4 md:w-5 md:h-5 text-purple-400" /> Hesap Yönetimi
-              </h3>
+              <div className="flex items-center justify-between mb-3 md:mb-4">
+                <h3 className="text-sm md:text-lg font-bold text-white flex items-center gap-2">
+                  <User className="w-4 h-4 md:w-5 md:h-5 text-purple-400" /> Hesap Yönetimi
+                </h3>
+                {!isEditingProfile && (
+                  <span className="text-[10px] md:text-xs font-semibold px-2.5 py-1 rounded-full border bg-emerald-500/10 text-emerald-300 border-emerald-500/20 flex items-center gap-1.5">
+                    <Lock className="w-3 h-3 text-emerald-400" />
+                    Bilgiler Kilitli
+                  </span>
+                )}
+              </div>
               
               <form onSubmit={handleUpdateProfile} className="space-y-3.5">
                 <div>
@@ -1841,9 +1968,14 @@ function App() {
                   <input
                     type="text"
                     required
+                    disabled={!isEditingProfile}
                     value={profileForm.isim}
                     onChange={(e) => setProfileForm({ ...profileForm, isim: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none focus:border-purple-500 transition-all"
+                    className={`w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all ${
+                      !isEditingProfile 
+                        ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none' 
+                        : 'bg-white/5 border-white/10 focus:border-purple-500'
+                    }`}
                   />
                 </div>
 
@@ -1852,9 +1984,14 @@ function App() {
                   <input
                     type="email"
                     required
+                    disabled={!isEditingProfile}
                     value={profileForm.eposta}
                     onChange={(e) => setProfileForm({ ...profileForm, eposta: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none focus:border-purple-500 transition-all"
+                    className={`w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all ${
+                      !isEditingProfile 
+                        ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none' 
+                        : 'bg-white/5 border-white/10 focus:border-purple-500'
+                    }`}
                   />
                 </div>
 
@@ -1862,7 +1999,10 @@ function App() {
                 {!showPasswordForm ? (
                   <button
                     type="button"
-                    onClick={() => setShowPasswordForm(true)}
+                    onClick={() => {
+                      setIsEditingProfile(true);
+                      setShowPasswordForm(true);
+                    }}
                     className="py-2 px-3 bg-white/5 hover:bg-white/10 text-white border border-white/10 font-semibold rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1.5"
                   >
                     <Lock className="w-3.5 h-3.5 text-purple-400" />
@@ -1909,25 +2049,57 @@ function App() {
                 )}
 
                 <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                  <button
-                    type="submit"
-                    disabled={
-                      profileLoading || 
-                      (!(showPasswordForm && profileForm.mevcut_sifre !== '' && profileForm.sifre !== '') &&
-                       profileForm.isim === (user?.isim || '') && 
-                       profileForm.eposta === (user?.eposta || ''))
-                    }
-                    className="flex-1 py-2 md:py-2.5 px-4 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center glow-btn"
-                  >
-                    {profileLoading ? 'Güncelleniyor...' : 'Bilgileri Güncelle'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="py-2 md:py-2.5 px-4 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 border border-rose-500/20 font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center"
-                  >
-                    Oturumu Kapat
-                  </button>
+                  {!isEditingProfile ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingProfile(true)}
+                        className="flex-1 py-2 md:py-2.5 px-4 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-2 glow-btn"
+                      >
+                        <Edit className="w-4 h-4" />
+                        Bilgileri Düzenle
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="py-2 md:py-2.5 px-4 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 border border-rose-500/20 font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center"
+                      >
+                        Oturumu Kapat
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="submit"
+                        disabled={
+                          profileLoading || 
+                          (!(showPasswordForm && profileForm.mevcut_sifre !== '' && profileForm.sifre !== '') &&
+                           profileForm.isim === (user?.isim || '') && 
+                           profileForm.eposta === (user?.eposta || ''))
+                        }
+                        className="flex-1 py-2 md:py-2.5 px-4 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center glow-btn flex items-center justify-center gap-2"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        {profileLoading ? 'Güncelleniyor...' : 'Bilgileri Güncelle'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProfileForm({
+                            isim: user?.isim || '',
+                            eposta: user?.eposta || '',
+                            mevcut_sifre: '',
+                            sifre: ''
+                          });
+                          setShowPasswordForm(false);
+                          setIsEditingProfile(false);
+                        }}
+                        className="py-2 md:py-2.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center"
+                      >
+                        Vazgeç
+                      </button>
+                    </>
+                  )}
                 </div>
               </form>
             </div>
