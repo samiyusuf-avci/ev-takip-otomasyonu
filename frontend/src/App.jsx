@@ -13,11 +13,13 @@ import {
   Edit,
   CheckCircle,
   XCircle,
+  X,
   AlertTriangle,
   Gauge,
   Bell,
   Calendar,
   FolderPlus,
+  FolderCog,
   Info,
   DollarSign,
   User,
@@ -126,6 +128,8 @@ function App() {
   useEffect(() => {
     setIsEditingProfile(false);
     setShowPasswordForm(false);
+    setShowProfileMenu(false);
+    setShowNotificationMenu(false);
     if (user) {
       setProfileForm({
         isim: user.isim || '',
@@ -416,6 +420,91 @@ function App() {
       onConfirm
     });
   };
+
+  // Tarayıcı Geri/İleri (Popstate) Tuş Kontrolü ve Sayfa Geçiş Yönetimi
+  const changePage = useCallback((newPage) => {
+    if (!newPage) return;
+    setShowProfileMenu(false);
+    setShowNotificationMenu(false);
+
+    const validPages = ['dashboard', 'gidalar', 'faturalar', 'garantiler', 'rutinler', 'ayarlar'];
+    if (!validPages.includes(newPage)) return;
+
+    if (newPage !== currentPage) {
+      window.history.pushState({ page: newPage }, '', `#${newPage}`);
+      setCurrentPage(newPage);
+    }
+  }, [currentPage]);
+
+  const closeAllModals = useCallback(() => {
+    setShowGidaModal(false);
+    setShowFaturaModal(false);
+    setShowGarantiModal(false);
+    setShowKlasorYonetimModal(false);
+    setShowKlasorModal(false);
+    setShowRutinModal(false);
+    setShowProfileMenu(false);
+    setShowNotificationMenu(false);
+    setDeleteConfirm(prev => ({ ...prev, show: false }));
+  }, []);
+
+  const isAnyModalOpen = Boolean(
+    showGidaModal ||
+    showFaturaModal ||
+    showGarantiModal ||
+    showKlasorYonetimModal ||
+    showKlasorModal ||
+    showRutinModal ||
+    showProfileMenu ||
+    showNotificationMenu ||
+    deleteConfirm.show
+  );
+
+  const lastModalOpenRef = useRef(false);
+
+  // Modal açıldığında/kapatıldığında history durumunu güncelle
+  useEffect(() => {
+    if (isAnyModalOpen && !lastModalOpenRef.current) {
+      if (!window.history.state?.isModal) {
+        window.history.pushState({ page: currentPage, isModal: true }, '', `#${currentPage}-modal`);
+      }
+    } else if (!isAnyModalOpen && lastModalOpenRef.current) {
+      if (window.history.state?.isModal) {
+        window.history.back();
+      }
+    }
+    lastModalOpenRef.current = isAnyModalOpen;
+  }, [isAnyModalOpen, currentPage]);
+
+  // Tarayıcı Geri/İleri (Popstate) olay dinleyicisi
+  useEffect(() => {
+    const validPages = ['dashboard', 'gidalar', 'faturalar', 'garantiler', 'rutinler', 'ayarlar'];
+    
+    const initialHash = window.location.hash.replace('#', '').split('-')[0];
+    const initialPage = validPages.includes(initialHash) ? initialHash : 'dashboard';
+    setCurrentPage(initialPage);
+    window.history.replaceState({ page: initialPage }, '', `#${initialPage}`);
+
+    const handlePopState = (event) => {
+      // 1. Açıksa modalları kapat
+      closeAllModals();
+
+      // 2. Hedef sayfayı belirle
+      const statePage = event.state?.page;
+      const currentHash = window.location.hash.replace('#', '').split('-')[0];
+      let targetPage = 'dashboard';
+      if (statePage && validPages.includes(statePage)) {
+        targetPage = statePage;
+      } else if (currentHash && validPages.includes(currentHash)) {
+        targetPage = currentHash;
+      }
+      setCurrentPage(targetPage);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [closeAllModals]);
+
   const showToast = useCallback((msg, type = 'success') => {
     if (toastTimeoutRef.current) {
       clearTimeout(toastTimeoutRef.current);
@@ -432,9 +521,9 @@ function App() {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
-    setCurrentPage('dashboard');
+    changePage('dashboard');
     showToast('Oturum kapatıldı.');
-  }, [showToast]);
+  }, [showToast, changePage]);
 
   const verifyUser = useCallback(async () => {
     try {
@@ -447,6 +536,27 @@ function App() {
 
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
+    if (authMode === 'register' && !authForm.isim?.trim()) {
+      setAuthError('Lütfen Ad Soyad alanını doldurun.');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!authForm.eposta?.trim() || !emailRegex.test(authForm.eposta.trim())) {
+      setAuthError('Geçerli bir e-posta adresi giriniz (örnek: isim@domain.com).');
+      return;
+    }
+
+    if (!authForm.sifre?.trim()) {
+      setAuthError('Lütfen Şifre alanını doldurun.');
+      return;
+    }
+
+    if (authMode === 'register' && authForm.sifre.length < 6) {
+      setAuthError('Şifreniz en az 6 karakter olmalıdır.');
+      return;
+    }
+
     setAuthError('');
     setAuthLoading(true);
     try {
@@ -479,6 +589,19 @@ function App() {
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     
+    if (!profileForm.isim?.trim()) {
+      showToast('Lütfen Ad Soyad alanını doldurun.', 'error');
+      document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!profileForm.eposta?.trim() || !emailRegex.test(profileForm.eposta.trim())) {
+      showToast('Geçerli bir e-posta adresi giriniz (örnek: isim@domain.com).', 'error');
+      document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     // Frontend şifre uzunluk doğrulaması
     if (showPasswordForm) {
       if (!profileForm.mevcut_sifre || !profileForm.sifre) {
@@ -632,6 +755,14 @@ function App() {
   // -------------------------------------------------------------
   const handleSaveGida = async (e) => {
     e.preventDefault();
+    if (!gidaForm.urun_adi?.trim()) {
+      showToast('Lütfen Ürün Adı alanını doldurun.', 'error');
+      return;
+    }
+    if (!gidaForm.skt) {
+      showToast('Lütfen Son Kullanma Tarihi seçin.', 'error');
+      return;
+    }
     try {
       if (editingGida) {
         await API.put(`/gidalar/${editingGida.id}`, gidaForm);
@@ -692,6 +823,18 @@ function App() {
   // -------------------------------------------------------------
   const handleSaveFatura = async (e) => {
     e.preventDefault();
+    if (!faturaForm.fatura_adi?.trim()) {
+      showToast('Lütfen Fatura Adı alanını doldurun.', 'error');
+      return;
+    }
+    if (!faturaForm.tutar) {
+      showToast('Lütfen Tutar girin.', 'error');
+      return;
+    }
+    if (!faturaForm.son_odeme_tarihi) {
+      showToast('Lütfen Son Ödeme Tarihi seçin.', 'error');
+      return;
+    }
     try {
       if (editingFatura) {
         await API.put(`/faturalar/${editingFatura.id}`, faturaForm);
@@ -752,6 +895,14 @@ function App() {
   // -------------------------------------------------------------
   const handleSaveGaranti = async (e) => {
     e.preventDefault();
+    if (!garantiForm.cihaz_adi?.trim()) {
+      showToast('Lütfen Cihaz / Ürün Adı alanını doldurun.', 'error');
+      return;
+    }
+    if (!garantiForm.garanti_bitis) {
+      showToast('Lütfen Garanti Bitiş Tarihi seçin.', 'error');
+      return;
+    }
     try {
       if (editingGaranti) {
         await API.put(`/garantiler/${editingGaranti.id}`, garantiForm);
@@ -802,6 +953,10 @@ function App() {
   // -------------------------------------------------------------
   const handleSaveKlasor = async (e) => {
     e.preventDefault();
+    if (!klasorForm.klasor_adi?.trim()) {
+      showToast('Lütfen Klasör Adı alanını doldurun.', 'error');
+      return;
+    }
     try {
       if (editingKlasor) {
         await API.put(`/rutin_klasorleri/${editingKlasor.id}`, klasorForm);
@@ -846,6 +1001,18 @@ function App() {
 
   const handleSaveRutin = async (e) => {
     e.preventDefault();
+    if (!rutinForm.gorev_adi?.trim()) {
+      showToast('Lütfen Görev Adı alanını doldurun.', 'error');
+      return;
+    }
+    if (!rutinForm.periyot_ay) {
+      showToast('Lütfen Tekrar Periyodu seçin.', 'error');
+      return;
+    }
+    if (!rutinForm.son_yapilma_tarihi) {
+      showToast('Lütfen Son Yapılma Tarihi seçin.', 'error');
+      return;
+    }
     try {
       const data = {
         ...rutinForm,
@@ -990,7 +1157,7 @@ function App() {
             </div>
           )}
 
-          <form onSubmit={handleAuthSubmit} className="space-y-4">
+          <form noValidate onSubmit={handleAuthSubmit} className="space-y-4">
             {authMode === 'register' && (
               <div>
                 <label className="block text-xs font-semibold text-gray-400 mb-1">Ad Soyad</label>
@@ -1093,14 +1260,20 @@ function App() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowNotificationMenu(!showNotificationMenu)}
+            onClick={() => {
+              setShowProfileMenu(false);
+              setShowNotificationMenu(prev => !prev);
+            }}
             title="Raporu Şimdi Gönder"
             className="p-2 rounded-xl bg-purple-600/10 hover:bg-purple-600/20 text-purple-400 border border-purple-500/20 transition-all cursor-pointer"
           >
             <Bell className="w-4 h-4" />
           </button>
           <button
-            onClick={() => setShowProfileMenu(!showProfileMenu)}
+            onClick={() => {
+              setShowNotificationMenu(false);
+              setShowProfileMenu(prev => !prev);
+            }}
             title="Hesap Ayarları"
             className="w-8 h-8 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 active:scale-95 border border-purple-500/20 text-purple-400 font-bold text-xs flex items-center justify-center transition-all cursor-pointer"
           >
@@ -1163,7 +1336,7 @@ function App() {
 
               <div className="flex flex-col gap-1.5">
                 <button
-                  onClick={() => { setCurrentPage('ayarlar'); setShowProfileMenu(false); }}
+                  onClick={() => { changePage('ayarlar'); setShowProfileMenu(false); }}
                   className="w-full flex items-center gap-2 py-2 px-3 text-xs text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left"
                 >
                   <Settings className="w-3.5 h-3.5 text-gray-400" />
@@ -1210,7 +1383,7 @@ function App() {
               return (
                 <button
                   key={item.id}
-                  onClick={() => setCurrentPage(item.id)}
+                  onClick={() => changePage(item.id)}
                   className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all duration-200 text-left font-medium ${isActive
                     ? 'bg-purple-600/20 text-purple-300 border border-purple-500/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]'
                     : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
@@ -1257,17 +1430,37 @@ function App() {
 
       {/* ANA İÇERİK BÖLGESİ */}
       <main className="flex-1 p-4 pt-20 md:pt-10 md:p-10 pb-28 md:pb-10 overflow-y-auto">
-        {/* TOAST / BİLDİRİM BANNERLARI (Fixed & Her zaman görünür) */}
+        {/* TOAST / BİLDİRİM BANNERLARI (Fixed & Premium Estetik) */}
         {successMsg && (
-          <div className="fixed top-20 md:top-6 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm p-4 rounded-xl bg-emerald-950 border border-emerald-500/30 text-emerald-400 flex items-center gap-2.5 text-sm shadow-[0_10px_30px_rgba(16,185,129,0.2)] animate-scale-in">
-            <CheckCircle className="w-5 h-5 flex-shrink-0" />
-            <span className="font-semibold">{successMsg}</span>
+          <div className="fixed top-20 md:top-6 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-md p-3.5 px-4 rounded-2xl bg-[#0f1f18]/95 border border-emerald-500/40 text-emerald-300 flex items-center justify-between gap-3 text-xs md:text-sm shadow-[0_10px_35px_rgba(16,185,129,0.3)] backdrop-blur-2xl animate-scale-in">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30 flex-shrink-0">
+                <CheckCircle className="w-4 h-4" />
+              </div>
+              <span className="font-semibold truncate">{successMsg}</span>
+            </div>
+            <button 
+              onClick={() => setSuccessMsg('')}
+              className="text-emerald-400/60 hover:text-emerald-300 p-1 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
         {error && (
-          <div className="fixed top-20 md:top-6 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm p-4 rounded-xl bg-rose-950 border border-rose-500/30 text-rose-400 flex items-center gap-2.5 text-sm shadow-[0_10px_30px_rgba(244,63,94,0.2)] animate-scale-in">
-            <AlertTriangle className="w-5 h-5 flex-shrink-0 animate-pulse" />
-            <span className="font-semibold">{error}</span>
+          <div className="fixed top-20 md:top-6 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-md p-3.5 px-4 rounded-2xl bg-[#1a0f1c]/95 border border-rose-500/40 text-rose-300 flex items-center justify-between gap-3 text-xs md:text-sm shadow-[0_10px_35px_rgba(244,63,94,0.3)] backdrop-blur-2xl animate-scale-in">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="p-1.5 bg-rose-500/20 text-rose-400 rounded-xl border border-rose-500/30 flex-shrink-0 animate-pulse">
+                <AlertTriangle className="w-4 h-4" />
+              </div>
+              <span className="font-semibold truncate">{error}</span>
+            </div>
+            <button 
+              onClick={() => setError('')}
+              className="text-rose-400/60 hover:text-rose-300 p-1 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
 
@@ -1339,7 +1532,7 @@ function App() {
                 return (
                   <div
                     key={i}
-                    onClick={() => setCurrentPage(card.page)}
+                    onClick={() => changePage(card.page)}
                     className="glass-panel glass-panel-hover p-3 md:p-6 rounded-2xl cursor-pointer flex flex-col justify-between relative overflow-hidden"
                   >
                     <div className={`absolute top-0 right-0 w-16 h-16 md:w-24 md:h-24 bg-gradient-to-br ${card.color} opacity-40 blur-2xl rounded-full -mr-3 -mt-3 md:-mr-5 md:-mt-5`}></div>
@@ -1394,15 +1587,6 @@ function App() {
                     <p className="text-xs text-gray-400 mt-0.5">Sisteminizdeki tüm yaklaşan son tarihler, ödeme bekleyen faturalar ve rutin bakımlar.</p>
                   </div>
                 </div>
-
-                <button
-                  onClick={handleTriggerDailyReport}
-                  disabled={loading}
-                  className="flex items-center justify-center gap-2 py-2 px-4 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 rounded-xl text-xs font-bold transition-all cursor-pointer self-start sm:self-auto shadow-sm"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Raporu Telegram'a Gönder</span>
-                </button>
               </div>
 
               {/* 2 Sekme: Yaklaşanlar & Süresi Geçenler */}
@@ -1504,7 +1688,7 @@ function App() {
                           {/* Action Buttons */}
                           <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/5">
                             <button
-                              onClick={() => setCurrentPage(notif.targetPage)}
+                              onClick={() => changePage(notif.targetPage)}
                               className="text-[11px] font-bold text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors cursor-pointer"
                             >
                               <span>Sayfaya Git</span>
@@ -1556,7 +1740,7 @@ function App() {
                   </div>
                   {!isTelegramConfigured && (
                     <button
-                      onClick={() => setCurrentPage('ayarlar')}
+                      onClick={() => changePage('ayarlar')}
                       className="relative z-10 py-2.5 px-5 bg-white/5 hover:bg-white/10 text-white rounded-xl border border-white/10 text-sm font-semibold transition-all duration-200 flex-shrink-0 cursor-pointer"
                     >
                       Telegram Botu Ekle
@@ -1608,13 +1792,15 @@ function App() {
                   >
                     <span className="hidden md:inline">{tab.label}</span>
                     <span className="md:hidden">{tab.mobileLabel}</span>
-                    <span
-                      className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-bold transition-colors ${
-                        isActive ? 'bg-white/20 text-white border border-white/20' : 'bg-white/10 text-gray-300 border border-white/5'
-                      }`}
-                    >
-                      {tab.count}
-                    </span>
+                    {tab.id === 'hepsi' && (
+                      <span
+                        className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-bold transition-colors ${
+                          isActive ? 'bg-white/20 text-white border border-white/20' : 'bg-white/10 text-gray-300 border border-white/5'
+                        }`}
+                      >
+                        {tab.count}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -1767,13 +1953,15 @@ function App() {
                   >
                     <span className="hidden md:inline">{tab.label}</span>
                     <span className="md:hidden">{tab.mobileLabel}</span>
-                    <span
-                      className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-bold transition-colors ${
-                        isActive ? 'bg-white/20 text-white border border-white/20' : 'bg-white/10 text-gray-300 border border-white/5'
-                      }`}
-                    >
-                      {tab.count}
-                    </span>
+                    {tab.id === 'hepsi' && (
+                      <span
+                        className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-bold transition-colors ${
+                          isActive ? 'bg-white/20 text-white border border-white/20' : 'bg-white/10 text-gray-300 border border-white/5'
+                        }`}
+                      >
+                        {tab.count}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -1899,13 +2087,15 @@ function App() {
                   >
                     <span className="hidden md:inline">{tab.label}</span>
                     <span className="md:hidden">{tab.mobileLabel}</span>
-                    <span
-                      className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-bold transition-colors ${
-                        isActive ? 'bg-white/20 text-white border border-white/20' : 'bg-white/10 text-gray-300 border border-white/5'
-                      }`}
-                    >
-                      {tab.count}
-                    </span>
+                    {tab.id === 'hepsi' && (
+                      <span
+                        className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-bold transition-colors ${
+                          isActive ? 'bg-white/20 text-white border border-white/20' : 'bg-white/10 text-gray-300 border border-white/5'
+                        }`}
+                      >
+                        {tab.count}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -1996,7 +2186,7 @@ function App() {
                   onClick={() => setShowKlasorYonetimModal(true)}
                   className="flex items-center gap-1.5 py-2 px-2.5 md:px-4 bg-white/5 hover:bg-white/10 text-white border border-white/10 font-semibold rounded-xl text-sm transition-all duration-200 cursor-pointer"
                 >
-                  <Settings className="w-4 h-4 text-purple-400" />
+                  <FolderCog className="w-4 h-4 text-purple-400" />
                   <span className="hidden md:inline">Klasör Yönetimi</span>
                 </button>
                 <button
@@ -2042,14 +2232,7 @@ function App() {
                         : 'bg-white/[0.05] border-white/10 text-gray-300 hover:bg-purple-500/20 hover:border-purple-500/30 hover:text-purple-200'
                     }`}
                   >
-                    <span>📂 {klasor.klasor_adi}</span>
-                    <span
-                      className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-bold transition-colors ${
-                        isSelected ? 'bg-white/20 text-white border border-white/20' : 'bg-white/10 text-gray-300 border border-white/5'
-                      }`}
-                    >
-                      {count}
-                    </span>
+                    <span>{klasor.klasor_adi}</span>
                   </button>
                 );
               })}
@@ -2240,7 +2423,7 @@ function App() {
                 )}
               </div>
 
-              <form onSubmit={handleSaveAyarlar} className="space-y-3.5">
+              <form noValidate onSubmit={handleSaveAyarlar} className="space-y-3.5">
                 <div>
                   <div className="flex justify-between items-center mb-1">
                     <label className="block text-xs md:text-sm font-semibold text-gray-300">Telegram Bot Token</label>
@@ -2359,7 +2542,7 @@ function App() {
                 )}
               </div>
               
-              <form onSubmit={handleUpdateProfile} className="space-y-3.5">
+              <form noValidate onSubmit={handleUpdateProfile} className="space-y-3.5">
                 <div>
                   <label className="block text-xs md:text-sm font-semibold text-gray-300 mb-1">Ad Soyad</label>
                   <input
@@ -2515,7 +2698,7 @@ function App() {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
           <div className="glass-panel w-full max-w-md p-6 rounded-3xl relative">
             <h3 className="text-xl font-bold text-white mb-4">{editingGida ? 'Gıda Düzenle 🥑' : 'Yeni Gıda Ekle 🥑'}</h3>
-            <form onSubmit={handleSaveGida} className="space-y-4">
+            <form noValidate onSubmit={handleSaveGida} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-400 mb-1">Ürün Adı *</label>
                 <input
@@ -2611,7 +2794,7 @@ function App() {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
           <div className="glass-panel w-full max-w-md p-6 rounded-3xl relative">
             <h3 className="text-xl font-bold text-white mb-4">{editingFatura ? 'Fatura Düzenle 💵' : 'Yeni Fatura Ekle 💵'}</h3>
-            <form onSubmit={handleSaveFatura} className="space-y-4">
+            <form noValidate onSubmit={handleSaveFatura} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-400 mb-1">Fatura Adı *</label>
                 <input
@@ -2707,7 +2890,7 @@ function App() {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
           <div className="glass-panel w-full max-w-md p-6 rounded-3xl relative">
             <h3 className="text-xl font-bold text-white mb-4">{editingGaranti ? 'Garanti Kaydı Düzenle 🛡️' : 'Yeni Garanti Belgesi 🛡️'}</h3>
-            <form onSubmit={handleSaveGaranti} className="space-y-4">
+            <form noValidate onSubmit={handleSaveGaranti} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-400 mb-1">Cihaz Adı *</label>
                 <input
@@ -2885,7 +3068,7 @@ function App() {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
           <div className="glass-panel w-full max-w-sm p-6 rounded-3xl relative">
             <h3 className="text-xl font-bold text-white mb-4">{editingKlasor ? 'Klasör Adını Düzenle 📂' : 'Yeni Rutin Klasörü 📂'}</h3>
-            <form onSubmit={handleSaveKlasor} className="space-y-4">
+            <form noValidate onSubmit={handleSaveKlasor} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-400 mb-1">Klasör Adı *</label>
                 <input
@@ -2929,7 +3112,7 @@ function App() {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
           <div className="glass-panel w-full max-w-md p-6 rounded-3xl relative">
             <h3 className="text-xl font-bold text-white mb-4">{editingRutin ? 'Rutin Görev Düzenle 🔁' : 'Yeni Rutin Görev Ekle 🔁'}</h3>
-            <form onSubmit={handleSaveRutin} className="space-y-4">
+            <form noValidate onSubmit={handleSaveRutin} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-400 mb-1">Bağlı Olduğu Klasör</label>
                 <select
@@ -3039,7 +3222,7 @@ function App() {
               <button
                 key={item.id}
                 id={`mobile-nav-${item.id}`}
-                onClick={() => setCurrentPage(item.id)}
+                onClick={() => changePage(item.id)}
                 className={`relative flex flex-col items-center justify-center gap-0.5 flex-1 py-2 px-0.5 rounded-xl transition-all duration-200 cursor-pointer ${
                   isActive
                     ? 'text-purple-400'

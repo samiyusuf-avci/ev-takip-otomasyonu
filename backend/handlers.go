@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -13,6 +14,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
+
+var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 
 type AppHandler struct {
 	DB        *gorm.DB
@@ -35,11 +38,18 @@ func (h *AppHandler) Register(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Lütfen tüm alanları doldurun."})
 	}
 
-	if req.Isim == "" || req.Eposta == "" || req.Sifre == "" {
+	if strings.TrimSpace(req.Isim) == "" || strings.TrimSpace(req.Eposta) == "" || strings.TrimSpace(req.Sifre) == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "Lütfen isim, e-posta ve şifre alanlarını doldurun."})
 	}
 
-	epostaLower := strings.ToLower(req.Eposta)
+	epostaLower := strings.ToLower(strings.TrimSpace(req.Eposta))
+	if !emailRegex.MatchString(epostaLower) {
+		return c.Status(400).JSON(fiber.Map{"error": "Geçerli bir e-posta adresi giriniz (örnek: isim@domain.com)."})
+	}
+
+	if len(req.Sifre) < 6 {
+		return c.Status(400).JSON(fiber.Map{"error": "Şifreniz en az 6 karakter olmalıdır."})
+	}
 
 	// E-posta benzersizlik kontrolü
 	var existingUser Kullanici
@@ -161,8 +171,13 @@ func (h *AppHandler) UpdateProfile(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Geçersiz istek gövdesi."})
 	}
 
-	if req.Isim == "" || req.Eposta == "" {
+	if strings.TrimSpace(req.Isim) == "" || strings.TrimSpace(req.Eposta) == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "İsim ve e-posta alanları boş bırakılamaz."})
+	}
+
+	epostaLower := strings.ToLower(strings.TrimSpace(req.Eposta))
+	if !emailRegex.MatchString(epostaLower) {
+		return c.Status(400).JSON(fiber.Map{"error": "Geçerli bir e-posta adresi giriniz (örnek: isim@domain.com)."})
 	}
 
 	var user Kullanici
@@ -170,7 +185,6 @@ func (h *AppHandler) UpdateProfile(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "Kullanıcı bulunamadı."})
 	}
 
-	epostaLower := strings.ToLower(req.Eposta)
 	if epostaLower != user.Eposta {
 		var existingUser Kullanici
 		err := h.DB.Where("eposta = ? AND id != ?", epostaLower, userID).First(&existingUser).Error
