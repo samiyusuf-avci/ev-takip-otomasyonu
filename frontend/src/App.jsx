@@ -22,7 +22,8 @@ import {
   User,
   Mail,
   Lock,
-  LogOut
+  LogOut,
+  Send
 } from 'lucide-react';
 
 // -------------------------------------------------------------
@@ -258,14 +259,27 @@ function App() {
     }
   };
 
+  const fetchAyarlar = useCallback(async () => {
+    try {
+      const res = await API.get('/ayarlar');
+      setAyarlar({
+        telegram_token: res.data.telegram_token || '',
+        telegram_chat_id: res.data.telegram_chat_id || ''
+      });
+    } catch (err) {
+      console.error('Ayarlar yüklenemedi:', err);
+    }
+  }, []);
+
   const fetchDashboardSummary = useCallback(async () => {
     try {
       const res = await API.get('/dashboard-summary');
       setSummary(res.data);
+      fetchAyarlar();
     } catch (err) {
       console.error('Dashboard özeti yüklenemedi:', err);
     }
-  }, []);
+  }, [fetchAyarlar]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -784,7 +798,7 @@ function App() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowNotificationMenu(!showNotificationMenu)}
-            title="Bildirim Test Et"
+            title="Raporu Şimdi Gönder"
             className="p-2 rounded-xl bg-purple-600/10 hover:bg-purple-600/20 text-purple-400 border border-purple-500/20 transition-all cursor-pointer"
           >
             <Bell className="w-4 h-4" />
@@ -932,7 +946,7 @@ function App() {
             className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-purple-600/10 hover:bg-purple-600/20 text-purple-400 font-semibold text-sm transition-all duration-200 border border-purple-500/20 cursor-pointer"
           >
             <Bell className="w-4 h-4" />
-            Bildirim Test Et
+            Raporu Şimdi Gönder
           </button>
 
           <button
@@ -1061,28 +1075,51 @@ function App() {
             </div>
 
             {/* Telegram Hatırlatma Bilgisi */}
-            <div className="glass-panel p-6 rounded-2xl border border-purple-500/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-5 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 blur-3xl rounded-full pointer-events-none"></div>
-              <div className="flex gap-4 relative z-10">
-                <div className="p-3 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-2xl flex-shrink-0 self-start">
-                  <Bell className="w-6 h-6" />
+            {(() => {
+              const isTelegramConfigured = Boolean(ayarlar.telegram_token && ayarlar.telegram_chat_id);
+              return (
+                <div className={`glass-panel p-6 rounded-2xl border ${isTelegramConfigured ? 'border-purple-500/30' : 'border-amber-500/20'} flex flex-col md:flex-row justify-between items-start md:items-center gap-5 relative overflow-hidden`}>
+                  <div className={`absolute top-0 right-0 w-64 h-64 ${isTelegramConfigured ? 'bg-purple-500/10' : 'bg-amber-500/5'} blur-3xl rounded-full pointer-events-none`}></div>
+                  <div className="flex gap-4 relative z-10">
+                    <div className={`p-3 ${isTelegramConfigured ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'} border rounded-2xl flex-shrink-0 self-start`}>
+                      <Bell className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2.5 mb-1">
+                        <h3 className="text-lg font-bold text-white tracking-tight">
+                          {isTelegramConfigured ? 'Anlık Telegram Hatırlatıcısı Aktif' : 'Telegram Botunu Yapılandırın'}
+                        </h3>
+                        <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full border whitespace-nowrap flex-shrink-0 ${
+                          isTelegramConfigured 
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                            : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${isTelegramConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
+                          {isTelegramConfigured ? 'Bot Bağlı' : 'Yapılandırılmadı'}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-400 mt-1 max-w-2xl">
+                        {isTelegramConfigured ? (
+                          <>
+                            Telegram botunuz bağlı ve aktif. Sistem her gece saat 00:00'da yaklaşan gıdalarınızı, faturalarınızı, garantilerinizi ve rutin görevlerinizi otomatik olarak tarar. Dilerseniz <span className="hidden md:inline">sol menüdeki</span><span className="inline md:hidden">üst menüdeki</span> "Raporu Şimdi Gönder" butonuna tıklayarak istediğiniz an anlık rapor tetikleyebilirsiniz.
+                          </>
+                        ) : (
+                          'Son kullanma tarihi yaklaşan gıdalarınız, son ödeme günü yaklaşan faturalarınız ve zamanı gelen rutin görevleriniz için Telegram üzerinden anlık bildirim almak istiyorsanız bot bilgilerinizi kolayca ekleyebilirsiniz.'
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  {!isTelegramConfigured && (
+                    <button
+                      onClick={() => setCurrentPage('ayarlar')}
+                      className="relative z-10 py-2.5 px-5 bg-white/5 hover:bg-white/10 text-white rounded-xl border border-white/10 text-sm font-semibold transition-all duration-200 flex-shrink-0 cursor-pointer"
+                    >
+                      Telegram Botu Ekle
+                    </button>
+                  )}
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white">Anlık Telegram Hatırlatıcısı Aktif</h3>
-                  <p className="text-sm text-gray-400 mt-1 max-w-2xl">
-                    Sistem her gece saat 00:00'da son kullanma tarihleri, fatura son ödeme günleri ve periyodik rutin görevlerinizi
-                    otomatik olarak tarar ve belirlediğiniz uyarı limitlerine ulaşıldığında Telegram botunuz üzerinden size anlık
-                    detaylı bir rapor gönderir.
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setCurrentPage('ayarlar')}
-                className="relative z-10 py-2.5 px-5 bg-white/5 hover:bg-white/10 text-white rounded-xl border border-white/10 text-sm font-semibold transition-all duration-200 flex-shrink-0 cursor-pointer"
-              >
-                Telegram Botu Yapılandır
-              </button>
-            </div>
+              );
+            })()}
           </div>
         )}
 
