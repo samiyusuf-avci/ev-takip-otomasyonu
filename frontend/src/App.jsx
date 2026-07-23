@@ -1569,20 +1569,30 @@ function App() {
 
               {/* Panel Başlığı ve Durum */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10 relative z-10">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-xl relative">
+                <div className="flex items-start sm:items-center gap-3 min-w-0">
+                  <div className="p-2.5 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-xl relative flex-shrink-0">
                     <Bell className="w-5 h-5 animate-pulse" />
                     {activeNotifications.length > 0 && (
                       <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full border-2 border-[#13141f] animate-ping" />
                     )}
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-base md:text-lg font-bold text-white tracking-tight">Anlık Bildirimler & Acil Uyarı Ekranı 🔔</h3>
-                      <span className="px-2.5 py-0.5 text-xs font-extrabold bg-rose-500/15 text-rose-400 border border-rose-500/30 rounded-full flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse"></span>
-                        {activeNotifications.length} Aktif Uyarı
-                      </span>
+                      {activeNotifications.length > 0 ? (
+                        <span className="px-2.5 py-0.5 text-xs font-extrabold bg-gradient-to-r from-rose-500/20 to-purple-500/20 text-rose-300 border border-rose-500/30 rounded-full inline-flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 shadow-[0_0_12px_rgba(244,63,94,0.25)]">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                          </span>
+                          {activeNotifications.length} Aktif Uyarı
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-0.5 text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded-full inline-flex items-center gap-1.5 whitespace-nowrap flex-shrink-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                          Uyarı Yok
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5">Sisteminizdeki tüm yaklaşan son tarihler, ödeme bekleyen faturalar ve rutin bakımlar.</p>
                   </div>
@@ -2398,12 +2408,13 @@ function App() {
 
             {/* Telegram Bot Ayarları */}
             <div className="glass-panel p-4 md:p-6 rounded-2xl border-white/5">
-              <div className="flex items-center justify-between mb-3 md:mb-4">
-                <h3 className="text-sm md:text-lg font-bold text-white flex items-center gap-2">
-                  <Bell className="w-4 h-4 md:w-5 md:h-5 text-purple-400" /> Telegram Bildirim Yapılandırması
+              <div className="flex items-center justify-between gap-2 mb-3 md:mb-4">
+                <h3 className="text-sm md:text-lg font-bold text-white flex items-center gap-2 min-w-0">
+                  <Bell className="w-4 h-4 md:w-5 md:h-5 text-purple-400 flex-shrink-0" />
+                  <span className="truncate md:whitespace-normal">Telegram Bildirim Yapılandırması</span>
                 </h3>
                 {Boolean(ayarlar.telegram_token || ayarlar.telegram_chat_id) && (
-                  <span className={`text-[10px] md:text-xs font-semibold px-2.5 py-1 rounded-full border flex items-center gap-1.5 ${
+                  <span className={`text-[10px] md:text-xs font-semibold px-2.5 py-1 rounded-full border flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 ${
                     isEditingTelegram 
                       ? 'bg-amber-500/10 text-amber-300 border-amber-500/20' 
                       : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
@@ -2530,12 +2541,13 @@ function App() {
 
             {/* Hesap Yönetimi (Mobil & Genel) */}
             <div className="glass-panel p-4 md:p-6 rounded-2xl border-white/5">
-              <div className="flex items-center justify-between mb-3 md:mb-4">
-                <h3 className="text-sm md:text-lg font-bold text-white flex items-center gap-2">
-                  <User className="w-4 h-4 md:w-5 md:h-5 text-purple-400" /> Hesap Yönetimi
+              <div className="flex items-center justify-between gap-2 mb-3 md:mb-4">
+                <h3 className="text-sm md:text-lg font-bold text-white flex items-center gap-2 min-w-0">
+                  <User className="w-4 h-4 md:w-5 md:h-5 text-purple-400 flex-shrink-0" />
+                  <span>Hesap Yönetimi</span>
                 </h3>
                 {!isEditingProfile && (
-                  <span className="text-[10px] md:text-xs font-semibold px-2.5 py-1 rounded-full border bg-emerald-500/10 text-emerald-300 border-emerald-500/20 flex items-center gap-1.5">
+                  <span className="text-[10px] md:text-xs font-semibold px-2.5 py-1 rounded-full border bg-emerald-500/10 text-emerald-300 border-emerald-500/20 flex items-center gap-1.5 whitespace-nowrap flex-shrink-0">
                     <Lock className="w-3 h-3 text-emerald-400" />
                     Bilgiler Kilitli
                   </span>
