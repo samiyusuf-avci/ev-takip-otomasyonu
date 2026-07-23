@@ -1937,24 +1937,6 @@ function App() {
               </form>
             </div>
 
-            {/* Manuel Tetikleyici Paneli */}
-            <div className="glass-panel p-4 md:p-6 rounded-2xl border-white/5">
-              <h3 className="text-sm md:text-lg font-bold text-white mb-1.5 flex items-center gap-2">
-                <RefreshCw className="w-4 h-4 md:w-5 md:h-5 text-emerald-400" /> Sistem Test Araçları
-              </h3>
-              <p className="text-[10px] md:text-sm text-gray-400 mb-3 leading-relaxed">
-                Süresi yaklaşan görevlerin ve son kullanma tarihli ürünlerin kontrolünü gece yarısını beklemeden şimdi tetikleyin.
-              </p>
-
-              <button
-                onClick={handleTriggerDailyReport}
-                disabled={loading}
-                className="py-2 md:py-2.5 px-4 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-500/20 font-semibold rounded-xl transition-all cursor-pointer text-xs"
-              >
-                Bildirim Taramasını Manuel Başlat
-              </button>
-            </div>
-
             {/* Hesap Yönetimi (Mobil & Genel) */}
             <div className="glass-panel p-4 md:p-6 rounded-2xl border-white/5">
               <div className="flex items-center justify-between mb-3 md:mb-4">
