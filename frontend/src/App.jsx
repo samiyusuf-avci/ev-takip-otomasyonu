@@ -640,12 +640,14 @@ function App() {
       if (res.data.success) {
         if (res.data.sent) {
           showToast(`Günlük kontrol tetiklendi. ${res.data.alertsCount} adet uyarı Telegram'a iletildi!`);
+        } else if (res.data.alertsCount > 0) {
+          showToast(`Kontrol tetiklendi (${res.data.alertsCount} adet uyarı bulundu), ancak Telegram Chat ID / Token ayarı yapılmadığı için gönderilemedi.`, 'error');
         } else {
           showToast('Kontrol tetiklendi. Yaklaşan veya acil uyarınız olmadığı için bildirim gönderilmedi.');
         }
       }
     } catch (err) {
-      showToast('Manuel tetikleme sırasında bir hata oluştu.', 'error');
+      showToast(`Manuel tetikleme sırasında bir hata oluştu: ${err.response?.data?.error || err.message}`, 'error');
     } finally {
       setLoading(false);
     }

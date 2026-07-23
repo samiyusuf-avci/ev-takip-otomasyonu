@@ -818,6 +818,11 @@ func (h *AppHandler) SaveAyarlar(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	chatIDSetting := Ayarlar{Anahtar: "telegram_chat_id", Deger: req.TelegramChatID}
+	if err := h.DB.Save(&chatIDSetting).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
 	if err := h.DB.Model(&Kullanici{}).Where("id = ?", userID).Update("telegram_chat_id", req.TelegramChatID).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -830,14 +835,16 @@ func (h *AppHandler) SaveAyarlar(c *fiber.Ctx) error {
 // -------------------------------------------------------------
 
 func (h *AppHandler) TestBildirim(c *fiber.Ctx) error {
-	success, sentCount, err := checkAndNotify(h.DB)
+	success, sentCount, alertsCount, err := checkAndNotify(h.DB)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	return c.JSON(fiber.Map{
 		"success":        success,
+		"sent":           sentCount > 0,
 		"sentUsersCount": sentCount,
+		"alertsCount":    alertsCount,
 	})
 }
 

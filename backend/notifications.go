@@ -22,19 +22,19 @@ func getDaysRemaining(targetDateStr string) (int, error) {
 	if targetDateStr == "" {
 		return 0, fmt.Errorf("empty date")
 	}
-	targetTime, err := time.Parse("2006-01-02", targetDateStr)
+	targetTime, err := time.ParseInLocation("2006-01-02", targetDateStr, time.Local)
 	if err != nil {
 		return 0, err
 	}
 	today := getTodayZeroTime()
 	diff := targetTime.Sub(today)
-	days := int(math.Ceil(diff.Hours() / 24.0))
+	days := int(math.Round(diff.Hours() / 24.0))
 	return days, nil
 }
 
 // Calculate next routine date by adding months to the last done date
 func getNextRoutineDate(lastDoneStr string, periodMonths int) (time.Time, error) {
-	t, err := time.Parse("2006-01-02", lastDoneStr)
+	t, err := time.ParseInLocation("2006-01-02", lastDoneStr, time.Local)
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -80,29 +80,45 @@ func sendTelegramMessage(db *gorm.DB, message string) (bool, error) {
 }
 
 // checkAndNotify scans all reminders and sends Telegram notifications if needed
-func checkAndNotify(db *gorm.DB) (bool, int, error) {
+func checkAndNotify(db *gorm.DB) (bool, int, int, error) {
 	fmt.Println("Hatırlatıcılar taranıyor...")
 
 	var users []Kullanici
 	if err := db.Where("telegram_chat_id IS NOT NULL AND telegram_chat_id != ''").Find(&users).Error; err != nil {
-		return false, 0, err
+		return false, 0, 0, err
+	}
+
+	// Eğer kullanıcıların telegram_chat_id'si boşsa ama ayarlar tablosunda varsa fallback yap
+	if len(users) == 0 {
+		var chatIDSetting Ayarlar
+		if err := db.Where("anahtar = ? AND deger != ''", "telegram_chat_id").First(&chatIDSetting).Error; err == nil && chatIDSetting.Deger != "" {
+			var allUsers []Kullanici
+			if err := db.Find(&allUsers).Error; err == nil && len(allUsers) > 0 {
+				for i := range allUsers {
+					allUsers[i].TelegramChatID = chatIDSetting.Deger
+					db.Model(&allUsers[i]).Update("telegram_chat_id", chatIDSetting.Deger)
+				}
+				users = allUsers
+			}
+		}
 	}
 
 	var tokenSetting Ayarlar
 	if err := db.Where("anahtar = ?", "telegram_token").First(&tokenSetting).Error; err != nil {
-		return false, 0, fmt.Errorf("Telegram bot token bulunamadı: %v", err)
+		return false, 0, 0, fmt.Errorf("Telegram bot token bulunamadı: %v", err)
 	}
 	token := tokenSetting.Deger
 	if token == "" {
-		return false, 0, fmt.Errorf("Telegram bot token bulunamadı")
+		return false, 0, 0, fmt.Errorf("Telegram bot token bulunamadı")
 	}
 
 	bot, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
-		return false, 0, fmt.Errorf("Telegram bot başlatılamadı: %v", err)
+		return false, 0, 0, fmt.Errorf("Telegram bot başlatılamadı: %v", err)
 	}
 
 	totalSent := 0
+	totalAlertsCount := 0
 	todayStr := time.Now().Format("02.01.2006")
 
 	for _, user := range users {
@@ -127,6 +143,7 @@ func checkAndNotify(db *gorm.DB) (bool, int, error) {
 				}
 			}
 			if len(gidaAlerts) > 0 {
+				totalAlertsCount += len(gidaAlerts)
 				alerts = append(alerts, fmt.Sprintf("🥑 <b>Gıda Son Kullanma Uyarıları:</b>\n%s", strings.Join(gidaAlerts, "\n")))
 			}
 		}
@@ -154,6 +171,7 @@ func checkAndNotify(db *gorm.DB) (bool, int, error) {
 				}
 			}
 			if len(faturaAlerts) > 0 {
+				totalAlertsCount += len(faturaAlerts)
 				alerts = append(alerts, fmt.Sprintf("💸 <b>Fatura Son Ödeme Uyarıları:</b>\n%s", strings.Join(faturaAlerts, "\n")))
 			}
 		}
@@ -165,12 +183,15 @@ func checkAndNotify(db *gorm.DB) (bool, int, error) {
 			for _, garanti := range garantiler {
 				days, err := getDaysRemaining(garanti.GarantiBitis)
 				if err == nil {
-					if days >= 0 && days <= garanti.HatirlatmaGunKala {
+					if days < 0 {
+						garantiAlerts = append(garantiAlerts, fmt.Sprintf("⚠️ <b>%s</b> (%s) - Garanti süresi %d gün önce bitti!", garanti.CihazAdi, garanti.MarkaModel, -days))
+					} else if days <= garanti.HatirlatmaGunKala {
 						garantiAlerts = append(garantiAlerts, fmt.Sprintf("🔌 <b>%s</b> (%s) - Garanti bitimine %d gün kaldı.", garanti.CihazAdi, garanti.MarkaModel, days))
 					}
 				}
 			}
 			if len(garantiAlerts) > 0 {
+				totalAlertsCount += len(garantiAlerts)
 				alerts = append(alerts, fmt.Sprintf("🛡️ <b>Garanti Süresi Uyarıları:</b>\n%s", strings.Join(garantiAlerts, "\n")))
 			}
 		}
@@ -193,7 +214,7 @@ func checkAndNotify(db *gorm.DB) (bool, int, error) {
 					nextDate, err := getNextRoutineDate(*rutin.SonYapilmaTarihi, rutin.PeriyotAy)
 					if err == nil {
 						today := getTodayZeroTime()
-						diffDays := int(math.Ceil(nextDate.Sub(today).Hours() / 24.0))
+						diffDays := int(math.Round(nextDate.Sub(today).Hours() / 24.0))
 						if diffDays <= rutin.HatirlatmaGunKala {
 							if diffDays < 0 {
 								rutinAlerts = append(rutinAlerts, fmt.Sprintf("🔁 <b>%s%s</b> (Zamanı %d gün geçti!)", folderText, rutin.GorevAdi, -diffDays))
@@ -209,6 +230,7 @@ func checkAndNotify(db *gorm.DB) (bool, int, error) {
 				}
 			}
 			if len(rutinAlerts) > 0 {
+				totalAlertsCount += len(rutinAlerts)
 				alerts = append(alerts, fmt.Sprintf("📅 <b>Rutin Görev Zamanı Uyarıları:</b>\n%s", strings.Join(rutinAlerts, "\n")))
 			}
 		}
@@ -232,6 +254,6 @@ func checkAndNotify(db *gorm.DB) (bool, int, error) {
 		}
 	}
 
-	fmt.Printf("Bildirim özeti %d kullanıcıya gönderildi.\n", totalSent)
-	return true, totalSent, nil
+	fmt.Printf("Bildirim özeti %d kullanıcıya gönderildi (%d toplam uyarı).\n", totalSent, totalAlertsCount)
+	return true, totalSent, totalAlertsCount, nil
 }
