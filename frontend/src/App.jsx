@@ -129,6 +129,9 @@ function App() {
   const [faturaFiltre, setFaturaFiltre] = useState('odenmedi'); // 'hepsi', 'odenmedi', 'odendi'
   const [garantiFiltre, setGarantiFiltre] = useState('aktif'); // 'hepsi', 'aktif', 'gecen'
   const [seciliRutinKlasor, setSeciliRutinKlasor] = useState('hepsi'); // 'hepsi' veya klasor_id
+  const [dashboardNotifTab, setDashboardNotifTab] = useState('yaklasanlar'); // 'yaklasanlar' | 'gecenler'
+
+  // Form Modalları ve State'leri
 
   // Memoized Filtrelenmiş Veri Listeleri (RAM/CPU tüketimini optimize eder)
   const filteredGidalar = useMemo(() => {
@@ -154,6 +157,209 @@ function App() {
     if (!Array.isArray(rutinler)) return [];
     return rutinler.filter((r) => r && (seciliRutinKlasor === 'hepsi' || r.klasor_id?.toString() === seciliRutinKlasor));
   }, [rutinler, seciliRutinKlasor]);
+
+  // Anlık Bildirim Listesi Memosu (Ana sayfa bildirim ekranı için)
+  const activeNotifications = useMemo(() => {
+    const list = [];
+
+    // 1. GIDALAR KONTROLÜ
+    if (Array.isArray(gidalar)) {
+      gidalar.forEach((gida) => {
+        if (gida.durum === 'bekliyor') {
+          const days = getDaysDiff(gida.skt);
+          if (days !== null) {
+            const limit = gida.hatirlatma_gun_kala ?? 3;
+            if (days < 0 || days <= limit) {
+              const isOverdue = days < 0;
+              const isToday = days === 0;
+              list.push({
+                id: `gida-${gida.id}`,
+                rawId: gida.id,
+                category: 'gida',
+                categoryName: 'Gıda Takibi 🥑',
+                title: gida.urun_adi,
+                subtitle: gida.kategori || 'Genel Mutfak',
+                dateStr: gida.skt,
+                days,
+                isOverdue,
+                isToday,
+                message: isOverdue 
+                  ? `Son Tüketim Tarihi ${Math.abs(days)} gün geçti!` 
+                  : isToday 
+                    ? 'Son Tüketim Tarihi BUGÜN!' 
+                    : `Son Tüketim Tarihine ${days} gün kaldı.`,
+                icon: Apple,
+                badgeBg: isOverdue ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : isToday ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-orange-500/15 text-orange-400 border-orange-500/30',
+                badgeText: isOverdue ? `${Math.abs(days)} Gün Geçti!` : isToday ? 'Bugün Son!' : `${days} Gün Kaldı`,
+                targetPage: 'gidalar',
+                rawItem: gida
+              });
+            }
+          }
+        }
+      });
+    }
+
+    // 2. FATURALAR KONTROLÜ
+    if (Array.isArray(faturalar)) {
+      faturalar.forEach((fatura) => {
+        if (fatura.durum === 'odenmedi') {
+          const days = getDaysDiff(fatura.son_odeme_tarihi);
+          if (days !== null) {
+            const limit = fatura.hatirlatma_gun_kala ?? 5;
+            if (days < 0 || days <= limit) {
+              const isOverdue = days < 0;
+              const isToday = days === 0;
+              const tutarText = fatura.tutar ? `${fatura.tutar} TL` : 'Tutar Belirtilmedi';
+              list.push({
+                id: `fatura-${fatura.id}`,
+                rawId: fatura.id,
+                category: 'fatura',
+                categoryName: 'Fatura Takibi 💸',
+                title: fatura.fatura_adi,
+                subtitle: `Tutar: ${tutarText}`,
+                dateStr: fatura.son_odeme_tarihi,
+                days,
+                isOverdue,
+                isToday,
+                message: isOverdue 
+                  ? `Son Ödeme Tarihi ${Math.abs(days)} gün geçti! (${tutarText})` 
+                  : isToday 
+                    ? `Bugün Son Ödeme Günü! (${tutarText})` 
+                    : `Son Ödeme Gününe ${days} gün kaldı. (${tutarText})`,
+                icon: Receipt,
+                badgeBg: isOverdue ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : isToday ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-rose-500/10 text-rose-300 border-rose-500/20',
+                badgeText: isOverdue ? `${Math.abs(days)} Gün Geçti!` : isToday ? 'Bugün Son Ödeme!' : `${days} Gün Kaldı`,
+                targetPage: 'faturalar',
+                rawItem: fatura
+              });
+            }
+          }
+        }
+      });
+    }
+
+    // 3. GARANTİLER KONTROLÜ
+    if (Array.isArray(garantiler)) {
+      garantiler.forEach((garanti) => {
+        const days = getDaysDiff(garanti.garanti_bitis);
+        if (days !== null) {
+          const limit = garanti.hatirlatma_gun_kala ?? 30;
+          if (days < 0 || days <= limit) {
+            const isOverdue = days < 0;
+            const isToday = days === 0;
+            list.push({
+              id: `garanti-${garanti.id}`,
+              rawId: garanti.id,
+              category: 'garanti',
+              categoryName: 'Garanti Takibi 🛡️',
+              title: garanti.cihaz_adi,
+              subtitle: garanti.marka_model || 'Elektronik / Cihaz',
+              dateStr: garanti.garanti_bitis,
+              days,
+              isOverdue,
+              isToday,
+              message: isOverdue 
+                ? `Garanti süresi ${Math.abs(days)} gün önce bitti!` 
+                : isToday 
+                  ? 'Garanti süresi bugün doluyor!' 
+                  : `Garanti bitimine ${days} gün kaldı.`,
+              icon: ShieldCheck,
+              badgeBg: isOverdue ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : isToday ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
+              badgeText: isOverdue ? `Süresi ${Math.abs(days)} Gün Önce Bitti` : isToday ? 'Bugün Bitiyor' : `${days} Gün Kaldı`,
+              targetPage: 'garantiler',
+              rawItem: garanti
+            });
+          }
+        }
+      });
+    }
+
+    // 4. RUTİNLER KONTROLÜ
+    if (Array.isArray(rutinler)) {
+      rutinler.forEach((rutin) => {
+        if (!rutin) return;
+        const limit = rutin.hatirlatma_gun_kala ?? 15;
+        if (!rutin.son_yapilma_tarihi) {
+          list.push({
+            id: `rutin-${rutin.id}`,
+            rawId: rutin.id,
+            category: 'rutin',
+            categoryName: 'Rutin Görev 📅',
+            title: rutin.gorev_adi,
+            subtitle: rutin.klasor_adi ? `Klasör: ${rutin.klasor_adi}` : 'Genel Rutin',
+            days: -999,
+            isOverdue: true,
+            isToday: false,
+            message: 'Bu rutin görev henüz hiç yapılmadı!',
+            icon: RefreshCw,
+            badgeBg: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
+            badgeText: 'Hiç Yapılmadı!',
+            targetPage: 'rutinler',
+            rawItem: rutin
+          });
+        } else {
+          const safeStr = typeof rutin.son_yapilma_tarihi === 'string' ? rutin.son_yapilma_tarihi.replace(' ', 'T') : rutin.son_yapilma_tarihi;
+          const lastDate = new Date(safeStr);
+          if (!isNaN(lastDate.getTime())) {
+            const nextDate = new Date(lastDate);
+            nextDate.setMonth(nextDate.getMonth() + (rutin.periyot_ay || 1));
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            nextDate.setHours(0, 0, 0, 0);
+            const diffDays = Math.ceil((nextDate - today) / (1000 * 60 * 60 * 24));
+            if (diffDays < 0 || diffDays <= limit) {
+              const isOverdue = diffDays < 0;
+              const isToday = diffDays === 0;
+              list.push({
+                id: `rutin-${rutin.id}`,
+                rawId: rutin.id,
+                category: 'rutin',
+                categoryName: 'Rutin Görev 📅',
+                title: rutin.gorev_adi,
+                subtitle: rutin.klasor_adi ? `Klasör: ${rutin.klasor_adi}` : 'Genel Rutin',
+                days: diffDays,
+                isOverdue,
+                isToday,
+                message: isOverdue 
+                  ? `Bakım/Görev zamanı ${Math.abs(diffDays)} gün geçti!` 
+                  : isToday 
+                    ? 'Yapılması için bugün son gün!' 
+                    : `Bakım zamanına ${diffDays} gün kaldı.`,
+                icon: RefreshCw,
+                badgeBg: isOverdue ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : isToday ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-purple-500/15 text-purple-300 border-purple-500/30',
+                badgeText: isOverdue ? `${Math.abs(diffDays)} Gün Geçti!` : isToday ? 'Bugün Son!' : `${diffDays} Gün Kaldı`,
+                targetPage: 'rutinler',
+                rawItem: rutin
+              });
+            }
+          }
+        }
+      });
+    }
+
+    return list.sort((a, b) => {
+      if (a.isOverdue && !b.isOverdue) return -1;
+      if (!a.isOverdue && b.isOverdue) return 1;
+      return a.days - b.days;
+    });
+  }, [gidalar, faturalar, garantiler, rutinler]);
+
+  const filteredActiveNotifications = useMemo(() => {
+    const list = activeNotifications.filter((n) => {
+      if (dashboardNotifTab === 'gecenler') {
+        return n.isOverdue;
+      }
+      return !n.isOverdue;
+    });
+
+    return list.sort((a, b) => {
+      if (dashboardNotifTab === 'gecenler') {
+        return b.days - a.days;
+      }
+      return a.days - b.days;
+    });
+  }, [activeNotifications, dashboardNotifTab]);
 
   // Form Modalları ve State'leri
   const [showGidaModal, setShowGidaModal] = useState(false);
@@ -318,7 +524,21 @@ function App() {
     setError('');
     try {
       if (currentPage === 'dashboard') {
-        await fetchDashboardSummary();
+        const [summaryRes, gidaRes, faturaRes, garantiRes, rutinRes, rutinFolderRes] = await Promise.allSettled([
+          API.get('/dashboard-summary'),
+          API.get('/gidalar'),
+          API.get('/faturalar'),
+          API.get('/garantiler'),
+          API.get('/rutinler'),
+          API.get('/rutin_klasorleri')
+        ]);
+        if (summaryRes.status === 'fulfilled') setSummary(summaryRes.value.data);
+        if (gidaRes.status === 'fulfilled') setGidalar(Array.isArray(gidaRes.value.data) ? gidaRes.value.data : []);
+        if (faturaRes.status === 'fulfilled') setFaturalar(Array.isArray(faturaRes.value.data) ? faturaRes.value.data : []);
+        if (garantiRes.status === 'fulfilled') setGarantiler(Array.isArray(garantiRes.value.data) ? garantiRes.value.data : []);
+        if (rutinRes.status === 'fulfilled') setRutinler(Array.isArray(rutinRes.value.data) ? rutinRes.value.data : []);
+        if (rutinFolderRes.status === 'fulfilled') setRutinKlasorleri(Array.isArray(rutinFolderRes.value.data) ? rutinFolderRes.value.data : []);
+        fetchAyarlar();
       } else if (currentPage === 'gidalar') {
         const res = await API.get('/gidalar');
         setGidalar(Array.isArray(res.data) ? res.data : []);
@@ -1124,6 +1344,155 @@ function App() {
                   </div>
                 );
               })}
+            </div>
+
+            {/* ANLIK BİLDİRİMLER EKRANI / PANELİ */}
+            <div className="glass-panel p-4 md:p-6 rounded-2xl border border-white/10 space-y-4 shadow-[0_10px_30px_rgba(0,0,0,0.3)] relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-80 h-80 bg-purple-500/5 blur-3xl rounded-full pointer-events-none"></div>
+
+              {/* Panel Başlığı ve Durum */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10 relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-xl relative">
+                    <Bell className="w-5 h-5 animate-pulse" />
+                    {activeNotifications.length > 0 && (
+                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full border-2 border-[#13141f] animate-ping" />
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base md:text-lg font-bold text-white tracking-tight">Anlık Bildirimler & Acil Uyarı Ekranı 🔔</h3>
+                      <span className="px-2.5 py-0.5 text-xs font-extrabold bg-rose-500/15 text-rose-400 border border-rose-500/30 rounded-full flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse"></span>
+                        {activeNotifications.length} Aktif Uyarı
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">Sisteminizdeki tüm yaklaşan son tarihler, ödeme bekleyen faturalar ve rutin bakımlar.</p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleTriggerDailyReport}
+                  disabled={loading}
+                  className="flex items-center justify-center gap-2 py-2 px-4 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 rounded-xl text-xs font-bold transition-all cursor-pointer self-start sm:self-auto shadow-sm"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Raporu Telegram'a Gönder</span>
+                </button>
+              </div>
+
+              {/* 2 Sekme: Yaklaşanlar & Süresi Geçenler */}
+              <div className="flex items-center gap-2 relative z-10">
+                <div className="p-1 bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl flex items-center gap-1 w-full sm:w-auto">
+                  <button
+                    onClick={() => setDashboardNotifTab('yaklasanlar')}
+                    className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer border ${
+                      dashboardNotifTab === 'yaklasanlar'
+                        ? 'bg-purple-600 text-white border-purple-400/40 shadow-[0_2px_10px_rgba(147,51,234,0.35)]'
+                        : 'bg-transparent border-transparent text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <span>⏰ Yaklaşanlar</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
+                      dashboardNotifTab === 'yaklasanlar' ? 'bg-white/20 text-white' : 'bg-white/10 text-gray-400'
+                    }`}>
+                      {activeNotifications.filter(n => !n.isOverdue).length}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => setDashboardNotifTab('gecenler')}
+                    className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer border ${
+                      dashboardNotifTab === 'gecenler'
+                        ? 'bg-rose-600 text-white border-rose-400/40 shadow-[0_2px_10px_rgba(225,29,72,0.35)]'
+                        : 'bg-transparent border-transparent text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <span>⚠️ Süresi Geçenler</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
+                      dashboardNotifTab === 'gecenler' ? 'bg-white/20 text-white' : 'bg-white/10 text-gray-400'
+                    }`}>
+                      {activeNotifications.filter(n => n.isOverdue).length}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Bildirim Listesi */}
+              <div className="relative z-10">
+                {filteredActiveNotifications.length === 0 ? (
+                  <div className="p-8 text-center bg-white/[0.02] border border-white/5 rounded-2xl flex flex-col items-center justify-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                      <CheckCircle className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">
+                        {dashboardNotifTab === 'gecenler' ? 'Süresi Geçen Uyarınız Yok 🎉' : 'Yaklaşan Uyarınız Yok 🎉'}
+                      </h4>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {dashboardNotifTab === 'gecenler'
+                          ? 'Günü geçen herhangi bir gıda, fatura veya bakım bulunmuyor.'
+                          : 'Yaklaşan son tarihi olan herhangi bir hatırlatmanız yok.'}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {filteredActiveNotifications.map((notif) => {
+                      const Icon = notif.icon;
+                      return (
+                        <div
+                          key={notif.id}
+                          className={`p-3.5 rounded-xl border backdrop-blur-md transition-all flex flex-col justify-between gap-3 relative overflow-hidden group hover:border-white/20 ${
+                            notif.isOverdue 
+                              ? 'bg-rose-500/[0.06] border-rose-500/30' 
+                              : notif.isToday 
+                                ? 'bg-amber-500/[0.06] border-amber-500/30' 
+                                : 'bg-white/[0.03] border-white/10'
+                          }`}
+                        >
+                          {/* Top Header */}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className={`p-2 rounded-lg border flex-shrink-0 ${notif.badgeBg}`}>
+                                <Icon className="w-4 h-4" />
+                              </div>
+                              <div className="min-w-0">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block truncate">
+                                  {notif.categoryName}
+                                </span>
+                                <h4 className="text-sm font-bold text-white truncate leading-tight group-hover:text-purple-300 transition-colors">
+                                  {notif.title}
+                                </h4>
+                              </div>
+                            </div>
+                            <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border flex-shrink-0 ${notif.badgeBg}`}>
+                              {notif.badgeText}
+                            </span>
+                          </div>
+
+                          {/* Detail Message */}
+                          <div className="text-xs text-gray-300 font-medium bg-black/20 p-2.5 rounded-lg border border-white/5 space-y-0.5">
+                            <p className="font-semibold text-gray-200">{notif.message}</p>
+                            {notif.subtitle && <p className="text-[11px] text-gray-400 truncate">{notif.subtitle}</p>}
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/5">
+                            <button
+                              onClick={() => setCurrentPage(notif.targetPage)}
+                              className="text-[11px] font-bold text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors cursor-pointer"
+                            >
+                              <span>Sayfaya Git</span>
+                              <Info className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Telegram Hatırlatma Bilgisi */}

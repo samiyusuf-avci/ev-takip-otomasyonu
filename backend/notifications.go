@@ -17,12 +17,20 @@ func getTodayZeroTime() time.Time {
 	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 }
 
+// Helper to parse date strings in various formats (YYYY-MM-DD, ISO 8601 with T/Z/space, etc.)
+func parseDateStr(dateStr string) (time.Time, error) {
+	if dateStr == "" {
+		return time.Time{}, fmt.Errorf("empty date")
+	}
+	cleanStr := strings.TrimSpace(dateStr)
+	cleanStr = strings.Split(cleanStr, "T")[0]
+	cleanStr = strings.Split(cleanStr, " ")[0]
+	return time.ParseInLocation("2006-01-02", cleanStr, time.Local)
+}
+
 // Calculate days remaining between targetDateStr and today
 func getDaysRemaining(targetDateStr string) (int, error) {
-	if targetDateStr == "" {
-		return 0, fmt.Errorf("empty date")
-	}
-	targetTime, err := time.ParseInLocation("2006-01-02", targetDateStr, time.Local)
+	targetTime, err := parseDateStr(targetDateStr)
 	if err != nil {
 		return 0, err
 	}
@@ -34,7 +42,7 @@ func getDaysRemaining(targetDateStr string) (int, error) {
 
 // Calculate next routine date by adding months to the last done date
 func getNextRoutineDate(lastDoneStr string, periodMonths int) (time.Time, error) {
-	t, err := time.ParseInLocation("2006-01-02", lastDoneStr, time.Local)
+	t, err := parseDateStr(lastDoneStr)
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -84,23 +92,15 @@ func checkAndNotify(db *gorm.DB) (bool, int, int, error) {
 	fmt.Println("Hatırlatıcılar taranıyor...")
 
 	var users []Kullanici
-	if err := db.Where("telegram_chat_id IS NOT NULL AND telegram_chat_id != ''").Find(&users).Error; err != nil {
+	if err := db.Find(&users).Error; err != nil {
 		return false, 0, 0, err
 	}
 
-	// Eğer kullanıcıların telegram_chat_id'si boşsa ama ayarlar tablosunda varsa fallback yap
-	if len(users) == 0 {
-		var chatIDSetting Ayarlar
-		if err := db.Where("anahtar = ? AND deger != ''", "telegram_chat_id").First(&chatIDSetting).Error; err == nil && chatIDSetting.Deger != "" {
-			var allUsers []Kullanici
-			if err := db.Find(&allUsers).Error; err == nil && len(allUsers) > 0 {
-				for i := range allUsers {
-					allUsers[i].TelegramChatID = chatIDSetting.Deger
-					db.Model(&allUsers[i]).Update("telegram_chat_id", chatIDSetting.Deger)
-				}
-				users = allUsers
-			}
-		}
+	// Eğer kullanıcıların telegram_chat_id'si boşsa ama ayarlar tablosunda varsa doldur
+	var chatIDSetting Ayarlar
+	defaultChatID := ""
+	if err := db.Where("anahtar = ? AND deger != ''", "telegram_chat_id").First(&chatIDSetting).Error; err == nil {
+		defaultChatID = chatIDSetting.Deger
 	}
 
 	var tokenSetting Ayarlar
@@ -122,6 +122,11 @@ func checkAndNotify(db *gorm.DB) (bool, int, int, error) {
 	todayStr := time.Now().Format("02.01.2006")
 
 	for _, user := range users {
+		userChatID := user.TelegramChatID
+		if userChatID == "" {
+			userChatID = defaultChatID
+		}
+
 		var alerts []string
 
 		// 1. GIDALAR KONTROLÜ
@@ -236,11 +241,11 @@ func checkAndNotify(db *gorm.DB) (bool, int, int, error) {
 		}
 
 		// UYARI VARSA GÖNDER
-		if len(alerts) > 0 {
+		if len(alerts) > 0 && userChatID != "" {
 			header := fmt.Sprintf("🏠 <b>Akıllı Ev ve Yaşam Asistanı Günlük Özeti</b>\n<i>Tarih: %s</i>\n\n", todayStr)
 			finalMessage := header + strings.Join(alerts, "\n\n")
 
-			chatIDInt, err := strconv.ParseInt(user.TelegramChatID, 10, 64)
+			chatIDInt, err := strconv.ParseInt(userChatID, 10, 64)
 			if err == nil {
 				msg := tgbotapi.NewMessage(chatIDInt, finalMessage)
 				msg.ParseMode = "HTML"
