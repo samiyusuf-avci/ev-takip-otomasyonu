@@ -488,6 +488,10 @@ function App() {
     setShowRutinModal(false);
     setShowProfileMenu(false);
     setShowNotificationMenu(false);
+    setShowLogoutConfirm(false);
+    setShowDeleteAccountModal(false);
+    setDeleteAccountPassword('');
+    setDeleteAccountError('');
     setDeleteConfirm(prev => ({ ...prev, show: false }));
   }, []);
 
@@ -500,7 +504,9 @@ function App() {
     showRutinModal ||
     showProfileMenu ||
     showNotificationMenu ||
-    deleteConfirm.show
+    deleteConfirm.show ||
+    showLogoutConfirm ||
+    showDeleteAccountModal
   );
 
   const lastModalOpenRef = useRef(false);
@@ -518,6 +524,17 @@ function App() {
     }
     lastModalOpenRef.current = isAnyModalOpen;
   }, [isAnyModalOpen, currentPage]);
+
+  // ESC tuşuna basıldığında açık olan modalları kapat
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isAnyModalOpen) {
+        closeAllModals();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isAnyModalOpen, closeAllModals]);
 
   // Tarayıcı Geri/İleri (Popstate) olay dinleyicisi
   useEffect(() => {

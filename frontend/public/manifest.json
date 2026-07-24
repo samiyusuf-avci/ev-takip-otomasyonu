@@ -1,0 +1,17 @@
+{
+  "name": "Akıllı Yaşam",
+  "short_name": "Akıllı Yaşam",
+  "description": "Akıllı Yaşam Ev Takip Otomasyonu",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0e15",
+  "theme_color": "#0d0e15",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
