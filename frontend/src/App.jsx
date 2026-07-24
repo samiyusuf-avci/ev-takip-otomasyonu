@@ -1225,32 +1225,32 @@ function App() {
       <div className="min-h-screen flex items-center justify-center bg-[#0d0e15] p-4 relative overflow-hidden">
         {/* TOAST / BİLDİRİM BANNERLARI (Giriş & Hesap Silindi Bilgilendirmesi) */}
         {successMsg && (
-          <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[99999] w-[90%] max-w-md p-3.5 px-4 rounded-2xl bg-[#0f1f18]/95 border border-emerald-500/40 text-emerald-300 flex items-center justify-between gap-3 text-xs md:text-sm shadow-[0_10px_35px_rgba(16,185,129,0.3)] backdrop-blur-2xl animate-scale-in">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30 flex-shrink-0">
+          <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[99999] w-[92%] max-w-md p-3.5 px-4 rounded-2xl bg-[#0f1f18]/95 border border-emerald-500/40 text-emerald-300 flex items-start justify-between gap-3 text-xs md:text-sm shadow-[0_10px_35px_rgba(16,185,129,0.3)] backdrop-blur-2xl animate-scale-in">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30 flex-shrink-0 mt-0.5">
                 <CheckCircle className="w-4 h-4" />
               </div>
-              <span className="font-semibold truncate">{successMsg}</span>
+              <span className="font-semibold break-words leading-snug">{successMsg}</span>
             </div>
             <button 
               onClick={() => setSuccessMsg('')}
-              className="text-emerald-400/60 hover:text-emerald-300 p-1 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+              className="text-emerald-400/60 hover:text-emerald-300 p-1 hover:bg-white/5 rounded-lg transition-colors cursor-pointer flex-shrink-0 mt-0.5"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
         )}
         {error && (
-          <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[99999] w-[90%] max-w-md p-3.5 px-4 rounded-2xl bg-[#1a0f1c]/95 border border-rose-500/40 text-rose-300 flex items-center justify-between gap-3 text-xs md:text-sm shadow-[0_10px_35px_rgba(244,63,94,0.3)] backdrop-blur-2xl animate-scale-in">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="p-1.5 bg-rose-500/20 text-rose-400 rounded-xl border border-rose-500/30 flex-shrink-0 animate-pulse">
+          <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[99999] w-[92%] max-w-md p-3.5 px-4 rounded-2xl bg-[#1a0f1c]/95 border border-rose-500/40 text-rose-300 flex items-start justify-between gap-3 text-xs md:text-sm shadow-[0_10px_35px_rgba(244,63,94,0.3)] backdrop-blur-2xl animate-scale-in">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="p-1.5 bg-rose-500/20 text-rose-400 rounded-xl border border-rose-500/30 flex-shrink-0 animate-pulse mt-0.5">
                 <AlertTriangle className="w-4 h-4" />
               </div>
-              <span className="font-semibold truncate">{error}</span>
+              <span className="font-semibold break-words leading-snug">{error}</span>
             </div>
             <button 
               onClick={() => setError('')}
-              className="text-rose-400/60 hover:text-rose-300 p-1 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+              className="text-rose-400/60 hover:text-rose-300 p-1 hover:bg-white/5 rounded-lg transition-colors cursor-pointer flex-shrink-0 mt-0.5"
             >
               <X className="w-4 h-4" />
             </button>
@@ -1554,32 +1554,32 @@ function App() {
       <main className="flex-1 p-4 pt-20 md:pt-10 md:p-10 pb-28 md:pb-10 overflow-y-auto">
         {/* TOAST / BİLDİRİM BANNERLARI (Fixed & Premium Estetik) */}
         {successMsg && (
-          <div className="fixed top-20 md:top-6 left-1/2 -translate-x-1/2 z-[99999] w-[90%] max-w-md p-3.5 px-4 rounded-2xl bg-[#0f1f18]/95 border border-emerald-500/40 text-emerald-300 flex items-center justify-between gap-3 text-xs md:text-sm shadow-[0_10px_35px_rgba(16,185,129,0.3)] backdrop-blur-2xl animate-scale-in">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30 flex-shrink-0">
+          <div className="fixed top-20 md:top-6 left-1/2 -translate-x-1/2 z-[99999] w-[92%] max-w-md p-3.5 px-4 rounded-2xl bg-[#0f1f18]/95 border border-emerald-500/40 text-emerald-300 flex items-start justify-between gap-3 text-xs md:text-sm shadow-[0_10px_35px_rgba(16,185,129,0.3)] backdrop-blur-2xl animate-scale-in">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30 flex-shrink-0 mt-0.5">
                 <CheckCircle className="w-4 h-4" />
               </div>
-              <span className="font-semibold truncate">{successMsg}</span>
+              <span className="font-semibold break-words leading-snug">{successMsg}</span>
             </div>
             <button 
               onClick={() => setSuccessMsg('')}
-              className="text-emerald-400/60 hover:text-emerald-300 p-1 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+              className="text-emerald-400/60 hover:text-emerald-300 p-1 hover:bg-white/5 rounded-lg transition-colors cursor-pointer flex-shrink-0 mt-0.5"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
         )}
         {error && (
-          <div className="fixed top-20 md:top-6 left-1/2 -translate-x-1/2 z-[99999] w-[90%] max-w-md p-3.5 px-4 rounded-2xl bg-[#1a0f1c]/95 border border-rose-500/40 text-rose-300 flex items-center justify-between gap-3 text-xs md:text-sm shadow-[0_10px_35px_rgba(244,63,94,0.3)] backdrop-blur-2xl animate-scale-in">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="p-1.5 bg-rose-500/20 text-rose-400 rounded-xl border border-rose-500/30 flex-shrink-0 animate-pulse">
+          <div className="fixed top-20 md:top-6 left-1/2 -translate-x-1/2 z-[99999] w-[92%] max-w-md p-3.5 px-4 rounded-2xl bg-[#1a0f1c]/95 border border-rose-500/40 text-rose-300 flex items-start justify-between gap-3 text-xs md:text-sm shadow-[0_10px_35px_rgba(244,63,94,0.3)] backdrop-blur-2xl animate-scale-in">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="p-1.5 bg-rose-500/20 text-rose-400 rounded-xl border border-rose-500/30 flex-shrink-0 animate-pulse mt-0.5">
                 <AlertTriangle className="w-4 h-4" />
               </div>
-              <span className="font-semibold truncate">{error}</span>
+              <span className="font-semibold break-words leading-snug">{error}</span>
             </div>
             <button 
               onClick={() => setError('')}
-              className="text-rose-400/60 hover:text-rose-300 p-1 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+              className="text-rose-400/60 hover:text-rose-300 p-1 hover:bg-white/5 rounded-lg transition-colors cursor-pointer flex-shrink-0 mt-0.5"
             >
               <X className="w-4 h-4" />
             </button>
