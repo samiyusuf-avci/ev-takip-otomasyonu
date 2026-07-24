@@ -1146,6 +1146,28 @@ function App() {
   // -------------------------------------------------------------
   // AYARLAR VE TEKNİK HİZMETLER
   // -------------------------------------------------------------
+  const startEditingTelegram = useCallback(() => {
+    // Profil düzenleme açıksa sıfırlayıp kapat
+    setIsEditingProfile(false);
+    setShowPasswordForm(false);
+    if (user) {
+      setProfileForm({
+        isim: user.isim || '',
+        eposta: user.eposta || '',
+        mevcut_sifre: '',
+        sifre: ''
+      });
+    }
+    setIsEditingTelegram(true);
+  }, [user]);
+
+  const startEditingProfile = useCallback(() => {
+    // Telegram düzenleme açıksa sıfırlayıp kapat
+    setAyarlar(savedAyarlar);
+    setIsEditingTelegram(false);
+    setIsEditingProfile(true);
+  }, [savedAyarlar]);
+
   const handleSaveAyarlar = async (e) => {
     e.preventDefault();
     try {
@@ -2605,7 +2627,7 @@ function App() {
                     <>
                       <button
                         type="button"
-                        onClick={() => setIsEditingTelegram(true)}
+                        onClick={startEditingTelegram}
                         className="flex-1 py-2 md:py-2.5 px-4 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-2 glow-btn"
                       >
                         <Edit className="w-4 h-4" />
@@ -2757,7 +2779,7 @@ function App() {
                   <button
                     type="button"
                     onClick={() => {
-                      setIsEditingProfile(true);
+                      startEditingProfile();
                       setShowPasswordForm(true);
                     }}
                     className="py-2 px-3 bg-white/5 hover:bg-white/10 text-white border border-white/10 font-semibold rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1.5"
@@ -2810,7 +2832,7 @@ function App() {
                     <>
                       <button
                         type="button"
-                        onClick={() => setIsEditingProfile(true)}
+                        onClick={startEditingProfile}
                         className="flex-1 py-2 md:py-2.5 px-4 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-2 glow-btn"
                       >
                         <Edit className="w-4 h-4" />
