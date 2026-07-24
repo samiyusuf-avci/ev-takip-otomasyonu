@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import API from './api';
 import DatePicker from './components/DatePicker';
+import TimePicker from './components/TimePicker';
 import {
   LayoutDashboard,
   Apple,
@@ -27,6 +28,8 @@ import {
   Lock,
   LogOut,
   Send,
+  Clock,
+  ChevronDown,
   MoreVertical
 } from 'lucide-react';
 
@@ -103,13 +106,53 @@ function App() {
   const [garantiler, setGarantiler] = useState([]);
   const [rutinKlasorleri, setRutinKlasorleri] = useState([]);
   const [rutinler, setRutinler] = useState([]);
-  const [ayarlar, setAyarlar] = useState({ telegram_token: '', telegram_chat_id: '' });
-  const [savedAyarlar, setSavedAyarlar] = useState({ telegram_token: '', telegram_chat_id: '' });
+  const [ayarlar, setAyarlar] = useState({ telegram_token: '', telegram_chat_id: '', bildirim_saati: '09:00' });
+  const [savedAyarlar, setSavedAyarlar] = useState({ telegram_token: '', telegram_chat_id: '', bildirim_saati: '09:00' });
   const [isEditingTelegram, setIsEditingTelegram] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({ isim: '', eposta: '', mevcut_sifre: '', sifre: '' });
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showTelegramGuide, setShowTelegramGuide] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [deleteAccountLoading, setDeleteAccountLoading] = useState(false);
+  const [deleteAccountPassword, setDeleteAccountPassword] = useState('');
+  const [deleteAccountError, setDeleteAccountError] = useState('');
+
+  const handleDeleteAccount = async (e) => {
+    if (e) e.preventDefault();
+    setDeleteAccountError('');
+    if (!deleteAccountPassword?.trim()) {
+      setDeleteAccountError('Lütfen onaylamak için mevcut şifrenizi girin.');
+      return;
+    }
+    setDeleteAccountLoading(true);
+    try {
+      const res = await API.delete('/auth/delete-account', {
+        data: { sifre: deleteAccountPassword }
+      });
+      setShowDeleteAccountModal(false);
+      setDeleteAccountPassword('');
+      setDeleteAccountError('');
+      localStorage.removeItem('token');
+      setToken(null);
+      setUser(null);
+      changePage('dashboard');
+      showToast(res.data?.message || 'Hesabınız ve tüm verileriniz kalıcı olarak silindi.');
+    } catch (err) {
+      const errMsg = err.response?.data?.error || err.response?.data?.message || 'Hesap silinirken bir hata oluştu.';
+      setDeleteAccountError(errMsg);
+      showToast(errMsg, 'error');
+    } finally {
+      setDeleteAccountLoading(false);
+    }
+  };
+
+  const promptLogout = useCallback(() => {
+    setShowProfileMenu(false);
+    setShowLogoutConfirm(true);
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -509,6 +552,10 @@ function App() {
     if (toastTimeoutRef.current) {
       clearTimeout(toastTimeoutRef.current);
     }
+    // Yeni bildirim geldiğinde eski tüm bildirimleri (başarı/hata) anında temizle
+    setSuccessMsg('');
+    setError('');
+
     if (type === 'success') {
       setSuccessMsg(msg);
       toastTimeoutRef.current = setTimeout(() => setSuccessMsg(''), 4000);
@@ -643,7 +690,8 @@ function App() {
       const res = await API.get('/ayarlar');
       const token = res.data.telegram_token || '';
       const chatId = res.data.telegram_chat_id || '';
-      const loadedAyarlar = { telegram_token: token, telegram_chat_id: chatId };
+      const bildirimSaati = res.data.bildirim_saati || '09:00';
+      const loadedAyarlar = { telegram_token: token, telegram_chat_id: chatId, bildirim_saati: bildirimSaati };
       setAyarlar(loadedAyarlar);
       setSavedAyarlar(loadedAyarlar);
       if (token || chatId) {
@@ -704,7 +752,8 @@ function App() {
         const res = await API.get('/ayarlar');
         const token = res.data.telegram_token || '';
         const chatId = res.data.telegram_chat_id || '';
-        const loadedAyarlar = { telegram_token: token, telegram_chat_id: chatId };
+        const bildirimSaati = res.data.bildirim_saati || '09:00';
+        const loadedAyarlar = { telegram_token: token, telegram_chat_id: chatId, bildirim_saati: bildirimSaati };
         setAyarlar(loadedAyarlar);
         setSavedAyarlar(loadedAyarlar);
         if (token || chatId) {
@@ -1135,6 +1184,40 @@ function App() {
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0d0e15] p-4 relative overflow-hidden">
+        {/* TOAST / BİLDİRİM BANNERLARI (Giriş & Hesap Silindi Bilgilendirmesi) */}
+        {successMsg && (
+          <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[99999] w-[90%] max-w-md p-3.5 px-4 rounded-2xl bg-[#0f1f18]/95 border border-emerald-500/40 text-emerald-300 flex items-center justify-between gap-3 text-xs md:text-sm shadow-[0_10px_35px_rgba(16,185,129,0.3)] backdrop-blur-2xl animate-scale-in">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30 flex-shrink-0">
+                <CheckCircle className="w-4 h-4" />
+              </div>
+              <span className="font-semibold truncate">{successMsg}</span>
+            </div>
+            <button 
+              onClick={() => setSuccessMsg('')}
+              className="text-emerald-400/60 hover:text-emerald-300 p-1 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+        {error && (
+          <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[99999] w-[90%] max-w-md p-3.5 px-4 rounded-2xl bg-[#1a0f1c]/95 border border-rose-500/40 text-rose-300 flex items-center justify-between gap-3 text-xs md:text-sm shadow-[0_10px_35px_rgba(244,63,94,0.3)] backdrop-blur-2xl animate-scale-in">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="p-1.5 bg-rose-500/20 text-rose-400 rounded-xl border border-rose-500/30 flex-shrink-0 animate-pulse">
+                <AlertTriangle className="w-4 h-4" />
+              </div>
+              <span className="font-semibold truncate">{error}</span>
+            </div>
+            <button 
+              onClick={() => setError('')}
+              className="text-rose-400/60 hover:text-rose-300 p-1 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {/* Glow Effects */}
         <div className="absolute -top-40 -left-40 w-96 h-96 bg-purple-600/10 blur-3xl rounded-full"></div>
         <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-rose-600/10 blur-3xl rounded-full"></div>
@@ -1344,7 +1427,7 @@ function App() {
                 </button>
                 
                 <button
-                  onClick={() => { handleLogout(); setShowProfileMenu(false); }}
+                  onClick={promptLogout}
                   className="w-full flex items-center gap-2 py-2 px-3 text-xs text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all text-left border border-rose-500/10"
                 >
                   <LogOut className="w-3.5 h-3.5" />
@@ -1357,7 +1440,7 @@ function App() {
       </header>
 
       {/* SOL NAVİGASYON (Sadece desktop'ta görünür) */}
-      <aside className="hidden md:flex w-64 glass-panel min-h-screen p-5 flex-col justify-between border-r border-white/10">
+      <aside className="hidden md:flex w-64 glass-panel h-screen sticky top-0 p-5 flex-col justify-between border-r border-white/10 flex-shrink-0">
         <div>
           <div className="flex items-center gap-3 mb-8 px-2">
             <div className="p-2.5 bg-purple-500/20 text-purple-400 rounded-xl border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.3)]">
@@ -1419,7 +1502,7 @@ function App() {
           </button>
 
           <button
-            onClick={handleLogout}
+            onClick={promptLogout}
             className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 border border-rose-500/20 font-semibold text-sm transition-all duration-200 cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
@@ -1432,7 +1515,7 @@ function App() {
       <main className="flex-1 p-4 pt-20 md:pt-10 md:p-10 pb-28 md:pb-10 overflow-y-auto">
         {/* TOAST / BİLDİRİM BANNERLARI (Fixed & Premium Estetik) */}
         {successMsg && (
-          <div className="fixed top-20 md:top-6 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-md p-3.5 px-4 rounded-2xl bg-[#0f1f18]/95 border border-emerald-500/40 text-emerald-300 flex items-center justify-between gap-3 text-xs md:text-sm shadow-[0_10px_35px_rgba(16,185,129,0.3)] backdrop-blur-2xl animate-scale-in">
+          <div className="fixed top-20 md:top-6 left-1/2 -translate-x-1/2 z-[99999] w-[90%] max-w-md p-3.5 px-4 rounded-2xl bg-[#0f1f18]/95 border border-emerald-500/40 text-emerald-300 flex items-center justify-between gap-3 text-xs md:text-sm shadow-[0_10px_35px_rgba(16,185,129,0.3)] backdrop-blur-2xl animate-scale-in">
             <div className="flex items-center gap-3 min-w-0">
               <div className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30 flex-shrink-0">
                 <CheckCircle className="w-4 h-4" />
@@ -1448,7 +1531,7 @@ function App() {
           </div>
         )}
         {error && (
-          <div className="fixed top-20 md:top-6 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-md p-3.5 px-4 rounded-2xl bg-[#1a0f1c]/95 border border-rose-500/40 text-rose-300 flex items-center justify-between gap-3 text-xs md:text-sm shadow-[0_10px_35px_rgba(244,63,94,0.3)] backdrop-blur-2xl animate-scale-in">
+          <div className="fixed top-20 md:top-6 left-1/2 -translate-x-1/2 z-[99999] w-[90%] max-w-md p-3.5 px-4 rounded-2xl bg-[#1a0f1c]/95 border border-rose-500/40 text-rose-300 flex items-center justify-between gap-3 text-xs md:text-sm shadow-[0_10px_35px_rgba(244,63,94,0.3)] backdrop-blur-2xl animate-scale-in">
             <div className="flex items-center gap-3 min-w-0">
               <div className="p-1.5 bg-rose-500/20 text-rose-400 rounded-xl border border-rose-500/30 flex-shrink-0 animate-pulse">
                 <AlertTriangle className="w-4 h-4" />
@@ -1737,7 +1820,7 @@ function App() {
                       <p className="text-sm text-gray-400 mt-1 max-w-2xl">
                         {isTelegramConfigured ? (
                           <>
-                            Telegram botunuz bağlı ve aktif. Sistem her gece saat 00:00'da gıdalarınızı, faturalarınızı, garantilerinizi ve rutin görevlerinizi otomatik olarak tarar. Dilerseniz <span className="hidden md:inline">sol menüdeki</span><span className="inline md:hidden">üst menüdeki</span> "Raporu Şimdi Gönder" butonuna tıklayarak istediğiniz an anlık rapor alabilirsiniz.
+                            Telegram botunuz bağlı ve aktif. Sistem her gün saat <span className="text-purple-300 font-semibold">{ayarlar.bildirim_saati || '09:00'}</span> TSİ'de gıdalarınızı, faturalarınızı, garantilerinizi ve rutin görevlerinizi otomatik olarak tarar. Dilerseniz <span className="hidden md:inline">sol menüdeki</span><span className="inline md:hidden">üst menüdeki</span> "Raporu Şimdi Gönder" butonuna tıklayarak istediğiniz an anlık rapor alabilirsiniz.
                           </>
                         ) : (
                           'Gıdalarınız, faturalarınız, garantileriniz ve rutin görevleriniz için Telegram üzerinden anlık bildirim almak istiyorsanız bot bilgilerinizi kolayca ekleyebilirsiniz.'
@@ -2480,6 +2563,26 @@ function App() {
                   <p className="text-[10px] text-gray-500 mt-0.5">Kişisel veya grup sohbet kimliğiniz (Chat ID).</p>
                 </div>
 
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-xs md:text-sm font-semibold text-gray-300 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-purple-400" />
+                      Otomatik Bildirim Saati (TSİ)
+                    </label>
+                    {!isEditingTelegram && (
+                      <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                        <Lock className="w-3 h-3 text-purple-400" /> Kilitli
+                      </span>
+                    )}
+                  </div>
+                  <TimePicker
+                    disabled={!isEditingTelegram}
+                    value={ayarlar.bildirim_saati || '09:00'}
+                    onChange={(newTime) => setAyarlar({ ...ayarlar, bildirim_saati: newTime })}
+                  />
+                  <p className="text-[10px] text-gray-500 mt-0.5">Her gün otomatik özet bildiriminin gönderileceği saat.</p>
+                </div>
+
                 <div className="flex flex-col sm:flex-row gap-2 pt-1">
                   {!isEditingTelegram ? (
                     <>
@@ -2506,7 +2609,7 @@ function App() {
                   ) : (
                     <>
                       {(() => {
-                        const isTelegramChanged = ayarlar.telegram_token !== savedAyarlar.telegram_token || ayarlar.telegram_chat_id !== savedAyarlar.telegram_chat_id;
+                        const isTelegramChanged = ayarlar.telegram_token !== savedAyarlar.telegram_token || ayarlar.telegram_chat_id !== savedAyarlar.telegram_chat_id || ayarlar.bildirim_saati !== savedAyarlar.bildirim_saati;
                         return (
                           <button
                             type="submit"
@@ -2534,6 +2637,54 @@ function App() {
                   )}
                 </div>
               </form>
+
+              {/* Telegram Botu Kurulum Rehberi Bilgi Notu (Açılır Kapanır Accordion) */}
+              <div className="mt-5 pt-4 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setShowTelegramGuide((prev) => !prev)}
+                  className="w-full flex items-center justify-between gap-2 text-left cursor-pointer group py-1"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20 group-hover:bg-purple-500/20 transition-all flex-shrink-0">
+                      <Info className="w-4 h-4" />
+                    </div>
+                    <h4 className="text-xs md:text-sm font-bold text-white group-hover:text-purple-300 transition-colors truncate">
+                      Telegram Botu Nasıl Oluşturulur ve Eklenir?
+                    </h4>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-gray-400 group-hover:text-white transition-colors flex-shrink-0">
+                    <span className="text-[10px] font-medium hidden sm:inline text-purple-400">
+                      {showTelegramGuide ? 'Gizle' : 'Rehberi Göster'}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showTelegramGuide ? 'rotate-180 text-purple-400' : ''}`} />
+                  </div>
+                </button>
+
+                {showTelegramGuide && (
+                  <div className="mt-3 bg-purple-500/[0.04] border border-purple-500/15 rounded-xl p-3.5 space-y-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <div className="flex items-start gap-2.5 text-xs text-gray-300">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold text-[10px] flex items-center justify-center mt-0.5">1</span>
+                      <span>Telegram uygulamasında <code className="bg-white/10 px-1.5 py-0.5 rounded text-purple-300 font-mono text-[11px]">@BotFather</code> kullanıcısını aratın ve sohbet başlatın.</span>
+                    </div>
+
+                    <div className="flex items-start gap-2.5 text-xs text-gray-300">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold text-[10px] flex items-center justify-center mt-0.5">2</span>
+                      <span><code className="bg-white/10 px-1.5 py-0.5 rounded text-purple-300 font-mono text-[11px]">/newbot</code> komutunu gönderip talimatları izleyerek yeni bot oluşturun. Size verilen <b>API Token</b> kodunu yukarıdaki <b>Telegram Bot Token</b> alanına yapıştırın.</span>
+                    </div>
+
+                    <div className="flex items-start gap-2.5 text-xs text-gray-300">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold text-[10px] flex items-center justify-center mt-0.5">3</span>
+                      <span>Telegram'da <code className="bg-white/10 px-1.5 py-0.5 rounded text-purple-300 font-mono text-[11px]">@userinfobot</code> hesabına mesaj atarak <b>Chat ID</b> sayısal kimliğinizi öğrenin ve yukarıdaki <b>Telegram Chat ID</b> alanına yazın.</span>
+                    </div>
+
+                    <div className="flex items-start gap-2.5 text-xs text-gray-300">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold text-[10px] flex items-center justify-center mt-0.5">4</span>
+                      <span>Oluşturduğunuz kendi botunuza Telegram'dan en az 1 kez <code className="bg-white/10 px-1.5 py-0.5 rounded text-purple-300 font-mono text-[11px]">/start</code> mesajı attıktan sonra <b>"Bağlantıyı Test Et"</b> butonuna tıklayarak kurulumu doğrulayın.</span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Hesap Yönetimi (Mobil & Genel) */}
@@ -2650,7 +2801,7 @@ function App() {
                       </button>
                       <button
                         type="button"
-                        onClick={handleLogout}
+                        onClick={promptLogout}
                         className="w-full sm:w-48 py-2 md:py-2.5 px-4 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 border border-rose-500/20 font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 flex-shrink-0"
                       >
                         <LogOut className="w-3.5 h-3.5 text-rose-400" />
@@ -2692,6 +2843,27 @@ function App() {
                   )}
                 </div>
               </form>
+            </div>
+
+            {/* Tehlikeli Bölge / Hesabı Sil */}
+            <div className="glass-panel p-4 md:p-6 rounded-2xl border border-rose-500/20 bg-rose-500/[0.02]">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm md:text-lg font-bold text-white">Hesabı Sil</h3>
+              </div>
+              <p className="text-xs text-gray-400 mb-4 leading-relaxed">
+                Hesabınızı ve hesabınıza bağlı tüm gıda, fatura, garanti ve rutin görev verilerini kalıcı olarak siler. Bu işlem geri alınamaz.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowDeleteAccountModal(true)}
+                className="w-full sm:w-auto py-2.5 px-4 bg-rose-600/20 hover:bg-rose-600 border border-rose-500/30 hover:border-rose-500 text-rose-300 hover:text-white font-semibold rounded-xl text-xs md:text-sm transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Hesabımı Kalıcı Olarak Sil
+              </button>
             </div>
           </div>
         )}
@@ -3295,6 +3467,98 @@ function App() {
                 Sil
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* OTURUMU KAPAT ONAY MODALI */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
+          <div className="bg-[#13141f] border border-white/10 p-6 rounded-2xl max-w-sm w-full shadow-[0_10px_40px_rgba(0,0,0,0.8)] animate-scale-in flex flex-col items-center text-center">
+            <div className="p-3 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-2xl mb-4 shadow-[0_0_20px_rgba(244,63,94,0.2)]">
+              <LogOut className="w-8 h-8" />
+            </div>
+
+            <h3 className="text-lg font-bold text-white mb-2">Oturumu Kapatmak İstiyor Musunuz?</h3>
+            <p className="text-xs md:text-sm text-gray-400 mb-6 leading-relaxed">
+              Oturumunuz kapatılacaktır. Hesabınıza tekrar erişmek için yeniden giriş yapmanız gerekecektir.
+            </p>
+
+            <div className="flex gap-3 w-full">
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white rounded-xl font-semibold border border-white/10 transition-all cursor-pointer text-xs md:text-sm"
+              >
+                Vazgeç
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLogoutConfirm(false);
+                  handleLogout();
+                }}
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-semibold transition-all cursor-pointer text-xs md:text-sm shadow-[0_4px_20px_rgba(244,63,94,0.3)] glow-btn flex items-center justify-center gap-1.5"
+              >
+                <LogOut className="w-4 h-4" />
+                Çıkış Yap
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* HESAP SİLME ONAY MODALI (ŞİFRE DOĞRULAMALI) */}
+      {showDeleteAccountModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+          <div className="bg-[#13141f] border border-rose-500/30 p-6 rounded-2xl max-w-sm w-full shadow-[0_10px_40px_rgba(244,63,94,0.3)] animate-scale-in flex flex-col items-center text-center">
+            <div className="p-3.5 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-2xl mb-3.5 shadow-[0_0_25px_rgba(244,63,94,0.25)] animate-pulse">
+              <AlertTriangle className="w-8 h-8" />
+            </div>
+
+            <h3 className="text-lg font-bold text-white mb-1.5">Hesabınızı Silmek İstiyor Musunuz?</h3>
+            <p className="text-xs text-gray-400 mb-4 leading-relaxed">
+              Bu işlem <b className="text-rose-400">geri alınamaz</b>. Devam etmek için lütfen mevcut şifrenizi girin:
+            </p>
+
+            <form onSubmit={handleDeleteAccount} className="w-full space-y-4">
+              <div className="relative">
+                <input
+                  type="password"
+                  required
+                  autoFocus
+                  placeholder="Mevcut şifrenizi girin..."
+                  value={deleteAccountPassword}
+                  onChange={(e) => setDeleteAccountPassword(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 focus:border-rose-500/60 rounded-xl py-2.5 px-3.5 text-white text-xs md:text-sm outline-none transition-all placeholder:text-gray-500 text-center"
+                />
+              </div>
+
+              <div className="flex gap-2.5 w-full">
+                <button
+                  type="button"
+                  disabled={deleteAccountLoading}
+                  onClick={() => {
+                    setShowDeleteAccountModal(false);
+                    setDeleteAccountPassword('');
+                    setDeleteAccountError('');
+                  }}
+                  className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white rounded-xl font-semibold border border-white/10 transition-all cursor-pointer text-xs md:text-sm"
+                >
+                  Vazgeç
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={deleteAccountLoading || !deleteAccountPassword.trim()}
+                  className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all cursor-pointer text-xs md:text-sm shadow-[0_4px_20px_rgba(244,63,94,0.4)] glow-btn flex items-center justify-center gap-1.5"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {deleteAccountLoading ? 'Siliniyor...' : 'Evet, Hesabımı Sil'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

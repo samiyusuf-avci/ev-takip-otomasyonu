@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/glebarez/sqlite"
 	"github.com/gofiber/fiber/v2"
@@ -50,18 +51,39 @@ func main() {
 	// Varsayılan boş ayarları kontrol et/oluştur
 	db.FirstOrCreate(&Ayarlar{Anahtar: "telegram_token", Deger: ""})
 	db.FirstOrCreate(&Ayarlar{Anahtar: "telegram_chat_id", Deger: ""})
+	db.FirstOrCreate(&Ayarlar{Anahtar: "bildirim_saati", Deger: "09:00"})
 
 	// Cron Görevlerini Başlat (Zamanlanmış görevler)
 	cronScheduler := cron.New()
-	_, err = cronScheduler.AddFunc("0 0 * * *", func() {
-		fmt.Println("Zamanlanmış kontrol tetiklendi (Saat 00:00).")
-		checkAndNotify(db)
+	var lastNotifiedKey string
+
+	_, err = cronScheduler.AddFunc("* * * * *", func() {
+		loc, err := time.LoadLocation("Europe/Istanbul")
+		if err != nil {
+			loc = time.Local
+		}
+		now := time.Now().In(loc)
+		todayStr := now.Format("2006-01-02")
+		currentHM := now.Format("15:04")
+
+		var setting Ayarlar
+		bildirimSaati := "09:00"
+		if err := db.Where("anahtar = ?", "bildirim_saati").First(&setting).Error; err == nil && setting.Deger != "" {
+			bildirimSaati = setting.Deger
+		}
+
+		currentKey := todayStr + " " + bildirimSaati
+		if currentHM == bildirimSaati && lastNotifiedKey != currentKey {
+			lastNotifiedKey = currentKey
+			fmt.Printf("Zamanlanmış otomatik kontrol tetiklendi (Saat %s TSİ).\n", currentHM)
+			checkAndNotify(db)
+		}
 	})
 	if err != nil {
 		fmt.Printf("Cron Job oluşturulurken hata: %v\n", err)
 	} else {
 		cronScheduler.Start()
-		fmt.Println("Cron Job zamanlayıcısı kuruldu (Her gün 00:00).")
+		fmt.Println("Cron Job zamanlayıcısı kuruldu (Dinamik saat kontrolü - TSİ).")
 	}
 
 	// Fiber Uygulamasını Başlat
@@ -85,6 +107,7 @@ func main() {
 
 	api.Get("/auth/me", h.Me)
 	api.Put("/auth/update-profile", h.UpdateProfile)
+	api.Delete("/auth/delete-account", h.DeleteAccount)
 	api.Get("/dashboard-summary", h.GetDashboardSummary)
 
 	// Gıdalar API Rotaları

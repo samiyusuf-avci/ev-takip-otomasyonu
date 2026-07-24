@@ -240,6 +240,43 @@ func (h *AppHandler) UpdateProfile(c *fiber.Ctx) error {
 	})
 }
 
+type DeleteAccountReq struct {
+	Sifre string `json:"sifre"`
+}
+
+// DeleteAccount verifies password and deletes the authenticated user and all associated records
+func (h *AppHandler) DeleteAccount(c *fiber.Ctx) error {
+	userID := c.Locals("userID").(uint)
+
+	var req DeleteAccountReq
+	if err := c.BodyParser(&req); err != nil || strings.TrimSpace(req.Sifre) == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Hesabınızı silmek için lütfen mevcut şifrenizi girin."})
+	}
+
+	var user Kullanici
+	if err := h.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Kullanıcı bulunamadı."})
+	}
+
+	// Şifreyi doğrula
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Sifre), []byte(req.Sifre)); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Girdiğiniz şifre hatalı. Hesap silinemedi."})
+	}
+
+	// Kullanıcıya ait tüm bağlı kayıtları temizle
+	h.DB.Where("kullanici_id = ?", userID).Delete(&Gida{})
+	h.DB.Where("kullanici_id = ?", userID).Delete(&Fatura{})
+	h.DB.Where("kullanici_id = ?", userID).Delete(&Garanti{})
+	h.DB.Where("kullanici_id = ?", userID).Delete(&Rutin{})
+	h.DB.Where("kullanici_id = ?", userID).Delete(&RutinKlasor{})
+
+	if err := h.DB.Where("id = ?", userID).Delete(&Kullanici{}).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Hesap silinirken bir hata oluştu: " + err.Error()})
+	}
+
+	return c.JSON(fiber.Map{"message": "Hesabınız ve tüm verileriniz başarıyla silindi."})
+}
+
 // -------------------------------------------------------------
 // DASHBOARD HANDLER
 // -------------------------------------------------------------
@@ -835,18 +872,26 @@ func (h *AppHandler) GetAyarlar(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	var tokenRow Ayarlar
+	var tokenRow, bildirimSaatiRow Ayarlar
 	h.DB.Where("anahtar = ?", "telegram_token").First(&tokenRow)
+	h.DB.Where("anahtar = ?", "bildirim_saati").First(&bildirimSaatiRow)
+
+	bildirimSaati := bildirimSaatiRow.Deger
+	if bildirimSaati == "" {
+		bildirimSaati = "09:00"
+	}
 
 	return c.JSON(fiber.Map{
 		"telegram_token":    tokenRow.Deger,
 		"telegram_chat_id": user.TelegramChatID,
+		"bildirim_saati":   bildirimSaati,
 	})
 }
 
 type SaveAyarlarReq struct {
 	TelegramToken  string `json:"telegram_token"`
 	TelegramChatID string `json:"telegram_chat_id"`
+	BildirimSaati  string `json:"bildirim_saati"`
 }
 
 func (h *AppHandler) SaveAyarlar(c *fiber.Ctx) error {
@@ -865,6 +910,13 @@ func (h *AppHandler) SaveAyarlar(c *fiber.Ctx) error {
 	chatIDSetting := Ayarlar{Anahtar: "telegram_chat_id", Deger: req.TelegramChatID}
 	if err := h.DB.Save(&chatIDSetting).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	if req.BildirimSaati != "" {
+		bildirimSaatiSetting := Ayarlar{Anahtar: "bildirim_saati", Deger: req.BildirimSaati}
+		if err := h.DB.Save(&bildirimSaatiSetting).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		}
 	}
 
 	if err := h.DB.Model(&Kullanici{}).Where("id = ?", userID).Update("telegram_chat_id", req.TelegramChatID).Error; err != nil {
