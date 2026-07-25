@@ -107,6 +107,25 @@ func AuthMiddleware(jwtSecret string) fiber.Handler {
 
 		c.Locals("userID", uint(idFloat))
 		c.Locals("userEposta", claims["eposta"])
+		if roleVal, ok := claims["role"].(string); ok {
+			c.Locals("userRole", roleVal)
+		} else {
+			c.Locals("userRole", "user")
+		}
 		return c.Next()
 	}
 }
+
+// IsAdmin verifies that the authenticated user has the 'admin' role
+func IsAdmin() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		role, ok := c.Locals("userRole").(string)
+		if !ok || role != "admin" {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "Erişim engellendi. Bu işleme yalnızca yönetici (admin) erişebilir.",
+			})
+		}
+		return c.Next()
+	}
+}
+

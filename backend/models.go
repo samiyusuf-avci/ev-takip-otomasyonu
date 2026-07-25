@@ -9,6 +9,7 @@ type Kullanici struct {
 	Isim            string    `json:"isim" gorm:"not null;column:isim"`
 	Eposta          string    `json:"eposta" gorm:"unique;not null;column:eposta"`
 	Sifre           string    `json:"-" gorm:"not null;column:sifre"`
+	Role            string    `json:"role" gorm:"default:user;column:role"`
 	TelegramChatID  string    `json:"telegram_chat_id" gorm:"column:telegram_chat_id"`
 	OlusturmaTarihi time.Time `json:"olusturma_tarihi" gorm:"default:CURRENT_TIMESTAMP;column:olusturma_tarihi"`
 }

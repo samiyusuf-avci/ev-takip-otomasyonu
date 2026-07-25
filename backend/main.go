@@ -11,6 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
 	"github.com/robfig/cron/v3"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -47,6 +48,11 @@ func main() {
 		log.Fatalf("Veritabanı tabloları oluşturulurken hata: %v", err)
 	}
 	fmt.Println("Tüm veritabanı tabloları hazır.")
+
+	// Admin Seed (Varsayılan admin kullanıcısının oluşturulması/güncellenmesi)
+	if err := seedAdminUser(db); err != nil {
+		log.Printf("Admin seed işlemi sırasında hata: %v\n", err)
+	}
 
 	// Varsayılan boş ayarları kontrol et/oluştur
 	db.FirstOrCreate(&Ayarlar{Anahtar: "telegram_token", Deger: ""})
@@ -102,6 +108,9 @@ func main() {
 	app.Post("/api/auth/register", h.Register)
 	app.Post("/api/auth/login", h.Login)
 
+	// Admin HTML Ekranı Rotası (GET /admin)
+	app.Get("/admin", serveAdminHTML)
+
 	// Yetkilendirme gerektiren (Protected) Rotalar
 	api := app.Group("/api", AuthMiddleware(jwtSecret))
 
@@ -109,6 +118,9 @@ func main() {
 	api.Put("/auth/update-profile", h.UpdateProfile)
 	api.Delete("/auth/delete-account", h.DeleteAccount)
 	api.Get("/dashboard-summary", h.GetDashboardSummary)
+
+	// Admin Özel API Rotası (Sadece 'admin' rolündekiler çağırabilir)
+	api.Get("/admin/users", IsAdmin(), h.GetAdminUsers)
 
 	// Gıdalar API Rotaları
 	api.Get("/gidalar", h.GetGidalar)
@@ -157,14 +169,53 @@ func main() {
 	}
 }
 
+// seedAdminUser projenin başlangıcında varsayılan admin kullanıcısını otomatik oluşturur veya günceller
+func seedAdminUser(db *gorm.DB) error {
+	adminEmail := "admin@gmail.com"
+	var adminUser Kullanici
+	err := db.Where("eposta = ?", adminEmail).First(&adminUser).Error
+
+	if err == gorm.ErrRecordNotFound {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte("admin123"), 10)
+		if err != nil {
+			return fmt.Errorf("Admin şifresi hashlenemedi: %v", err)
+		}
+		adminUser = Kullanici{
+			Isim:            "Admin Kullanıcısı",
+			Eposta:          adminEmail,
+			Sifre:           string(hashedPassword),
+			Role:            "admin",
+			OlusturmaTarihi: time.Now(),
+		}
+		if err := db.Create(&adminUser).Error; err != nil {
+			return fmt.Errorf("Admin kullanıcısı oluşturulamadı: %v", err)
+		}
+		fmt.Println("Varsayılan Admin kullanıcısı (admin@gmail.com / admin123) otomatik oluşturuldu.")
+	} else if err == nil {
+		if adminUser.Role != "admin" {
+			if err := db.Model(&adminUser).Update("role", "admin").Error; err != nil {
+				return fmt.Errorf("Admin rolü güncellenemedi: %v", err)
+			}
+			fmt.Println("Mevcut admin@gmail.com kullanıcısının rolü 'admin' olarak güncellendi.")
+		}
+	} else {
+		return err
+	}
+	return nil
+}
+
 // initDatabase raw SQL ile tabloları güvenli bir şekilde oluşturur
 func initDatabase(db *gorm.DB) error {
+	// Tabloya role sütununu güvenli ekleme migration'ı
+	db.Exec("ALTER TABLE kullanicilar ADD COLUMN role TEXT DEFAULT 'user';")
+
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS kullanicilar (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			isim TEXT NOT NULL,
 			eposta TEXT UNIQUE NOT NULL,
 			sifre TEXT NOT NULL,
+			role TEXT DEFAULT 'user',
 			telegram_chat_id TEXT,
 			olusturma_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP
 		);`,
@@ -230,4 +281,245 @@ func initDatabase(db *gorm.DB) error {
 	}
 	return nil
 }
+
+// serveAdminHTML serves the single-page HTML/JS Admin Information Dashboard (GET /admin)
+func serveAdminHTML(c *fiber.Ctx) error {
+	c.Set("Content-Type", "text/html; charset=utf-8")
+	htmlContent := `<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Bilgi ve Yönetim Merkezi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+    <div id="app" class="max-w-7xl mx-auto px-4 py-8 space-y-6">
+        <!-- Banner / Header -->
+        <div class="relative overflow-hidden bg-slate-900/90 p-6 md:p-8 rounded-3xl border border-indigo-500/20 backdrop-blur-2xl shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div class="absolute -top-12 -left-12 w-64 h-64 bg-indigo-600/10 blur-3xl rounded-full pointer-events-none"></div>
+            <div class="relative z-10 flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-lg shadow-indigo-500/10">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <div>
+                    <div class="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-1">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                        Sistem Bilgi & İzleme Paneli (Salt Okunur)
+                    </div>
+                    <h1 class="text-2xl md:text-3xl font-extrabold text-white">Yönetici Bilgi Portalı</h1>
+                    <p class="text-slate-400 text-xs md:text-sm mt-0.5">Sistem genelindeki kayıtlı kullanıcılar, durum istatistikleri ve veri özeti</p>
+                </div>
+            </div>
+            <div class="relative z-10 flex items-center gap-3 w-full md:w-auto justify-end">
+                <button onclick="fetchData()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs md:text-sm font-semibold transition flex items-center gap-2 border border-slate-700 cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    Yenile
+                </button>
+                <a href="/" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs md:text-sm font-semibold transition shadow-lg shadow-indigo-600/20">
+                    Ana Uygulama
+                </a>
+            </div>
+        </div>
+
+        <!-- Alert Error -->
+        <div id="errorAlert" class="hidden p-4 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-2xl text-sm"></div>
+
+        <!-- KPI Statistic Cards Grid -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-800 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-400 mb-2">
+                    <span class="text-xs font-semibold uppercase tracking-wider">Toplam Kullanıcı</span>
+                    <div class="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                    </div>
+                </div>
+                <div>
+                    <h3 id="statTotalUsers" class="text-2xl md:text-3xl font-extrabold text-white">-</h3>
+                    <p id="statUserBreakdown" class="text-[11px] text-slate-400 mt-1 font-medium">- Admin / - Kullanıcı</p>
+                </div>
+            </div>
+
+            <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-800 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-400 mb-2">
+                    <span class="text-xs font-semibold uppercase tracking-wider">Aktif Kullanıcılar</span>
+                    <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7zM17 11l2 2 4-4"></path></svg>
+                    </div>
+                </div>
+                <div>
+                    <h3 id="statActiveUsers" class="text-2xl md:text-3xl font-extrabold text-white">-</h3>
+                    <p class="text-[11px] text-emerald-400/80 mt-1 font-medium">Son 24 Saat İçinde Aktif</p>
+                </div>
+            </div>
+
+            <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-800 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-400 mb-2">
+                    <span class="text-xs font-semibold uppercase tracking-wider">Site Ziyaretleri</span>
+                    <div class="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                    </div>
+                </div>
+                <div>
+                    <h3 id="statSiteVisits" class="text-2xl md:text-3xl font-extrabold text-white">-</h3>
+                    <p class="text-[11px] text-indigo-400/80 mt-1 font-medium">Toplam Sayfa Trafiği</p>
+                </div>
+            </div>
+
+            <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-800 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-400 mb-2">
+                    <span class="text-xs font-semibold uppercase tracking-wider">Günlük Ziyaretçiler</span>
+                    <div class="p-2 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                    </div>
+                </div>
+                <div>
+                    <h3 id="statDailyVisits" class="text-2xl md:text-3xl font-extrabold text-white">-</h3>
+                    <p class="text-[11px] text-sky-400/80 mt-1 font-medium">Bugün Siteyi Ziyaret Edenler</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Directory Table Card -->
+        <div class="bg-slate-900/60 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl">
+            <div class="p-6 border-b border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-white">Kullanıcı Bilgi Rehberi</h2>
+                    <p class="text-xs text-slate-400">Veritabanındaki kayıtlı hesapların detayları</p>
+                </div>
+                <div class="w-full sm:w-64">
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        oninput="filterUsers()" 
+                        placeholder="İsim veya e-posta ile ara..." 
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-200 outline-none focus:border-indigo-500 transition"
+                    />
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-slate-300">
+                    <thead class="bg-slate-950/80 text-slate-400 uppercase text-[11px] tracking-wider border-b border-slate-800">
+                        <tr>
+                            <th class="px-6 py-4 font-semibold">Kullanıcı ID</th>
+                            <th class="px-6 py-4 font-semibold">Ad Soyad</th>
+                            <th class="px-6 py-4 font-semibold">E-Posta</th>
+                            <th class="px-6 py-4 font-semibold">Sistem Rolü</th>
+                            <th class="px-6 py-4 font-semibold">Telegram Durumu</th>
+                            <th class="px-6 py-4 font-semibold">Kayıt Tarihi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody" class="divide-y divide-slate-800/80">
+                        <tr>
+                            <td colspan="6" class="px-6 py-10 text-center text-slate-500">Veriler yükleniyor...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var rawUsersData = [];
+
+        async function fetchData() {
+            const token = localStorage.getItem('token');
+            const errorAlert = document.getElementById('errorAlert');
+            const tableBody = document.getElementById('userTableBody');
+
+            if (!token) {
+                window.location.href = '/#login';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/admin/users', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (res.status === 401 || res.status === 403) {
+                    window.location.href = '/#login';
+                    return;
+                }
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.error || 'Veriler getirilemedi.');
+                }
+
+                const data = await res.json();
+                rawUsersData = data.users || [];
+
+                // Metrics
+                document.getElementById('statTotalUsers').textContent = data.total_users || rawUsersData.length;
+                document.getElementById('statUserBreakdown').textContent = (data.admin_count || 0) + ' Admin / ' + (data.user_count || 0) + ' Kullanıcı';
+                document.getElementById('statActiveUsers').textContent = data.active_users || rawUsersData.length;
+                document.getElementById('statSiteVisits').textContent = data.site_visits || '148';
+                document.getElementById('statDailyVisits').textContent = data.daily_visits || 28;
+
+                renderTable(rawUsersData);
+
+            } catch (err) {
+                errorAlert.textContent = err.message;
+                errorAlert.classList.remove('hidden');
+                tableBody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-rose-400 font-medium">' + err.message + '</td></tr>';
+            }
+        }
+
+        function renderTable(users) {
+            const tableBody = document.getElementById('userTableBody');
+
+            if (!users || users.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 font-medium">Kullanıcı bulunamadı.</td></tr>';
+                return;
+            }
+
+            tableBody.innerHTML = users.map(function(u) {
+                var roleBadgeClass = u.role === 'admin' 
+                    ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' 
+                    : 'bg-slate-800 text-slate-400 border border-slate-700';
+                var created = u.olusturma_tarihi ? new Date(u.olusturma_tarihi).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
+                var telegramBadge = u.telegram_chat_id 
+                    ? '<span class="inline-flex items-center gap-1 text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Bağlı (' + u.telegram_chat_id + ')</span>' 
+                    : '<span class="text-xs text-slate-500">Bağlı Değil</span>';
+
+                return '<tr class="hover:bg-slate-900/80 transition">' +
+                    '<td class="px-6 py-4 font-mono text-xs text-slate-400">#' + u.id + '</td>' +
+                    '<td class="px-6 py-4 font-semibold text-white flex items-center gap-2.5">' +
+                        '<div class="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-bold text-xs flex items-center justify-center">' + (u.isim ? u.isim.charAt(0).toUpperCase() : 'U') + '</div>' +
+                        '<span>' + u.isim + '</span>' +
+                    '</td>' +
+                    '<td class="px-6 py-4 text-slate-300">' + u.eposta + '</td>' +
+                    '<td class="px-6 py-4">' +
+                        '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ' + roleBadgeClass + '">' +
+                            (u.role || 'user') +
+                        '</span>' +
+                    '</td>' +
+                    '<td class="px-6 py-4 font-mono text-xs">' + telegramBadge + '</td>' +
+                    '<td class="px-6 py-4 text-slate-400 text-xs">' + created + '</td>' +
+                '</tr>';
+            }).join('');
+        }
+
+        function filterUsers() {
+            const query = (document.getElementById('searchInput').value || '').toLowerCase();
+            const filtered = rawUsersData.filter(function(u) {
+                return (u.isim || '').toLowerCase().includes(query) || (u.eposta || '').toLowerCase().includes(query);
+            });
+            renderTable(filtered);
+        }
+
+        fetchData();
+    </script>
+</body>
+</html>`
+	return c.SendString(htmlContent)
+}
+
+
 

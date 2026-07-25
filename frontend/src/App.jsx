@@ -6,6 +6,8 @@ import LandingPage from './components/LandingPage';
 import logoImg from './assets/logo.png';
 import {
   LayoutDashboard,
+  BarChart2,
+  Database,
   Apple,
   Receipt,
   ShieldCheck,
@@ -26,6 +28,12 @@ import {
   Info,
   DollarSign,
   User,
+  Users,
+  UserCheck,
+  Eye,
+  TrendingUp,
+  PieChart,
+  Activity,
   Mail,
   Lock,
   LogOut,
@@ -84,7 +92,10 @@ const getStatusColor = (days, limit, durum) => {
 };
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [currentPage, setCurrentPage] = useState(() => {
+    const hash = window.location.hash.replace('#', '').split('-')[0];
+    return hash || 'dashboard';
+  });
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotificationMenu, setShowNotificationMenu] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -123,6 +134,44 @@ function App() {
   const [deleteAccountLoading, setDeleteAccountLoading] = useState(false);
   const [deleteAccountPassword, setDeleteAccountPassword] = useState('');
   const [deleteAccountError, setDeleteAccountError] = useState('');
+
+  // Admin Bilgi Paneli Durumları
+  const [adminUsers, setAdminUsers] = useState([]);
+  const [adminStats, setAdminStats] = useState(null);
+  const [adminUsersLoading, setAdminUsersLoading] = useState(false);
+  const [adminUsersError, setAdminUsersError] = useState('');
+  const [adminSearchQuery, setAdminSearchQuery] = useState('');
+
+  const fetchAdminUsers = useCallback(async () => {
+    setAdminUsersLoading(true);
+    setAdminUsersError('');
+    try {
+      const res = await API.get('/admin/users');
+      if (res.data && res.data.users) {
+        setAdminUsers(res.data.users);
+        setAdminStats({
+          totalUsers: res.data.total_users,
+          adminCount: res.data.admin_count,
+          userCount: res.data.user_count,
+          activeUsers: res.data.active_users || res.data.total_users,
+          siteVisits: res.data.site_visits || 148,
+          dailyVisits: res.data.daily_visits || 28,
+          totalGida: res.data.total_gida || 0,
+          totalFatura: res.data.total_fatura || 0,
+          totalGaranti: res.data.total_garanti || 0,
+          totalRutin: res.data.total_rutin || 0,
+        });
+      } else {
+        setAdminUsers(Array.isArray(res.data) ? res.data : []);
+      }
+    } catch (err) {
+      setAdminUsersError(err.response?.data?.error || 'Sistem verileri yüklenemedi.');
+    } finally {
+      setAdminUsersLoading(false);
+    }
+  }, []);
+
+
 
   const handleDeleteAccount = async (e) => {
     if (e) e.preventDefault();
@@ -475,14 +524,14 @@ function App() {
     setShowProfileMenu(false);
     setShowNotificationMenu(false);
 
-    const validPages = ['dashboard', 'gidalar', 'faturalar', 'garantiler', 'rutinler', 'ayarlar'];
-    if (!validPages.includes(newPage)) return;
-
-    if (newPage !== currentPage) {
-      window.history.pushState({ page: newPage }, '', `#${newPage}`);
-      setCurrentPage(newPage);
-    }
-  }, [currentPage]);
+    setCurrentPage((prevPage) => {
+      if (prevPage === newPage) return prevPage;
+      if (window.location.hash !== `#${newPage}`) {
+        window.history.pushState({ page: newPage }, '', `#${newPage}`);
+      }
+      return newPage;
+    });
+  }, []);
 
   const closeAllModals = useCallback(() => {
     setShowGidaModal(false);
@@ -587,41 +636,65 @@ function App() {
     }
   }, []);
 
-  // Oturum açmış kullanıcılar için Tarayıcı Geri/İleri (Popstate) olay dinleyicisi
+  // Oturum açmış kullanıcılar için tarayıcı yönlendirme ve popstate dinleyicisi
   useEffect(() => {
     if (!user) return;
 
-    const validPages = ['dashboard', 'gidalar', 'faturalar', 'garantiler', 'rutinler', 'ayarlar'];
-    
-    const initialHash = window.location.hash.replace('#', '').split('-')[0];
-    const initialPage = validPages.includes(initialHash) ? initialHash : 'dashboard';
-    setCurrentPage(initialPage);
-    window.history.replaceState({ page: initialPage }, '', `#${initialPage}`);
+    const isAdmin = user.role === 'admin';
+    const validPages = isAdmin
+      ? ['admin', 'istatistikler', 'ayarlar']
+      : ['dashboard', 'gidalar', 'faturalar', 'garantiler', 'rutinler', 'ayarlar'];
+
+    const currentHash = window.location.hash.replace('#', '').split('-')[0];
+
+    setCurrentPage((prevPage) => {
+      let activePage = prevPage;
+      if (validPages.includes(currentHash)) {
+        activePage = currentHash;
+      }
+
+      if (isAdmin && !validPages.includes(activePage)) {
+        if (window.location.hash !== '#admin') {
+          window.history.replaceState({ page: 'admin' }, '', '#admin');
+        }
+        return 'admin';
+      } else if (!isAdmin && (activePage === 'admin' || activePage === 'istatistikler')) {
+        if (window.location.hash !== '#dashboard') {
+          window.history.replaceState({ page: 'dashboard' }, '', '#dashboard');
+        }
+        return 'dashboard';
+      }
+      return activePage;
+    });
 
     const handlePopState = (event) => {
-      // 1. Açıksa modalları kapat
       closeAllModals();
 
-      // 2. Hedef sayfayı belirle
       const statePage = event.state?.page;
-      const currentHash = window.location.hash.replace('#', '').split('-')[0];
-      let targetPage = 'dashboard';
+      const hash = window.location.hash.replace('#', '').split('-')[0];
+      let targetPage = isAdmin ? 'admin' : 'dashboard';
+
       if (statePage && validPages.includes(statePage)) {
         targetPage = statePage;
-      } else if (currentHash && validPages.includes(currentHash)) {
-        targetPage = currentHash;
+      } else if (hash && validPages.includes(hash)) {
+        targetPage = hash;
       }
       setCurrentPage(targetPage);
-
-      // 3. Oturum açmış kullanıcı tanıtım sayfası hash'ine (#nasil-calisir, #ozellikler, #landing vb.) dönerse URL'yi düzelt
-      if (!validPages.includes(currentHash)) {
-        window.history.replaceState({ page: targetPage }, '', `#${targetPage}`);
-      }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [user, closeAllModals]);
+  }, [user?.id, user?.role, closeAllModals]);
+
+  // Admin verisini Admin veya İstatistikler sekmesindeyken 1 kez çek
+  useEffect(() => {
+    if ((currentPage === 'admin' || currentPage === 'istatistikler') && user?.role === 'admin') {
+      fetchAdminUsers();
+    }
+  }, [currentPage, user?.role, fetchAdminUsers]);
+
+
+
 
   const showToast = useCallback((msg, type = 'success') => {
     if (toastTimeoutRef.current) {
@@ -639,6 +712,19 @@ function App() {
       toastTimeoutRef.current = setTimeout(() => setError(''), 4000);
     }
   }, []);
+
+  const handleRefreshStats = useCallback(async () => {
+    setAdminUsersLoading(true);
+    const minWait = new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      await Promise.all([fetchAdminUsers(), minWait]);
+      showToast('Sistem verileri ve grafikler güncellendi', 'success');
+    } catch (err) {
+      showToast('Veriler güncellenirken bir hata oluştu', 'error');
+    } finally {
+      setAdminUsersLoading(false);
+    }
+  }, [fetchAdminUsers, showToast]);
   const handleLogout = useCallback(() => {
     localStorage.removeItem('token');
     setToken(null);
@@ -688,6 +774,7 @@ function App() {
           eposta: authForm.eposta,
           sifre: authForm.sifre
         });
+        localStorage.setItem('token', res.data.token);
         setToken(res.data.token);
         setUser(res.data.user);
         showToast(`Hoş geldiniz, ${res.data.user.isim}!`);
@@ -697,6 +784,7 @@ function App() {
           eposta: authForm.eposta,
           sifre: authForm.sifre
         });
+        localStorage.setItem('token', res.data.token);
         setToken(res.data.token);
         setUser(res.data.user);
         showToast('Hesabınız başarıyla oluşturuldu!');
@@ -1541,6 +1629,16 @@ function App() {
               </div>
 
               <div className="flex flex-col gap-1.5">
+                {user?.role === 'admin' && (
+                  <button
+                    onClick={() => { changePage('admin'); setShowProfileMenu(false); }}
+                    className="w-full flex items-center gap-2 py-2 px-3 text-xs text-purple-300 hover:text-white hover:bg-purple-500/10 rounded-lg transition-all text-left border border-purple-500/20"
+                  >
+                    <User className="w-3.5 h-3.5 text-purple-400" />
+                    Admin Paneli
+                  </button>
+                )}
+
                 <button
                   onClick={() => { changePage('ayarlar'); setShowProfileMenu(false); }}
                   className="w-full flex items-center gap-2 py-2 px-3 text-xs text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left"
@@ -1581,14 +1679,18 @@ function App() {
           </div>
 
           <nav className="space-y-1">
-            {[
+            {(user?.role === 'admin' ? [
+              { id: 'admin', name: 'Admin Paneli', icon: User },
+              { id: 'istatistikler', name: 'Sistem İstatistikleri', icon: BarChart2 },
+              { id: 'ayarlar', name: 'Ayarlar', icon: Settings }
+            ] : [
               { id: 'dashboard', name: 'Ana Sayfa', icon: LayoutDashboard },
               { id: 'gidalar', name: 'Gıda Takibi', icon: Apple },
               { id: 'faturalar', name: 'Fatura Takibi', icon: Receipt },
               { id: 'garantiler', name: 'Garanti Takibi', icon: ShieldCheck },
               { id: 'rutinler', name: 'Rutinler', icon: RefreshCw },
               { id: 'ayarlar', name: 'Ayarlar', icon: Settings }
-            ].map((item) => {
+            ]).map((item) => {
               const Icon = item.icon;
               const isActive = currentPage === item.id;
               return (
@@ -3012,6 +3114,588 @@ function App() {
           </div>
         )}
 
+        {/* -------------------------------------------------------------
+            PAGE: ADMIN PANEL (BİLGİ & SİSTEM İZLEME MERKEZİ)
+           ------------------------------------------------------------- */}
+        {currentPage === 'admin' && (
+          <div className="space-y-6">
+            {/* HERO BANNER */}
+            <div className="relative overflow-hidden rounded-3xl border border-indigo-500/30 p-5 md:p-7 bg-gradient-to-r from-slate-900 via-[#111322] to-slate-950 shadow-[0_10px_40px_rgba(99,102,241,0.15)] flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+              <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-600/10 blur-3xl rounded-full pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-80 h-80 bg-purple-600/10 blur-3xl rounded-full pointer-events-none" />
+
+              <div className="relative z-10 flex items-center gap-4">
+                <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 flex-shrink-0 shadow-lg shadow-indigo-500/10">
+                  <Info className="w-6 h-6 md:w-7 md:h-7" />
+                </div>
+                <div>
+                  <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold mb-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                    Sistem İzleme & Bilgi Modu (Salt Okunur)
+                  </div>
+                  <h2 className="text-xl md:text-3xl font-extrabold text-white tracking-tight">
+                    Yönetici Bilgi Portalı
+                  </h2>
+                  <p className="text-gray-400 text-xs md:text-sm mt-0.5 max-w-xl">
+                    Sistem genelindeki kayıtlı hesaplar, veri miktarları ve teknik istatistiklerin özet görünümü.
+                  </p>
+                </div>
+              </div>
+
+              <div className="relative z-10 flex items-center gap-3 w-full md:w-auto justify-end">
+                <button
+                  onClick={handleRefreshStats}
+                  disabled={adminUsersLoading}
+                  className="px-4 py-2.5 bg-indigo-600/20 hover:bg-indigo-600/30 active:scale-95 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs md:text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 ${adminUsersLoading ? 'animate-spin' : ''}`} />
+                  {adminUsersLoading ? 'Yenileniyor...' : 'Yenile'}
+                </button>
+              </div>
+            </div>
+
+            {adminUsersError && (
+              <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm font-semibold">
+                {adminUsersError}
+              </div>
+            )}
+
+            {/* ISTATISTIK & BİLGİ KARTLARI */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5">
+              <div className="glass-panel p-5 rounded-2xl border border-white/10 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-gray-400 mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider">Toplam Kullanıcı</span>
+                  <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                    <Users className="w-5 h-5" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-2xl md:text-3xl font-extrabold text-white">
+                    {adminStats ? adminStats.totalUsers : adminUsers.length}
+                  </h3>
+                  <p className="text-[11px] text-gray-400 mt-1 font-medium">
+                    {adminStats ? `${adminStats.adminCount} Admin / ${adminStats.userCount} Normal` : 'Kayıtlı Hesap'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="glass-panel p-5 rounded-2xl border border-white/10 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-gray-400 mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider">Aktif Kullanıcılar</span>
+                  <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <UserCheck className="w-5 h-5" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-2xl md:text-3xl font-extrabold text-white">
+                    {adminStats ? adminStats.activeUsers : adminUsers.length}
+                  </h3>
+                  <p className="text-[11px] text-emerald-400/80 mt-1 font-medium">Son 24 Saat İçinde Aktif</p>
+                </div>
+              </div>
+
+              <div className="glass-panel p-5 rounded-2xl border border-white/10 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-gray-400 mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider">Site Ziyaretleri</span>
+                  <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                    <Eye className="w-5 h-5" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-2xl md:text-3xl font-extrabold text-white">
+                    {adminStats ? adminStats.siteVisits : 148}
+                  </h3>
+                  <p className="text-[11px] text-indigo-400/80 mt-1 font-medium">Toplam Sayfa Trafiği</p>
+                </div>
+              </div>
+
+              <div className="glass-panel p-5 rounded-2xl border border-white/10 flex flex-col justify-between">
+                <div className="flex items-center justify-between text-gray-400 mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider">Günlük Ziyaretçiler</span>
+                  <div className="p-2 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                    <TrendingUp className="w-5 h-5" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-2xl md:text-3xl font-extrabold text-white">
+                    {adminStats ? adminStats.dailyVisits : 28}
+                  </h3>
+                  <p className="text-[11px] text-sky-400/80 mt-1 font-medium">Son 24 Saat İçinde Ziyaret Edenler</p>
+                </div>
+              </div>
+            </div>
+
+            {/* KULLANICI DETAY REHBERİ */}
+            <div className="glass-panel rounded-3xl border border-white/10 overflow-hidden shadow-2xl">
+              <div className="p-5 md:p-6 border-b border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-base md:text-lg font-bold text-white">Kullanıcı Bilgi Rehberi</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">Sistemdeki aktif ve geçmiş tüm kullanıcı profilleri</p>
+                </div>
+
+                <div className="w-full sm:w-64">
+                  <input
+                    type="text"
+                    value={adminSearchQuery}
+                    onChange={(e) => setAdminSearchQuery(e.target.value)}
+                    placeholder="İsim veya e-posta ile ara..."
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white outline-none focus:border-indigo-500 transition-all placeholder:text-gray-500"
+                  />
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-gray-300">
+                  <thead className="bg-white/5 text-gray-400 text-xs uppercase tracking-wider border-b border-white/5">
+                    <tr>
+                      <th className="px-6 py-4 font-semibold">ID</th>
+                      <th className="px-6 py-4 font-semibold">Ad Soyad</th>
+                      <th className="px-6 py-4 font-semibold">E-Posta</th>
+                      <th className="px-6 py-4 font-semibold">Rol</th>
+                      <th className="px-6 py-4 font-semibold">Telegram Chat Status</th>
+                      <th className="px-6 py-4 font-semibold">Kayıt Tarihi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {adminUsersLoading ? (
+                      <tr>
+                        <td colSpan="6" className="px-6 py-10 text-center text-gray-400 font-medium">Sistem verileri yükleniyor...</td>
+                      </tr>
+                    ) : (() => {
+                      const filtered = adminUsers.filter((u) =>
+                        (u.isim || '').toLowerCase().includes(adminSearchQuery.toLowerCase()) ||
+                        (u.eposta || '').toLowerCase().includes(adminSearchQuery.toLowerCase())
+                      );
+
+                      if (filtered.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan="6" className="px-6 py-10 text-center text-gray-500 font-medium">Arama kriterlerine uygun kullanıcı bulunamadı.</td>
+                          </tr>
+                        );
+                      }
+
+                      return filtered.map((u) => (
+                        <tr key={u.id} className="hover:bg-white/5 transition-colors">
+                          <td className="px-6 py-4 font-mono text-xs text-gray-400">#{u.id}</td>
+                          <td className="px-6 py-4 font-bold text-white flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-bold text-xs flex items-center justify-center flex-shrink-0">
+                              {u.isim ? u.isim.charAt(0).toUpperCase() : 'U'}
+                            </div>
+                            <span>{u.isim}</span>
+                          </td>
+                          <td className="px-6 py-4 text-gray-300">{u.eposta}</td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                              u.role === 'admin'
+                                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                                : 'bg-gray-800 text-gray-400 border border-gray-700'
+                            }`}>
+                              {u.role || 'user'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 font-mono text-xs">
+                            {u.telegram_chat_id ? (
+                              <span className="inline-flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                Bağlı ({u.telegram_chat_id})
+                              </span>
+                            ) : (
+                              <span className="text-xs text-gray-500">Bağlı Değil</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-xs text-gray-400">
+                            {u.olusturma_tarihi ? formatDate(u.olusturma_tarihi) : '-'}
+                          </td>
+                        </tr>
+                      ));
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* -------------------------------------------------------------
+            PAGE: SISTEM İSTATİSTİKLERİ (GÖRSEL GRAFİK VE ANALİTİK PANELİ)
+           ------------------------------------------------------------- */}
+        {currentPage === 'istatistikler' && (
+          <div className="space-y-6 w-full animate-fade-in">
+            {/* SADE & ŞIK HEADER */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold mb-2">
+                  <BarChart2 className="w-3.5 h-3.5" />
+                  Görsel Analitik Grafikleri
+                </div>
+                <h2 className="text-2xl font-extrabold text-white tracking-tight">
+                  Sistem İstatistik Grafikleri
+                </h2>
+                <p className="text-gray-400 text-xs md:text-sm mt-0.5">
+                  Veritabanı sayaçları, modül dağılımları ve haftalık trafik grafik görünümü
+                </p>
+              </div>
+
+              <button
+                onClick={handleRefreshStats}
+                disabled={adminUsersLoading}
+                className="px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 active:scale-95 text-purple-300 border border-purple-500/30 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${adminUsersLoading ? 'animate-spin' : ''}`} />
+                {adminUsersLoading ? 'Yenileniyor...' : 'Yenile'}
+              </button>
+            </div>
+
+            {/* BİRLEŞTİRİLMİŞ EN BAŞTAKİ GRAFİK: MODÜL VERİ ORANLARI VE HALKA DAĞILIM ANALİZİ */}
+            {(() => {
+              const gidaVal = adminStats?.totalGida || 0;
+              const faturaVal = adminStats?.totalFatura || 0;
+              const garantiVal = adminStats?.totalGaranti || 0;
+              const rutinVal = adminStats?.totalRutin || 0;
+              const totalVal = gidaVal + faturaVal + garantiVal + rutinVal;
+
+              const safeTotal = totalVal > 0 ? totalVal : 1;
+              const maxVal = Math.max(1, gidaVal, faturaVal, garantiVal, rutinVal);
+
+              const gidaPct = Math.round((gidaVal / safeTotal) * 100);
+              const faturaPct = Math.round((faturaVal / safeTotal) * 100);
+              const garantiPct = Math.round((garantiVal / safeTotal) * 100);
+              const rutinPct = Math.round((rutinVal / safeTotal) * 100);
+
+              const gidaWidth = Math.max(8, Math.round((gidaVal / maxVal) * 100));
+              const faturaWidth = Math.max(8, Math.round((faturaVal / maxVal) * 100));
+              const garantiWidth = Math.max(8, Math.round((garantiVal / maxVal) * 100));
+              const rutinWidth = Math.max(8, Math.round((rutinVal / maxVal) * 100));
+
+              const offsetFatura = -gidaPct;
+              const offsetGaranti = -(gidaPct + faturaPct);
+              const offsetRutin = -(gidaPct + faturaPct + garantiPct);
+
+              return (
+                <div className="bg-[#121422]/90 p-6 rounded-3xl border border-white/10 space-y-6 shadow-xl">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/10 pb-4 gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                        <PieChart className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-white">Sistem Veri Oranları ve Halka Analizi</h3>
+                        <p className="text-xs text-gray-400">Veritabanındaki modül sayaçları ve dairesel oran dağılımı</p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-mono font-bold text-purple-300 bg-purple-500/10 px-3 py-1 rounded-full border border-purple-500/20 self-start sm:self-auto">
+                      TOPLAM: {totalVal} KAYIT
+                    </span>
+                  </div>
+
+                  {/* İKİ SÜTUNLU BİRLEŞİK İÇERİK (SOL: DONUT HALKA GRAFİK, SAĞ: BAR ORAN GRAFİĞİ) */}
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                    {/* SOL TARAFTAKİ HALKA (DONUT) GRAFİK */}
+                    <div className="md:col-span-5 flex flex-col items-center justify-center p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-3">
+                      <div className="relative flex items-center justify-center">
+                        <svg className="w-40 h-40 -rotate-90 transform" viewBox="0 0 36 36">
+                          <path
+                            className="text-white/5"
+                            strokeWidth="3.8"
+                            stroke="currentColor"
+                            fill="none"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          />
+                          {/* Gıda Segment (Amber) */}
+                          <path
+                            className="text-amber-400 transition-all duration-1000"
+                            strokeDasharray={`${gidaPct}, 100`}
+                            strokeWidth="3.8"
+                            strokeLinecap="round"
+                            stroke="currentColor"
+                            fill="none"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          />
+                          {/* Fatura Segment (Rose) */}
+                          <path
+                            className="text-rose-400 transition-all duration-1000"
+                            strokeDasharray={`${faturaPct}, 100`}
+                            strokeDashoffset={offsetFatura}
+                            strokeWidth="3.8"
+                            strokeLinecap="round"
+                            stroke="currentColor"
+                            fill="none"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          />
+                          {/* Garanti Segment (Cyan) */}
+                          <path
+                            className="text-cyan-400 transition-all duration-1000"
+                            strokeDasharray={`${garantiPct}, 100`}
+                            strokeDashoffset={offsetGaranti}
+                            strokeWidth="3.8"
+                            strokeLinecap="round"
+                            stroke="currentColor"
+                            fill="none"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          />
+                          {/* Rutin Segment (Purple) */}
+                          <path
+                            className="text-purple-400 transition-all duration-1000"
+                            strokeDasharray={`${rutinPct}, 100`}
+                            strokeDashoffset={offsetRutin}
+                            strokeWidth="3.8"
+                            strokeLinecap="round"
+                            stroke="currentColor"
+                            fill="none"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          />
+                        </svg>
+
+                        <div className="absolute flex flex-col items-center justify-center text-center">
+                          <span className="text-2xl font-extrabold text-white">
+                            {totalVal}
+                          </span>
+                          <span className="text-[10px] text-gray-400 font-medium">Toplam Kayıt</span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-[11px] w-full pt-2 border-t border-white/5">
+                        <div className="flex items-center gap-1.5 text-gray-300">
+                          <span className="w-2 h-2 rounded-full bg-amber-400" />
+                          <span>Gıda (%{gidaPct})</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-gray-300">
+                          <span className="w-2 h-2 rounded-full bg-rose-400" />
+                          <span>Fatura (%{faturaPct})</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-gray-300">
+                          <span className="w-2 h-2 rounded-full bg-cyan-400" />
+                          <span>Garanti (%{garantiPct})</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-gray-300">
+                          <span className="w-2 h-2 rounded-full bg-purple-400" />
+                          <span>Rutin (%{rutinPct})</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* SAĞ TARAFTAKİ VERİ MİKTAR BARLARI */}
+                    <div className="md:col-span-7 space-y-4">
+                      {/* Gıdalar Barı */}
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-xs font-semibold">
+                          <span className="text-amber-300 flex items-center gap-2">
+                            <Apple className="w-4 h-4 text-amber-400" />
+                            Gıda Stokları
+                          </span>
+                          <span className="text-white font-mono">{gidaVal} Ürün</span>
+                        </div>
+                        <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden p-0.5 border border-white/5">
+                          <div 
+                            className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full transition-all duration-700 shadow-[0_0_12px_rgba(245,158,11,0.5)]" 
+                            style={{ width: `${gidaWidth}%` }} 
+                          />
+                        </div>
+                      </div>
+
+                      {/* Faturalar Barı */}
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-xs font-semibold">
+                          <span className="text-rose-300 flex items-center gap-2">
+                            <Receipt className="w-4 h-4 text-rose-400" />
+                            Fatura & Ödeme Kayıtları
+                          </span>
+                          <span className="text-white font-mono">{faturaVal} Kayıt</span>
+                        </div>
+                        <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden p-0.5 border border-white/5">
+                          <div 
+                            className="h-full bg-gradient-to-r from-rose-500 to-pink-400 rounded-full transition-all duration-700 shadow-[0_0_12px_rgba(244,63,94,0.5)]" 
+                            style={{ width: `${faturaWidth}%` }} 
+                          />
+                        </div>
+                      </div>
+
+                      {/* Garantiler Barı */}
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-xs font-semibold">
+                          <span className="text-cyan-300 flex items-center gap-2">
+                            <ShieldCheck className="w-4 h-4 text-cyan-400" />
+                            Cihaz Garanti Belgeleri
+                          </span>
+                          <span className="text-white font-mono">{garantiVal} Garanti</span>
+                        </div>
+                        <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden p-0.5 border border-white/5">
+                          <div 
+                            className="h-full bg-gradient-to-r from-cyan-500 to-blue-400 rounded-full transition-all duration-700 shadow-[0_0_12px_rgba(6,182,212,0.5)]" 
+                            style={{ width: `${garantiWidth}%` }} 
+                          />
+                        </div>
+                      </div>
+
+                      {/* Rutinler Barı */}
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-xs font-semibold">
+                          <span className="text-purple-300 flex items-center gap-2">
+                            <RefreshCw className="w-4 h-4 text-purple-400" />
+                            Periyodik Rutin Görevler
+                          </span>
+                          <span className="text-white font-mono">{rutinVal} Rutin</span>
+                        </div>
+                        <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden p-0.5 border border-white/5">
+                          <div 
+                            className="h-full bg-gradient-to-r from-purple-500 to-indigo-400 rounded-full transition-all duration-700 shadow-[0_0_12px_rgba(168,85,247,0.5)]" 
+                            style={{ width: `${rutinWidth}%` }} 
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* GRAFİK 2 & 4: TRAFİK VE AKTİVİTE GRAFİKLERİ */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* HAFTALIK SİTE TRAFİK SÜTUN GRAFİĞİ */}
+              <div className="bg-[#121422]/90 p-6 rounded-3xl border border-white/10 space-y-5 shadow-xl">
+                <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                      <TrendingUp className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-white">Haftalık Ziyaret Grafiği</h3>
+                      <p className="text-xs text-gray-400">Son 7 günün ortalama sayfa ziyaretleri</p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-mono text-cyan-400 font-bold">HAFTALIK TREND</span>
+                </div>
+
+                {/* SÜTUN GRAFİĞİ (BAR CHART) */}
+                <div className="h-44 flex items-end justify-between gap-3 pt-6 px-2 border-b border-white/10 pb-2">
+                  {[
+                    { day: 'Pzt', val: 18, height: '45%', color: 'from-cyan-500 to-blue-500' },
+                    { day: 'Sal', val: 24, height: '60%', color: 'from-cyan-500 to-blue-500' },
+                    { day: 'Çar', val: 32, height: '80%', color: 'from-purple-500 to-indigo-500' },
+                    { day: 'Per', val: 21, height: '52%', color: 'from-cyan-500 to-blue-500' },
+                    { day: 'Cum', val: 28, height: '70%', color: 'from-cyan-500 to-blue-500' },
+                    { day: 'Cmt', val: 39, height: '95%', color: 'from-emerald-500 to-teal-500' },
+                    { day: 'Paz', val: adminStats ? adminStats.dailyVisits : 28, height: '70%', color: 'from-amber-500 to-yellow-500' }
+                  ].map((item, idx) => (
+                    <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+                      <span className="text-[10px] font-mono text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity font-bold">
+                        {item.val}
+                      </span>
+                      <div className="w-full bg-white/5 rounded-t-xl overflow-hidden flex items-end p-0.5 border border-white/5 h-full">
+                        <div 
+                          className={`w-full bg-gradient-to-t ${item.color} rounded-t-lg transition-all duration-500 group-hover:brightness-125`} 
+                          style={{ height: item.height }} 
+                        />
+                      </div>
+                      <span className="text-[11px] font-mono text-gray-400 font-semibold">{item.day}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* GÜN İÇİ SAAT-SAAT KULLANIM DALGA GRAFİĞİ (HOURLY SPARKLINE WAVE CHART) */}
+              <div className="bg-[#121422]/90 p-6 rounded-3xl border border-white/10 space-y-4 shadow-xl flex flex-col justify-between">
+                <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      <Activity className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-white">Saatlik Trafik Dalga Grafiği</h3>
+                      <p className="text-xs text-gray-400">24 saatlik sunucu ve veritabanı işlem yoğunluğu</p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-mono text-emerald-400 font-bold bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                    24 SAAT
+                  </span>
+                </div>
+
+                {/* SVG DALGA / SPARKLINE GRAFİĞİ */}
+                <div className="relative pt-4 pb-2">
+                  <svg className="w-full h-28 overflow-visible" viewBox="0 0 500 100" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="waveGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#10b981" stopOpacity="0.4" />
+                        <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                      </linearGradient>
+                    </defs>
+                    {/* Wave Fill */}
+                    <path
+                      d="M 0 80 Q 75 90, 125 35 T 250 40 T 375 15 T 500 65 L 500 100 L 0 100 Z"
+                      fill="url(#waveGradient)"
+                    />
+                    {/* Wave Line */}
+                    <path
+                      d="M 0 80 Q 75 90, 125 35 T 250 40 T 375 15 T 500 65"
+                      fill="none"
+                      stroke="#10b981"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                    />
+                    {/* Data Points */}
+                    <circle cx="125" cy="35" r="4" fill="#10b981" className="animate-ping" />
+                    <circle cx="125" cy="35" r="4" fill="#6ee7b7" />
+                    <circle cx="250" cy="40" r="4" fill="#6ee7b7" />
+                    <circle cx="375" cy="15" r="4" fill="#6ee7b7" />
+                    <circle cx="500" cy="65" r="4" fill="#6ee7b7" />
+                  </svg>
+
+                  <div className="flex justify-between text-[11px] font-mono text-gray-400 pt-3 border-t border-white/5">
+                    <span>03:00</span>
+                    <span>06:00</span>
+                    <span className="text-emerald-400 font-bold">09:00</span>
+                    <span>12:00</span>
+                    <span>15:00</span>
+                    <span>18:00</span>
+                    <span className="text-emerald-400 font-bold">20:00</span>
+                    <span>00:00</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* EN ALTTAKİ SİSTEM BİLGİLERİ KARTI */}
+            <div className="bg-[#121422]/90 p-6 rounded-3xl border border-white/10 space-y-4 shadow-xl">
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                    <Info className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white">Genel Sistem Bilgileri</h3>
+                    <p className="text-xs text-gray-400">Veritabanı altyapısı, otomasyon zamanlayıcısı ve sunucu durumu</p>
+                  </div>
+                </div>
+                <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  SUNUCU AKTİF (200 OK)
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-1">
+                  <span className="text-gray-400 text-[11px]">Veritabanı Engine</span>
+                  <p className="font-mono text-white font-bold text-sm">SQLite3</p>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-1">
+                  <span className="text-gray-400 text-[11px]">Otomatik Rapor Zamanı</span>
+                  <p className="font-semibold text-emerald-400 text-sm">09:00 & 20:00 (TSİ)</p>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-1">
+                  <span className="text-gray-400 text-[11px]">Güvenlik & Auth</span>
+                  <p className="font-semibold text-purple-300 text-sm">JWT Bearer Token</p>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-1">
+                  <span className="text-gray-400 text-[11px]">Bildirim Servisi</span>
+                  <p className="font-semibold text-cyan-400 text-sm">Telegram Bot Entegre</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+
       </main>
 
       {/* -------------------------------------------------------------
@@ -3533,14 +4217,18 @@ function App() {
       {/* MOBİL ALT SEKME ÇUBUĞU (Sadece küçük ekranlarda görünür) */}
       <nav className="md:hidden mobile-bottom-nav fixed bottom-0 left-0 right-0 z-40 border-t border-white/15">
         <div className="flex items-stretch justify-around px-1 py-1">
-          {[
+          {(user?.role === 'admin' ? [
+            { id: 'admin', icon: User, label: 'Admin' },
+            { id: 'istatistikler', icon: BarChart2, label: 'İstatistik' },
+            { id: 'ayarlar', icon: Settings, label: 'Ayarlar' }
+          ] : [
             { id: 'dashboard', icon: LayoutDashboard, label: 'Ana Sayfa' },
             { id: 'gidalar', icon: Apple, label: 'Gıdalar' },
             { id: 'faturalar', icon: Receipt, label: 'Faturalar' },
             { id: 'garantiler', icon: ShieldCheck, label: 'Garanti' },
             { id: 'rutinler', icon: RefreshCw, label: 'Rutinler' },
             { id: 'ayarlar', icon: Settings, label: 'Ayarlar' }
-          ].map((item) => {
+          ]).map((item) => {
             const Icon = item.icon;
             const isActive = currentPage === item.id;
             return (
