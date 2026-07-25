@@ -153,21 +153,21 @@ export default function LandingPage({ onLogin, onRegister }) {
       <div className="absolute top-[1200px] right-[-200px] w-[600px] h-[600px] bg-blue-600/10 blur-3xl rounded-full pointer-events-none -z-10" />
 
       {/* HEADER / NAVIGATION */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#0d0e15]/80 border-b border-white/10 transition-all">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#0d0e15]/85 border-b border-white/10 transition-all">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2">
           {/* Logo & Brand */}
-          <div className="flex items-center gap-3">
-            <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl blur opacity-70 group-hover:opacity-100 transition duration-300"></div>
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink-0">
+            <div className="relative group flex-shrink-0">
+              <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl sm:rounded-2xl blur opacity-70 group-hover:opacity-100 transition duration-300"></div>
               <img
                 src={logoImg}
                 alt="Akıllı Yaşam Logo"
-                className="relative w-11 h-11 rounded-xl object-cover border border-purple-400/40 shadow-[0_0_20px_rgba(168,85,247,0.4)]"
+                className="relative w-8 h-8 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl object-cover border border-purple-400/40 shadow-[0_0_20px_rgba(168,85,247,0.4)]"
               />
             </div>
-            <div>
-              <span className="text-lg font-bold text-white tracking-tight flex items-center gap-1.5">
-                Akıllı Yaşam <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold">Pro</span>
+            <div className="min-w-0">
+              <span className="text-xs xs:text-sm sm:text-lg font-bold text-white tracking-tight flex items-center gap-1 sm:gap-1.5 whitespace-nowrap">
+                Akıllı Yaşam <span className="text-[9px] sm:text-xs px-1.5 py-0.5 sm:px-2 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold flex-shrink-0">Pro</span>
               </span>
               <p className="text-[11px] text-gray-400 font-medium hidden sm:block">Ev Takip & Otomasyon Sistemi</p>
             </div>
@@ -202,20 +202,20 @@ export default function LandingPage({ onLogin, onRegister }) {
           </nav>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
             <button
               onClick={onLogin}
-              className="px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-200 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer flex items-center gap-2"
+              className="px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold text-gray-200 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer flex items-center gap-1 sm:gap-2 whitespace-nowrap"
             >
-              <LogIn className="w-4 h-4 text-purple-400" />
-              Giriş Yap
+              <LogIn className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400 flex-shrink-0" />
+              <span>Giriş Yap</span>
             </button>
             <button
               onClick={onRegister}
-              className="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-purple-600 hover:bg-purple-500 transition-all shadow-[0_4px_20px_rgba(168,85,247,0.35)] hover:shadow-[0_6px_25px_rgba(168,85,247,0.5)] cursor-pointer flex items-center gap-2 glow-btn"
+              className="px-3 py-1.5 sm:px-5 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold text-white bg-purple-600 hover:bg-purple-500 transition-all shadow-[0_4px_20px_rgba(168,85,247,0.35)] hover:shadow-[0_6px_25px_rgba(168,85,247,0.5)] cursor-pointer flex items-center gap-1 sm:gap-2 glow-btn whitespace-nowrap"
             >
-              <UserPlus className="w-4 h-4" />
-              Kayıt Ol
+              <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+              <span>Kayıt Ol</span>
             </button>
           </div>
         </div>
@@ -335,7 +335,7 @@ export default function LandingPage({ onLogin, onRegister }) {
       </section>
 
       {/* FEATURES SECTION */}
-      <section id="ozellikler" className="min-h-[calc(100vh-80px)] scroll-mt-24 pt-8 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto relative">
+      <section id="ozellikler" className="min-h-0 md:min-h-[calc(100vh-80px)] scroll-mt-20 pt-6 pb-12 sm:pt-8 sm:pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto relative">
         {/* Ultra-Shortened Header */}
         <div className="text-center max-w-3xl mx-auto mb-6 sm:mb-8">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs font-semibold mb-2.5 backdrop-blur-md">
@@ -352,7 +352,7 @@ export default function LandingPage({ onLogin, onRegister }) {
         </div>
 
         {/* Feature Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
           {features.map((item, idx) => {
             const Icon = item.icon;
             return (
@@ -400,21 +400,21 @@ export default function LandingPage({ onLogin, onRegister }) {
       </section>
 
       {/* HOW IT WORKS */}
-      <section id="nasil-calisir" className="min-h-[calc(100vh-80px)] scroll-mt-24 pt-12 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto relative">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-semibold mb-3">
+      <section id="nasil-calisir" className="min-h-0 md:min-h-[calc(100vh-80px)] scroll-mt-20 pt-6 pb-12 sm:pt-12 sm:pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto relative">
+        <div className="text-center max-w-3xl mx-auto mb-6 sm:mb-14">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-semibold mb-2 sm:mb-3">
             <Zap className="w-3.5 h-3.5 text-indigo-400" />
             <span>Kolay Başlangıç Rehberi</span>
           </div>
-          <h3 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+          <h3 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
             3 Basit Adımda Evinizi Otomatize Edin
           </h3>
-          <p className="mt-3 text-gray-400 text-sm sm:text-base">
+          <p className="mt-2 sm:mt-3 text-gray-400 text-xs sm:text-base">
             Karmaşık kurulumlar yok. Birkaç dakika içinde evinizin tüm takibini başlatın.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-8 relative">
           {/* Connecting line for desktop */}
           <div className="hidden md:block absolute top-[88px] left-[15%] right-[15%] h-1 bg-gradient-to-r from-purple-500/40 via-cyan-500/40 to-emerald-500/40 rounded-full z-0 pointer-events-none" />
 
@@ -423,32 +423,32 @@ export default function LandingPage({ onLogin, onRegister }) {
             return (
               <div
                 key={idx}
-                className={`glass-panel p-8 rounded-3xl border border-white/10 ${step.hoverBorder} bg-[#13141f]/80 relative z-10 flex flex-col items-start transition-all duration-300 hover:-translate-y-2 ${step.glow} group`}
+                className={`glass-panel p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-white/10 ${step.hoverBorder} bg-[#13141f]/80 relative z-10 flex flex-col items-start transition-all duration-300 hover:-translate-y-1 sm:hover:-translate-y-2 ${step.glow} group`}
               >
                 {/* Header Row: Icon + Number Badge */}
-                <div className="w-full flex items-center justify-between mb-6">
-                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${step.gradient} p-0.5 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                    <div className="w-full h-full bg-[#0d0e15] rounded-[14px] flex items-center justify-center">
-                      <Icon className="w-7 h-7 text-white" />
+                <div className="w-full flex items-center justify-between mb-3 sm:mb-6">
+                  <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br ${step.gradient} p-0.5 shadow-lg group-hover:scale-105 sm:group-hover:scale-110 transition-transform duration-300`}>
+                    <div className="w-full h-full bg-[#0d0e15] rounded-[10px] sm:rounded-[14px] flex items-center justify-center">
+                      <Icon className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
                     </div>
                   </div>
 
                   <div className="flex flex-col items-end">
-                    <span className={`text-xs font-bold px-3 py-1 rounded-full border ${step.badgeBg}`}>
+                    <span className={`text-[10px] sm:text-xs font-bold px-2 py-0.5 sm:px-3 sm:py-1 rounded-full border ${step.badgeBg}`}>
                       {step.stepBadge}
                     </span>
                   </div>
                 </div>
 
-                <div className="inline-block px-2.5 py-1 rounded-md bg-white/5 border border-white/10 text-[11px] font-medium text-gray-300 mb-3">
+                <div className="inline-block px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md bg-white/5 border border-white/10 text-[10px] sm:text-[11px] font-medium text-gray-300 mb-1.5 sm:mb-3">
                   ⚡ {step.tag}
                 </div>
 
-                <h4 className="text-xl font-bold text-white mb-2 group-hover:text-purple-300 transition-colors">
+                <h4 className="text-base sm:text-xl font-bold text-white mb-1 sm:mb-2 group-hover:text-purple-300 transition-colors">
                   {step.title}
                 </h4>
 
-                <p className="text-sm text-gray-400 leading-relaxed">
+                <p className="text-xs sm:text-sm text-gray-300 leading-snug sm:leading-relaxed">
                   {step.desc}
                 </p>
               </div>
@@ -458,9 +458,9 @@ export default function LandingPage({ onLogin, onRegister }) {
       </section>
 
       {/* ADVANTAGES & TELEGRAM PROMO */}
-      <section id="avantajlar" className="min-h-[calc(100vh-80px)] scroll-mt-24 pt-12 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="glass-panel rounded-3xl border border-purple-500/30 p-8 sm:p-12 bg-gradient-to-br from-[#161426] via-[#111322] to-[#0f0e1a] relative overflow-hidden shadow-[0_0_50px_rgba(168,85,247,0.15)]">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center relative z-10">
+      <section id="avantajlar" className="min-h-0 md:min-h-[calc(100vh-80px)] scroll-mt-20 pt-6 pb-12 sm:pt-12 sm:pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="glass-panel rounded-2xl sm:rounded-3xl border border-purple-500/30 p-5 sm:p-12 bg-gradient-to-br from-[#161426] via-[#111322] to-[#0f0e1a] relative overflow-hidden shadow-[0_0_50px_rgba(168,85,247,0.15)]">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 items-center relative z-10">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-semibold mb-4">
                 <Bell className="w-4 h-4 text-purple-400" />

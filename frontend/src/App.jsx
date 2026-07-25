@@ -1452,28 +1452,28 @@ function App() {
     <div className="min-h-screen flex flex-col md:flex-row">
 
       {/* MOBİL HEADER (Sadece küçük ekranlarda görünür) */}
-      <header className="md:hidden mobile-header fixed top-0 left-0 right-0 z-40 border-b border-white/15 px-4 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <header className="md:hidden mobile-header fixed top-0 left-0 right-0 z-40 border-b border-white/15 px-3.5 py-2.5 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
           <img 
             src={logoImg} 
             alt="Akıllı Yaşam Logo" 
-            className="w-10 h-10 rounded-xl object-cover border border-purple-500/40 shadow-[0_0_14px_rgba(168,85,247,0.45)] flex-shrink-0" 
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-purple-500/40 shadow-[0_0_14px_rgba(168,85,247,0.45)] flex-shrink-0" 
           />
-          <div>
-            <h1 className="text-base font-bold text-white leading-tight">Akıllı Yaşam</h1>
-            <p className="text-[10px] text-purple-400/80 font-medium">Ev Takip Otomasyonu</p>
+          <div className="min-w-0">
+            <h1 className="text-sm sm:text-base font-bold text-white leading-tight truncate whitespace-nowrap">Akıllı Yaşam</h1>
+            <p className="text-[10px] text-purple-400/80 font-medium truncate whitespace-nowrap">Ev Takip Otomasyonu</p>
           </div>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={() => {
               setShowProfileMenu(false);
               setShowNotificationMenu(prev => !prev);
             }}
             title="Raporu Şimdi Gönder"
-            className="w-10 h-10 rounded-xl bg-purple-600/10 hover:bg-purple-600/20 active:scale-95 text-purple-400 border border-purple-500/20 transition-all cursor-pointer flex items-center justify-center"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-purple-600/10 hover:bg-purple-600/20 active:scale-95 text-purple-400 border border-purple-500/20 transition-all cursor-pointer flex items-center justify-center flex-shrink-0"
           >
-            <Bell className="w-5 h-5" />
+            <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
           <button
             onClick={() => {
@@ -1481,7 +1481,7 @@ function App() {
               setShowProfileMenu(prev => !prev);
             }}
             title="Hesap Ayarları"
-            className="w-10 h-10 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 active:scale-95 border border-purple-500/20 text-purple-400 font-bold text-sm flex items-center justify-center transition-all cursor-pointer"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 active:scale-95 border border-purple-500/20 text-purple-400 font-bold text-xs sm:text-sm flex items-center justify-center transition-all cursor-pointer flex-shrink-0"
           >
             {user.isim ? user.isim.charAt(0).toUpperCase() : 'U'}
           </button>
