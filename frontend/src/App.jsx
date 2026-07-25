@@ -1609,27 +1609,17 @@ function App() {
               <div className="absolute top-0 right-0 w-72 h-72 bg-purple-600/15 blur-3xl rounded-full pointer-events-none" />
               <div className="absolute bottom-0 left-0 w-72 h-72 bg-indigo-600/10 blur-3xl rounded-full pointer-events-none" />
 
-              <div className="relative z-10 flex items-center gap-4 md:gap-5">
-                <div className="relative group flex-shrink-0">
-                  <div className="absolute -inset-1 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-3xl blur opacity-75 group-hover:opacity-100 transition duration-500"></div>
-                  <img
-                    src={logoImg}
-                    alt="Akıllı Yaşam Kapak Logosu"
-                    className="relative w-16 h-16 md:w-20 md:h-20 rounded-2xl object-cover border border-purple-400/40 shadow-[0_0_25px_rgba(168,85,247,0.5)] transform transition duration-500 hover:scale-105"
-                  />
+              <div className="relative z-10">
+                <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold mb-1.5">
+                  <span className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
+                  Akıllı Yaşam Otomasyonu
                 </div>
-                <div>
-                  <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold mb-1.5">
-                    <span className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
-                    Akıllı Yaşam Otomasyonu
-                  </div>
-                  <h2 className="text-xl md:text-3xl font-extrabold text-white tracking-tight">
-                    Hoş Geldiniz, {user?.isim || 'Kullanıcı'} 👋
-                  </h2>
-                  <p className="text-gray-300/80 text-xs md:text-sm mt-0.5 max-w-xl">
-                    Evinizin tüm gıda, fatura, garanti ve rutin takiplerini tek bir akıllı panel üzerinden kolayca yönetin.
-                  </p>
-                </div>
+                <h2 className="text-xl md:text-3xl font-extrabold text-white tracking-tight">
+                  Hoş Geldiniz, {user?.isim || 'Kullanıcı'} 👋
+                </h2>
+                <p className="text-gray-300/80 text-xs md:text-sm mt-0.5 max-w-xl">
+                  Evinizin tüm gıda, fatura, garanti ve rutin takiplerini tek bir akıllı panel üzerinden kolayca yönetin.
+                </p>
               </div>
 
               <div className="relative z-10 flex flex-row md:flex-col items-center md:items-end justify-between w-full md:w-auto border-t md:border-t-0 md:border-l border-white/10 pt-3 md:pt-0 md:pl-5 gap-2">
