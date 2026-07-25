@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import API from './api';
 import DatePicker from './components/DatePicker';
 import TimePicker from './components/TimePicker';
+import LandingPage from './components/LandingPage';
 import logoImg from './assets/logo.png';
 import {
   LayoutDashboard,
@@ -31,7 +32,8 @@ import {
   Send,
   Clock,
   ChevronDown,
-  MoreVertical
+  MoreVertical,
+  ArrowLeft
 } from 'lucide-react';
 
 // -------------------------------------------------------------
@@ -95,6 +97,7 @@ function App() {
   // Auth Stateleri
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token') || null);
+  const [showLanding, setShowLanding] = useState(true);
   const [authMode, setAuthMode] = useState('login'); // 'login' veya 'register'
   const [authForm, setAuthForm] = useState({ isim: '', eposta: '', sifre: '' });
   const [authError, setAuthError] = useState('');
@@ -139,6 +142,7 @@ function App() {
       localStorage.removeItem('token');
       setToken(null);
       setUser(null);
+      setShowLanding(true);
       changePage('dashboard');
       showToast(res.data?.message || 'Hesabınız ve tüm verileriniz kalıcı olarak silindi.');
     } catch (err) {
@@ -537,8 +541,56 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isAnyModalOpen, closeAllModals]);
 
-  // Tarayıcı Geri/İleri (Popstate) olay dinleyicisi
+  // Giriş yapmamış kullanıcılar için tarayıcı geri/ileri (Popstate) ve URL takibi
   useEffect(() => {
+    if (user) return;
+
+    const handleAuthPopState = () => {
+      const currentHash = window.location.hash.replace('#', '');
+      if (currentHash === 'login' || currentHash === 'register') {
+        setAuthMode(currentHash);
+        setShowLanding(false);
+      } else {
+        setShowLanding(true);
+      }
+    };
+
+    const initialHash = window.location.hash.replace('#', '');
+    if (initialHash === 'login' || initialHash === 'register') {
+      setAuthMode(initialHash);
+      setShowLanding(false);
+    } else {
+      setShowLanding(true);
+      if (!window.location.hash || window.location.hash === '#' || window.location.hash === '#dashboard') {
+        window.history.replaceState({ isLanding: true }, '', '#landing');
+      }
+    }
+
+    window.addEventListener('popstate', handleAuthPopState);
+    return () => window.removeEventListener('popstate', handleAuthPopState);
+  }, [user]);
+
+  const navigateToAuth = useCallback((mode = 'login') => {
+    setAuthMode(mode);
+    setAuthError('');
+    setShowLanding(false);
+    if (window.location.hash !== `#${mode}`) {
+      window.history.pushState({ authMode: mode }, '', `#${mode}`);
+    }
+  }, []);
+
+  const navigateToLanding = useCallback(() => {
+    setShowLanding(true);
+    setAuthError('');
+    if (window.location.hash !== '#landing') {
+      window.history.pushState({ isLanding: true }, '', '#landing');
+    }
+  }, []);
+
+  // Oturum açmış kullanıcılar için Tarayıcı Geri/İleri (Popstate) olay dinleyicisi
+  useEffect(() => {
+    if (!user) return;
+
     const validPages = ['dashboard', 'gidalar', 'faturalar', 'garantiler', 'rutinler', 'ayarlar'];
     
     const initialHash = window.location.hash.replace('#', '').split('-')[0];
@@ -560,11 +612,16 @@ function App() {
         targetPage = currentHash;
       }
       setCurrentPage(targetPage);
+
+      // 3. Oturum açmış kullanıcı tanıtım sayfası hash'ine (#nasil-calisir, #ozellikler, #landing vb.) dönerse URL'yi düzelt
+      if (!validPages.includes(currentHash)) {
+        window.history.replaceState({ page: targetPage }, '', `#${targetPage}`);
+      }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [closeAllModals]);
+  }, [user, closeAllModals]);
 
   const showToast = useCallback((msg, type = 'success') => {
     if (toastTimeoutRef.current) {
@@ -586,6 +643,7 @@ function App() {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
+    setShowLanding(true);
     changePage('dashboard');
     showToast('Oturum kapatıldı.');
   }, [showToast, changePage]);
@@ -1222,6 +1280,15 @@ function App() {
 
 
   if (!user) {
+    if (showLanding) {
+      return (
+        <LandingPage
+          onLogin={() => navigateToAuth('login')}
+          onRegister={() => navigateToAuth('register')}
+        />
+      );
+    }
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0d0e15] p-4 relative overflow-hidden">
         {/* TOAST / BİLDİRİM BANNERLARI (Giriş & Hesap Silindi Bilgilendirmesi) */}
@@ -1263,6 +1330,15 @@ function App() {
         <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-rose-600/10 blur-3xl rounded-full"></div>
 
         <div className="glass-panel w-full max-w-md p-8 rounded-3xl border border-white/10 shadow-[0_0_50px_rgba(168,85,247,0.15)] relative z-10">
+          <button
+            type="button"
+            onClick={navigateToLanding}
+            className="mb-6 inline-flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors font-semibold cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Tanıtım Sayfasına Dön
+          </button>
+
           <div className="flex flex-col items-center mb-8">
             <div className="relative mb-4 group">
               <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-3xl blur opacity-75 group-hover:opacity-100 transition duration-500"></div>
@@ -1348,7 +1424,7 @@ function App() {
                 Hesabınız yok mu?{' '}
                 <button
                   type="button"
-                  onClick={() => { setAuthMode('register'); setAuthError(''); }}
+                  onClick={() => navigateToAuth('register')}
                   className="text-purple-400 font-bold hover:underline"
                 >
                   Kayıt Olun
@@ -1359,7 +1435,7 @@ function App() {
                 Zaten hesabınız var mı?{' '}
                 <button
                   type="button"
-                  onClick={() => { setAuthMode('login'); setAuthError(''); }}
+                  onClick={() => navigateToAuth('login')}
                   className="text-purple-400 font-bold hover:underline"
                 >
                   Giriş Yapın

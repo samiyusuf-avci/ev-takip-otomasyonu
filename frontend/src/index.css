@@ -1,6 +1,9 @@
 @import "tailwindcss";
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     background: radial-gradient(circle at top left, #1a1b24, #0f1015);
     color: #f3f4f6;
