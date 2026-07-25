@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import API from './api';
 import DatePicker from './components/DatePicker';
 import TimePicker from './components/TimePicker';
+import logoImg from './assets/logo.png';
 import {
   LayoutDashboard,
   Apple,
@@ -1263,8 +1264,13 @@ function App() {
 
         <div className="glass-panel w-full max-w-md p-8 rounded-3xl border border-white/10 shadow-[0_0_50px_rgba(168,85,247,0.15)] relative z-10">
           <div className="flex flex-col items-center mb-8">
-            <div className="p-3.5 bg-purple-500/20 text-purple-400 rounded-2xl border border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.3)] mb-4">
-              <RefreshCw className="w-8 h-8 animate-[spin_8s_linear_infinite]" />
+            <div className="relative mb-4 group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-3xl blur opacity-75 group-hover:opacity-100 transition duration-500"></div>
+              <img 
+                src={logoImg} 
+                alt="Akıllı Yaşam Logosu" 
+                className="relative w-20 h-20 rounded-2xl object-cover border border-purple-400/40 shadow-[0_0_30px_rgba(168,85,247,0.5)] transform transition duration-500 hover:scale-105" 
+              />
             </div>
             <h1 className="text-2xl font-bold text-white tracking-tight">Akıllı Yaşam Asistanı</h1>
             <p className="text-xs text-purple-400/80 font-medium mt-1">
@@ -1372,9 +1378,11 @@ function App() {
       {/* MOBİL HEADER (Sadece küçük ekranlarda görünür) */}
       <header className="md:hidden mobile-header fixed top-0 left-0 right-0 z-40 border-b border-white/15 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="p-1.5 bg-purple-500/20 text-purple-400 rounded-lg border border-purple-500/30">
-            <RefreshCw className="w-4 h-4 animate-[spin_6s_linear_infinite]" />
-          </div>
+          <img 
+            src={logoImg} 
+            alt="Akıllı Yaşam Logo" 
+            className="w-8 h-8 rounded-xl object-cover border border-purple-500/40 shadow-[0_0_12px_rgba(168,85,247,0.4)] flex-shrink-0" 
+          />
           <div>
             <h1 className="text-sm font-bold text-white leading-tight">Akıllı Yaşam</h1>
             <p className="text-[9px] text-purple-400/70 font-medium">Ev Takip Otomasyonu</p>
@@ -1482,8 +1490,13 @@ function App() {
       <aside className="hidden md:flex w-64 glass-panel h-screen sticky top-0 p-5 flex-col justify-between border-r border-white/10 flex-shrink-0">
         <div>
           <div className="flex items-center gap-3 mb-8 px-2">
-            <div className="p-2.5 bg-purple-500/20 text-purple-400 rounded-xl border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.3)]">
-              <RefreshCw className="w-6 h-6 animate-[spin_6s_linear_infinite]" />
+            <div className="relative group flex-shrink-0">
+              <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl blur opacity-60 group-hover:opacity-100 transition duration-500"></div>
+              <img 
+                src={logoImg} 
+                alt="Akıllı Yaşam Logo" 
+                className="relative w-11 h-11 rounded-xl object-cover border border-purple-400/40 shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-transform hover:scale-105" 
+              />
             </div>
             <div>
               <h1 className="text-lg font-bold text-white tracking-tight leading-tight">Akıllı Yaşam</h1>
@@ -1591,13 +1604,39 @@ function App() {
            ------------------------------------------------------------- */}
         {currentPage === 'dashboard' && (
           <div className="space-y-4 md:space-y-8">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 md:gap-4">
-              <div>
-                <h2 className="text-xl md:text-3xl font-bold text-white tracking-tight">Hoş Geldiniz 🏠</h2>
-                <p className="text-gray-400 mt-0.5 text-xs md:text-base">Evinizin tüm düzenini buradan yönetin.</p>
+            {/* KAPAK HERO BANNER */}
+            <div className="relative overflow-hidden rounded-3xl border border-purple-500/30 p-5 md:p-7 bg-gradient-to-r from-purple-950/70 via-[#131422] to-slate-950 shadow-[0_10px_40px_rgba(168,85,247,0.15)] flex flex-col md:flex-row items-center justify-between gap-5">
+              <div className="absolute top-0 right-0 w-72 h-72 bg-purple-600/15 blur-3xl rounded-full pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-72 h-72 bg-indigo-600/10 blur-3xl rounded-full pointer-events-none" />
+
+              <div className="relative z-10 flex items-center gap-4 md:gap-5">
+                <div className="relative group flex-shrink-0">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-3xl blur opacity-75 group-hover:opacity-100 transition duration-500"></div>
+                  <img
+                    src={logoImg}
+                    alt="Akıllı Yaşam Kapak Logosu"
+                    className="relative w-16 h-16 md:w-20 md:h-20 rounded-2xl object-cover border border-purple-400/40 shadow-[0_0_25px_rgba(168,85,247,0.5)] transform transition duration-500 hover:scale-105"
+                  />
+                </div>
+                <div>
+                  <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold mb-1.5">
+                    <span className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
+                    Akıllı Yaşam Otomasyonu
+                  </div>
+                  <h2 className="text-xl md:text-3xl font-extrabold text-white tracking-tight">
+                    Hoş Geldiniz, {user?.isim || 'Kullanıcı'} 👋
+                  </h2>
+                  <p className="text-gray-300/80 text-xs md:text-sm mt-0.5 max-w-xl">
+                    Evinizin tüm gıda, fatura, garanti ve rutin takiplerini tek bir akıllı panel üzerinden kolayca yönetin.
+                  </p>
+                </div>
               </div>
-              <div className="text-xs font-semibold py-1.5 px-3 rounded-xl bg-white/5 border border-white/10 text-purple-400">
-                📅 Bugün: {formatDate(new Date().toISOString().split('T')[0])}
+
+              <div className="relative z-10 flex flex-row md:flex-col items-center md:items-end justify-between w-full md:w-auto border-t md:border-t-0 md:border-l border-white/10 pt-3 md:pt-0 md:pl-5 gap-2">
+                <div className="text-xs font-semibold py-1.5 px-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300">
+                  📅 Bugün: {formatDate(new Date().toISOString().split('T')[0])}
+                </div>
+                <span className="text-[11px] text-gray-400 font-medium">Sistem Aktif & Senkronize</span>
               </div>
             </div>
 

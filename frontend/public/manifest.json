@@ -1,5 +1,5 @@
 {
-  "name": "Akıllı Yaşam",
+  "name": "Akıllı Yaşam Ev Takip Otomasyonu",
   "short_name": "Akıllı Yaşam",
   "description": "Akıllı Yaşam Ev Takip Otomasyonu",
   "start_url": "/",
@@ -20,9 +20,9 @@
       "purpose": "any maskable"
     },
     {
-      "src": "/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/logo.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]
