@@ -1376,28 +1376,28 @@ function App() {
     <div className="min-h-screen flex flex-col md:flex-row">
 
       {/* MOBİL HEADER (Sadece küçük ekranlarda görünür) */}
-      <header className="md:hidden mobile-header fixed top-0 left-0 right-0 z-40 border-b border-white/15 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
+      <header className="md:hidden mobile-header fixed top-0 left-0 right-0 z-40 border-b border-white/15 px-4 py-3.5 flex items-center justify-between">
+        <div className="flex items-center gap-3">
           <img 
             src={logoImg} 
             alt="Akıllı Yaşam Logo" 
-            className="w-8 h-8 rounded-xl object-cover border border-purple-500/40 shadow-[0_0_12px_rgba(168,85,247,0.4)] flex-shrink-0" 
+            className="w-10 h-10 rounded-xl object-cover border border-purple-500/40 shadow-[0_0_14px_rgba(168,85,247,0.45)] flex-shrink-0" 
           />
           <div>
-            <h1 className="text-sm font-bold text-white leading-tight">Akıllı Yaşam</h1>
-            <p className="text-[9px] text-purple-400/70 font-medium">Ev Takip Otomasyonu</p>
+            <h1 className="text-base font-bold text-white leading-tight">Akıllı Yaşam</h1>
+            <p className="text-[10px] text-purple-400/80 font-medium">Ev Takip Otomasyonu</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={() => {
               setShowProfileMenu(false);
               setShowNotificationMenu(prev => !prev);
             }}
             title="Raporu Şimdi Gönder"
-            className="p-2 rounded-xl bg-purple-600/10 hover:bg-purple-600/20 text-purple-400 border border-purple-500/20 transition-all cursor-pointer"
+            className="w-10 h-10 rounded-xl bg-purple-600/10 hover:bg-purple-600/20 active:scale-95 text-purple-400 border border-purple-500/20 transition-all cursor-pointer flex items-center justify-center"
           >
-            <Bell className="w-4 h-4" />
+            <Bell className="w-5 h-5" />
           </button>
           <button
             onClick={() => {
@@ -1405,7 +1405,7 @@ function App() {
               setShowProfileMenu(prev => !prev);
             }}
             title="Hesap Ayarları"
-            className="w-8 h-8 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 active:scale-95 border border-purple-500/20 text-purple-400 font-bold text-xs flex items-center justify-center transition-all cursor-pointer"
+            className="w-10 h-10 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 active:scale-95 border border-purple-500/20 text-purple-400 font-bold text-sm flex items-center justify-center transition-all cursor-pointer"
           >
             {user.isim ? user.isim.charAt(0).toUpperCase() : 'U'}
           </button>
@@ -1420,7 +1420,7 @@ function App() {
               onClick={() => setShowNotificationMenu(false)}
             />
             
-            <div className="absolute right-14 top-16 z-50 w-64 bg-[#13141f] border border-white/10 p-4 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.8)] animate-scale-in flex flex-col gap-3">
+            <div className="absolute right-14 top-[72px] z-50 w-64 bg-[#13141f] border border-white/10 p-4 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.8)] animate-scale-in flex flex-col gap-3">
               <div className="flex items-center gap-2 pb-2 border-b border-white/5 text-purple-400">
                 <Bell className="w-4 h-4 animate-bounce" />
                 <h4 className="text-xs font-bold text-white">Sistem Bildirim Testi 🔔</h4>
@@ -1453,7 +1453,7 @@ function App() {
               onClick={() => setShowProfileMenu(false)}
             />
             
-            <div className="absolute right-4 top-16 z-50 w-64 bg-[#13141f] border border-white/10 p-4 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.8)] animate-scale-in flex flex-col gap-3">
+            <div className="absolute right-4 top-[72px] z-50 w-64 bg-[#13141f] border border-white/10 p-4 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.8)] animate-scale-in flex flex-col gap-3">
               <div className="flex items-center gap-2.5 pb-2.5 border-b border-white/5">
                 <div className="w-9 h-9 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 font-extrabold text-sm flex items-center justify-center flex-shrink-0">
                   {user.isim ? user.isim.charAt(0).toUpperCase() : 'U'}
@@ -1564,10 +1564,10 @@ function App() {
       </aside>
 
       {/* ANA İÇERİK BÖLGESİ */}
-      <main className="flex-1 p-4 pt-20 md:pt-10 md:p-10 pb-28 md:pb-10 overflow-y-auto">
+      <main className="flex-1 p-4 pt-24 md:pt-10 md:p-10 pb-28 md:pb-10 overflow-y-auto">
         {/* TOAST / BİLDİRİM BANNERLARI (Fixed & Premium Estetik) */}
         {successMsg && (
-          <div className="fixed top-20 md:top-6 left-1/2 -translate-x-1/2 z-[99999] w-[92%] max-w-md p-3.5 px-4 rounded-2xl bg-[#0f1f18]/95 border border-emerald-500/40 text-emerald-300 flex items-start justify-between gap-3 text-xs md:text-sm shadow-[0_10px_35px_rgba(16,185,129,0.3)] backdrop-blur-2xl animate-scale-in">
+          <div className="fixed top-24 md:top-6 left-1/2 -translate-x-1/2 z-[99999] w-[92%] max-w-md p-3.5 px-4 rounded-2xl bg-[#0f1f18]/95 border border-emerald-500/40 text-emerald-300 flex items-start justify-between gap-3 text-xs md:text-sm shadow-[0_10px_35px_rgba(16,185,129,0.3)] backdrop-blur-2xl animate-scale-in">
             <div className="flex items-start gap-3 min-w-0">
               <div className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30 flex-shrink-0 mt-0.5">
                 <CheckCircle className="w-4 h-4" />
@@ -1583,7 +1583,7 @@ function App() {
           </div>
         )}
         {error && (
-          <div className="fixed top-20 md:top-6 left-1/2 -translate-x-1/2 z-[99999] w-[92%] max-w-md p-3.5 px-4 rounded-2xl bg-[#1a0f1c]/95 border border-rose-500/40 text-rose-300 flex items-start justify-between gap-3 text-xs md:text-sm shadow-[0_10px_35px_rgba(244,63,94,0.3)] backdrop-blur-2xl animate-scale-in">
+          <div className="fixed top-24 md:top-6 left-1/2 -translate-x-1/2 z-[99999] w-[92%] max-w-md p-3.5 px-4 rounded-2xl bg-[#1a0f1c]/95 border border-rose-500/40 text-rose-300 flex items-start justify-between gap-3 text-xs md:text-sm shadow-[0_10px_35px_rgba(244,63,94,0.3)] backdrop-blur-2xl animate-scale-in">
             <div className="flex items-start gap-3 min-w-0">
               <div className="p-1.5 bg-rose-500/20 text-rose-400 rounded-xl border border-rose-500/30 flex-shrink-0 animate-pulse mt-0.5">
                 <AlertTriangle className="w-4 h-4" />
