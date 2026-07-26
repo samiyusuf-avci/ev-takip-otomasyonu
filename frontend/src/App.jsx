@@ -300,10 +300,10 @@ function App() {
                 days,
                 isOverdue,
                 isToday,
-                message: isOverdue 
-                  ? `Son Tüketim Tarihi ${Math.abs(days)} gün geçti!` 
-                  : isToday 
-                    ? 'Son Tüketim Tarihi BUGÜN!' 
+                message: isOverdue
+                  ? `Son Tüketim Tarihi ${Math.abs(days)} gün geçti!`
+                  : isToday
+                    ? 'Son Tüketim Tarihi BUGÜN!'
                     : `Son Tüketim Tarihine ${days} gün kaldı.`,
                 icon: Apple,
                 badgeBg: isOverdue ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : isToday ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-orange-500/15 text-orange-400 border-orange-500/30',
@@ -339,10 +339,10 @@ function App() {
                 days,
                 isOverdue,
                 isToday,
-                message: isOverdue 
-                  ? `Son Ödeme Tarihi ${Math.abs(days)} gün geçti! (${tutarText})` 
-                  : isToday 
-                    ? `Bugün Son Ödeme Günü! (${tutarText})` 
+                message: isOverdue
+                  ? `Son Ödeme Tarihi ${Math.abs(days)} gün geçti! (${tutarText})`
+                  : isToday
+                    ? `Bugün Son Ödeme Günü! (${tutarText})`
                     : `Son Ödeme Gününe ${days} gün kaldı. (${tutarText})`,
                 icon: Receipt,
                 badgeBg: isOverdue ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : isToday ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-rose-500/10 text-rose-300 border-rose-500/20',
@@ -376,10 +376,10 @@ function App() {
               days,
               isOverdue,
               isToday,
-              message: isOverdue 
-                ? `Garanti süresi ${Math.abs(days)} gün önce bitti!` 
-                : isToday 
-                  ? 'Garanti süresi bugün doluyor!' 
+              message: isOverdue
+                ? `Garanti süresi ${Math.abs(days)} gün önce bitti!`
+                : isToday
+                  ? 'Garanti süresi bugün doluyor!'
                   : `Garanti bitimine ${days} gün kaldı.`,
               icon: ShieldCheck,
               badgeBg: isOverdue ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : isToday ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
@@ -446,10 +446,10 @@ function App() {
                 days: diffDays,
                 isOverdue,
                 isToday,
-                message: isOverdue 
-                  ? `Bakım/Görev zamanı ${Math.abs(diffDays)} gün geçti!` 
-                  : isToday 
-                    ? 'Yapılması için bugün son gün!' 
+                message: isOverdue
+                  ? `Bakım/Görev zamanı ${Math.abs(diffDays)} gün geçti!`
+                  : isToday
+                    ? 'Yapılması için bugün son gün!'
                     : `Bakım zamanına ${diffDays} gün kaldı.`,
                 icon: RefreshCw,
                 badgeBg: isOverdue ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' : isToday ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' : 'bg-purple-500/15 text-purple-300 border-purple-500/30',
@@ -643,7 +643,7 @@ function App() {
     const isAdmin = user.role === 'admin';
     const validPages = isAdmin
       ? ['admin', 'istatistikler', 'ayarlar']
-      : ['dashboard', 'gidalar', 'faturalar', 'garantiler', 'rutinler', 'ayarlar'];
+      : ['dashboard', 'gidalar', 'faturalar', 'garantiler', 'rutinler', 'istatistikler', 'ayarlar'];
 
     const currentHash = window.location.hash.replace('#', '').split('-')[0];
 
@@ -658,7 +658,7 @@ function App() {
           window.history.replaceState({ page: 'admin' }, '', '#admin');
         }
         return 'admin';
-      } else if (!isAdmin && (activePage === 'admin' || activePage === 'istatistikler')) {
+      } else if (!isAdmin && activePage === 'admin') {
         if (window.location.hash !== '#dashboard') {
           window.history.replaceState({ page: 'dashboard' }, '', '#dashboard');
         }
@@ -686,12 +686,12 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [user?.id, user?.role, closeAllModals]);
 
-  // Admin verisini Admin veya İstatistikler sekmesindeyken 1 kez çek
+  // Admin/Sistem verisini Admin veya İstatistikler sekmesindeyken 1 kez çek
   useEffect(() => {
-    if ((currentPage === 'admin' || currentPage === 'istatistikler') && user?.role === 'admin') {
+    if ((currentPage === 'admin' || currentPage === 'istatistikler') && user) {
       fetchAdminUsers();
     }
-  }, [currentPage, user?.role, fetchAdminUsers]);
+  }, [currentPage, user, fetchAdminUsers]);
 
 
 
@@ -799,7 +799,7 @@ function App() {
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
-    
+
     if (!profileForm.isim?.trim()) {
       showToast('Lütfen Ad Soyad alanını doldurun.', 'error');
       document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1388,7 +1388,7 @@ function App() {
               </div>
               <span className="font-semibold break-words leading-snug">{successMsg}</span>
             </div>
-            <button 
+            <button
               onClick={() => setSuccessMsg('')}
               className="text-emerald-400/60 hover:text-emerald-300 p-1 hover:bg-white/5 rounded-lg transition-colors cursor-pointer flex-shrink-0 mt-0.5"
             >
@@ -1404,7 +1404,7 @@ function App() {
               </div>
               <span className="font-semibold break-words leading-snug">{error}</span>
             </div>
-            <button 
+            <button
               onClick={() => setError('')}
               className="text-rose-400/60 hover:text-rose-300 p-1 hover:bg-white/5 rounded-lg transition-colors cursor-pointer flex-shrink-0 mt-0.5"
             >
@@ -1430,10 +1430,10 @@ function App() {
           <div className="flex flex-col items-center mb-8">
             <div className="relative mb-4 group">
               <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-3xl blur opacity-75 group-hover:opacity-100 transition duration-500"></div>
-              <img 
-                src={logoImg} 
-                alt="Akıllı Yaşam Logosu" 
-                className="relative w-20 h-20 rounded-2xl object-cover border border-purple-400/40 shadow-[0_0_30px_rgba(168,85,247,0.5)] transform transition duration-500 hover:scale-105" 
+              <img
+                src={logoImg}
+                alt="Akıllı Yaşam Logosu"
+                className="relative w-20 h-20 rounded-2xl object-cover border border-purple-400/40 shadow-[0_0_30px_rgba(168,85,247,0.5)] transform transition duration-500 hover:scale-105"
               />
             </div>
             <h1 className="text-2xl font-bold text-white tracking-tight">Akıllı Yaşam Asistanı</h1>
@@ -1542,10 +1542,10 @@ function App() {
       {/* MOBİL HEADER (Sadece küçük ekranlarda görünür) */}
       <header className="md:hidden mobile-header fixed top-0 left-0 right-0 z-40 border-b border-white/15 px-3.5 py-2.5 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          <img 
-            src={logoImg} 
-            alt="Akıllı Yaşam Logo" 
-            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-purple-500/40 shadow-[0_0_14px_rgba(168,85,247,0.45)] flex-shrink-0" 
+          <img
+            src={logoImg}
+            alt="Akıllı Yaşam Logo"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-purple-500/40 shadow-[0_0_14px_rgba(168,85,247,0.45)] flex-shrink-0"
           />
           <div className="min-w-0">
             <h1 className="text-sm sm:text-base font-bold text-white leading-tight truncate whitespace-nowrap">Akıllı Yaşam</h1>
@@ -1579,17 +1579,17 @@ function App() {
         {showNotificationMenu && (
           <>
             {/* Click-away backdrop */}
-            <div 
+            <div
               className="fixed inset-0 z-40 bg-transparent w-screen h-screen"
               onClick={() => setShowNotificationMenu(false)}
             />
-            
+
             <div className="absolute right-14 top-[72px] z-50 w-64 bg-[#13141f] border border-white/10 p-4 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.8)] animate-scale-in flex flex-col gap-3">
               <div className="flex items-center gap-2 pb-2 border-b border-white/5 text-purple-400">
                 <Bell className="w-4 h-4 animate-bounce" />
                 <h4 className="text-xs font-bold text-white">Sistem Bildirim Testi 🔔</h4>
               </div>
-              
+
               <p className="text-[10px] text-gray-400 leading-relaxed">
                 Yaklaşan tüm görevleri ve son tarihleri tarayarak Telegram'a anlık durum raporu gönderir.
               </p>
@@ -1612,11 +1612,11 @@ function App() {
         {showProfileMenu && (
           <>
             {/* Click-away backdrop (tüm ekranı kaplar ve tıklanınca kapatır) */}
-            <div 
+            <div
               className="fixed inset-0 z-40 bg-transparent w-screen h-screen"
               onClick={() => setShowProfileMenu(false)}
             />
-            
+
             <div className="absolute right-4 top-[72px] z-50 w-64 bg-[#13141f] border border-white/10 p-4 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.8)] animate-scale-in flex flex-col gap-3">
               <div className="flex items-center gap-2.5 pb-2.5 border-b border-white/5">
                 <div className="w-9 h-9 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 font-extrabold text-sm flex items-center justify-center flex-shrink-0">
@@ -1646,7 +1646,7 @@ function App() {
                   <Settings className="w-3.5 h-3.5 text-gray-400" />
                   Ayarlar ve Hesap Yönetimi
                 </button>
-                
+
                 <button
                   onClick={promptLogout}
                   className="w-full flex items-center gap-2 py-2 px-3 text-xs text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all text-left border border-rose-500/10"
@@ -1666,10 +1666,10 @@ function App() {
           <div className="flex items-center gap-3 mb-8 px-2">
             <div className="relative group flex-shrink-0">
               <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl blur opacity-60 group-hover:opacity-100 transition duration-500"></div>
-              <img 
-                src={logoImg} 
-                alt="Akıllı Yaşam Logo" 
-                className="relative w-11 h-11 rounded-xl object-cover border border-purple-400/40 shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-transform hover:scale-105" 
+              <img
+                src={logoImg}
+                alt="Akıllı Yaşam Logo"
+                className="relative w-11 h-11 rounded-xl object-cover border border-purple-400/40 shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-transform hover:scale-105"
               />
             </div>
             <div>
@@ -1689,6 +1689,7 @@ function App() {
               { id: 'faturalar', name: 'Fatura Takibi', icon: Receipt },
               { id: 'garantiler', name: 'Garanti Takibi', icon: ShieldCheck },
               { id: 'rutinler', name: 'Rutinler', icon: RefreshCw },
+              { id: 'istatistikler', name: 'İstatistikler', icon: BarChart2 },
               { id: 'ayarlar', name: 'Ayarlar', icon: Settings }
             ]).map((item) => {
               const Icon = item.icon;
@@ -1752,7 +1753,7 @@ function App() {
               </div>
               <span className="font-semibold break-words leading-snug">{successMsg}</span>
             </div>
-            <button 
+            <button
               onClick={() => setSuccessMsg('')}
               className="text-emerald-400/60 hover:text-emerald-300 p-1 hover:bg-white/5 rounded-lg transition-colors cursor-pointer flex-shrink-0 mt-0.5"
             >
@@ -1768,7 +1769,7 @@ function App() {
               </div>
               <span className="font-semibold break-words leading-snug">{error}</span>
             </div>
-            <button 
+            <button
               onClick={() => setError('')}
               className="text-rose-400/60 hover:text-rose-300 p-1 hover:bg-white/5 rounded-lg transition-colors cursor-pointer flex-shrink-0 mt-0.5"
             >
@@ -1930,32 +1931,28 @@ function App() {
                 <div className="p-1 bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl flex items-center gap-1 w-full sm:w-auto">
                   <button
                     onClick={() => setDashboardNotifTab('yaklasanlar')}
-                    className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer border ${
-                      dashboardNotifTab === 'yaklasanlar'
+                    className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer border ${dashboardNotifTab === 'yaklasanlar'
                         ? 'bg-purple-600 text-white border-purple-400/40 shadow-[0_2px_10px_rgba(147,51,234,0.35)]'
                         : 'bg-transparent border-transparent text-gray-400 hover:text-white hover:bg-white/5'
-                    }`}
+                      }`}
                   >
                     <span>⏰ Yaklaşanlar</span>
-                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
-                      dashboardNotifTab === 'yaklasanlar' ? 'bg-white/20 text-white' : 'bg-white/10 text-gray-400'
-                    }`}>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${dashboardNotifTab === 'yaklasanlar' ? 'bg-white/20 text-white' : 'bg-white/10 text-gray-400'
+                      }`}>
                       {activeNotifications.filter(n => !n.isOverdue).length}
                     </span>
                   </button>
 
                   <button
                     onClick={() => setDashboardNotifTab('gecenler')}
-                    className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer border ${
-                      dashboardNotifTab === 'gecenler'
+                    className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer border ${dashboardNotifTab === 'gecenler'
                         ? 'bg-rose-600 text-white border-rose-400/40 shadow-[0_2px_10px_rgba(225,29,72,0.35)]'
                         : 'bg-transparent border-transparent text-gray-400 hover:text-white hover:bg-white/5'
-                    }`}
+                      }`}
                   >
                     <span>⚠️ Süresi Geçenler</span>
-                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
-                      dashboardNotifTab === 'gecenler' ? 'bg-white/20 text-white' : 'bg-white/10 text-gray-400'
-                    }`}>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${dashboardNotifTab === 'gecenler' ? 'bg-white/20 text-white' : 'bg-white/10 text-gray-400'
+                      }`}>
                       {activeNotifications.filter(n => n.isOverdue).length}
                     </span>
                   </button>
@@ -1987,13 +1984,12 @@ function App() {
                       return (
                         <div
                           key={notif.id}
-                          className={`p-3.5 rounded-xl border backdrop-blur-md transition-all flex flex-col justify-between gap-3 relative overflow-hidden group hover:border-white/20 ${
-                            notif.isOverdue 
-                              ? 'bg-rose-500/[0.06] border-rose-500/30' 
-                              : notif.isToday 
-                                ? 'bg-amber-500/[0.06] border-amber-500/30' 
+                          className={`p-3.5 rounded-xl border backdrop-blur-md transition-all flex flex-col justify-between gap-3 relative overflow-hidden group hover:border-white/20 ${notif.isOverdue
+                              ? 'bg-rose-500/[0.06] border-rose-500/30'
+                              : notif.isToday
+                                ? 'bg-amber-500/[0.06] border-amber-500/30'
                                 : 'bg-white/[0.03] border-white/10'
-                          }`}
+                            }`}
                         >
                           {/* Top Header */}
                           <div className="flex items-start justify-between gap-2">
@@ -2054,11 +2050,10 @@ function App() {
                         <h3 className="text-lg font-bold text-white tracking-tight">
                           {isTelegramConfigured ? 'Anlık Telegram Hatırlatıcısı Aktif' : 'Telegram Botunu Yapılandırın'}
                         </h3>
-                        <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full border whitespace-nowrap flex-shrink-0 ${
-                          isTelegramConfigured 
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                        <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full border whitespace-nowrap flex-shrink-0 ${isTelegramConfigured
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                             : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                        }`}>
+                          }`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${isTelegramConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
                           {isTelegramConfigured ? 'Bot Bağlı' : 'Yapılandırılmadı'}
                         </span>
@@ -2120,19 +2115,17 @@ function App() {
                   <button
                     key={tab.id}
                     onClick={() => setGidaFiltre(tab.id)}
-                    className={`flex-1 md:flex-initial px-2.5 py-2 xs:px-3 md:px-4 md:py-2 rounded-xl text-[11px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer select-none border ${
-                      isActive
+                    className={`flex-1 md:flex-initial px-2.5 py-2 xs:px-3 md:px-4 md:py-2 rounded-xl text-[11px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer select-none border ${isActive
                         ? 'bg-purple-600 text-white border-purple-400/30 shadow-[0_2px_14px_rgba(147,51,234,0.45)] font-bold scale-[1.01]'
                         : 'bg-white/[0.05] border-white/10 text-gray-300 hover:bg-purple-500/20 hover:border-purple-500/30 hover:text-purple-200'
-                    }`}
+                      }`}
                   >
                     <span className="hidden md:inline">{tab.label}</span>
                     <span className="md:hidden">{tab.mobileLabel}</span>
                     {tab.id === 'hepsi' && (
                       <span
-                        className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-bold transition-colors ${
-                          isActive ? 'bg-white/20 text-white border border-white/20' : 'bg-white/10 text-gray-300 border border-white/5'
-                        }`}
+                        className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-bold transition-colors ${isActive ? 'bg-white/20 text-white border border-white/20' : 'bg-white/10 text-gray-300 border border-white/5'
+                          }`}
                       >
                         {tab.count}
                       </span>
@@ -2145,102 +2138,102 @@ function App() {
             {/* GIDA KARTLARI */}
             <div className="space-y-2 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
               {filteredGidalar.map((gida) => {
-                  const days = getDaysDiff(gida.skt);
-                  const statusClass = getStatusColor(days, gida.hatirlatma_gun_kala, gida.durum);
-                  return (
-                    <div key={gida.id} className="glass-panel rounded-xl md:rounded-2xl border-white/5 relative overflow-hidden">
+                const days = getDaysDiff(gida.skt);
+                const statusClass = getStatusColor(days, gida.hatirlatma_gun_kala, gida.durum);
+                return (
+                  <div key={gida.id} className="glass-panel rounded-xl md:rounded-2xl border-white/5 relative overflow-hidden">
 
-                      {/* MOBİL: Kompakt yatay liste görünümü */}
-                      <div className="md:hidden flex items-center gap-3 p-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <span className="text-xs font-semibold text-purple-300 bg-purple-500/10 px-1.5 py-0.5 rounded-md">
-                              {gida.kategori || 'Genel'}
-                            </span>
-                            <span className={`text-[10px] font-bold py-0.5 px-1.5 rounded-md border ${statusClass}`}>
-                              {gida.durum === 'tuketildi' ? 'Tüketildi' : gida.durum === 'atildi' ? 'Atıldı' : days === 0 ? 'Bugün Son!' : days < 0 ? `${Math.abs(days)}g geçti` : `${days}g kaldı`}
-                            </span>
-                          </div>
-                          <h3 className="text-sm font-bold text-white truncate">{gida.urun_adi}</h3>
-                          <p className="text-[10px] text-gray-500 mt-0.5">{formatDate(gida.skt)}</p>
+                    {/* MOBİL: Kompakt yatay liste görünümü */}
+                    <div className="md:hidden flex items-center gap-3 p-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-xs font-semibold text-purple-300 bg-purple-500/10 px-1.5 py-0.5 rounded-md">
+                            {gida.kategori || 'Genel'}
+                          </span>
+                          <span className={`text-[10px] font-bold py-0.5 px-1.5 rounded-md border ${statusClass}`}>
+                            {gida.durum === 'tuketildi' ? 'Tüketildi' : gida.durum === 'atildi' ? 'Atıldı' : days === 0 ? 'Bugün Son!' : days < 0 ? `${Math.abs(days)}g geçti` : `${days}g kaldı`}
+                          </span>
                         </div>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          {gida.durum === 'bekliyor' && (
-                            <>
-                              <button
-                                onClick={() => handleUpdateGidaDurum(gida, 'tuketildi')}
-                                className="p-1.5 rounded-lg bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-500/20 transition-all cursor-pointer"
-                                title="Tüketildi"
-                              >
-                                <CheckCircle className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => handleUpdateGidaDurum(gida, 'atildi')}
-                                className="p-1.5 rounded-lg bg-orange-600/10 hover:bg-orange-600/20 text-orange-400 border border-orange-500/20 transition-all cursor-pointer"
-                                title="Atıldı / Bozuldu"
-                              >
-                                <XCircle className="w-3.5 h-3.5" />
-                              </button>
-                            </>
-                          )}
-                          <button
-                            onClick={() => handleEditGida(gida)}
-                            className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg border border-white/10 transition-all cursor-pointer"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteGida(gida.id)}
-                            className="p-1.5 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-lg border border-rose-500/20 transition-all cursor-pointer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        <h3 className="text-sm font-bold text-white truncate">{gida.urun_adi}</h3>
+                        <p className="text-[10px] text-gray-500 mt-0.5">{formatDate(gida.skt)}</p>
                       </div>
-
-                      {/* DESKTOP: Tam kart görünümü */}
-                      <div className="hidden md:flex flex-col justify-between p-5 h-full">
-                        {days !== null && days <= gida.hatirlatma_gun_kala && gida.durum === 'bekliyor' && (
-                          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full"></div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {gida.durum === 'bekliyor' && (
+                          <>
+                            <button
+                              onClick={() => handleUpdateGidaDurum(gida, 'tuketildi')}
+                              className="p-1.5 rounded-lg bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-500/20 transition-all cursor-pointer"
+                              title="Tüketildi"
+                            >
+                              <CheckCircle className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleUpdateGidaDurum(gida, 'atildi')}
+                              className="p-1.5 rounded-lg bg-orange-600/10 hover:bg-orange-600/20 text-orange-400 border border-orange-500/20 transition-all cursor-pointer"
+                              title="Atıldı / Bozuldu"
+                            >
+                              <XCircle className="w-3.5 h-3.5" />
+                            </button>
+                          </>
                         )}
-                        <div>
-                          <div className="flex justify-between items-start mb-3">
-                            <span className="text-xs font-semibold py-1 px-2.5 rounded-lg bg-white/5 border border-white/10 text-purple-300">
-                              {gida.kategori || 'Genel'}
-                            </span>
-                            <span className={`text-xs font-bold py-1 px-2.5 rounded-lg border ${statusClass}`}>
-                              {gida.durum === 'tuketildi' ? 'Tüketildi' : gida.durum === 'atildi' ? 'Atıldı' : days === 0 ? 'Bugün Son!' : days < 0 ? `${Math.abs(days)} Gün Geçti` : `${days} Gün Kaldı`}
-                            </span>
-                          </div>
-                          <h3 className="text-lg font-bold text-white mb-2">{gida.urun_adi}</h3>
-                          <div className="space-y-1.5 text-sm text-gray-400">
-                            <div className="flex justify-between"><span>S.K.T:</span><span className="font-semibold text-gray-300">{formatDate(gida.skt)}</span></div>
-                            <div className="flex justify-between"><span>Hatırlatma Limiti:</span><span className="font-semibold text-gray-300">{gida.hatirlatma_gun_kala} Gün Kala</span></div>
-                          </div>
+                        <button
+                          onClick={() => handleEditGida(gida)}
+                          className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg border border-white/10 transition-all cursor-pointer"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteGida(gida.id)}
+                          className="p-1.5 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-lg border border-rose-500/20 transition-all cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* DESKTOP: Tam kart görünümü */}
+                    <div className="hidden md:flex flex-col justify-between p-5 h-full">
+                      {days !== null && days <= gida.hatirlatma_gun_kala && gida.durum === 'bekliyor' && (
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full"></div>
+                      )}
+                      <div>
+                        <div className="flex justify-between items-start mb-3">
+                          <span className="text-xs font-semibold py-1 px-2.5 rounded-lg bg-white/5 border border-white/10 text-purple-300">
+                            {gida.kategori || 'Genel'}
+                          </span>
+                          <span className={`text-xs font-bold py-1 px-2.5 rounded-lg border ${statusClass}`}>
+                            {gida.durum === 'tuketildi' ? 'Tüketildi' : gida.durum === 'atildi' ? 'Atıldı' : days === 0 ? 'Bugün Son!' : days < 0 ? `${Math.abs(days)} Gün Geçti` : `${days} Gün Kaldı`}
+                          </span>
                         </div>
-                        <div className="flex gap-2 mt-5 pt-4 border-t border-white/5">
-                          {gida.durum === 'bekliyor' && (
-                            <>
-                              <button onClick={() => handleUpdateGidaDurum(gida, 'tuketildi')} className="flex-1 py-2 rounded-xl bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 font-semibold text-xs border border-emerald-500/20 transition-all cursor-pointer flex justify-center items-center gap-1">
-                                <CheckCircle className="w-3.5 h-3.5" /> Tüketildi
-                              </button>
-                              <button onClick={() => handleUpdateGidaDurum(gida, 'atildi')} className="flex-1 py-2 rounded-xl bg-orange-600/10 hover:bg-orange-600/20 text-orange-400 font-semibold text-xs border border-orange-500/20 transition-all cursor-pointer flex justify-center items-center gap-1">
-                                <Trash2 className="w-3.5 h-3.5" /> Atıldı
-                              </button>
-                            </>
-                          )}
-                          <button onClick={() => handleEditGida(gida)} className="p-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl border border-white/10 transition-all cursor-pointer">
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => handleDeleteGida(gida.id)} className="p-2 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-xl border border-rose-500/20 transition-all cursor-pointer">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                        <h3 className="text-lg font-bold text-white mb-2">{gida.urun_adi}</h3>
+                        <div className="space-y-1.5 text-sm text-gray-400">
+                          <div className="flex justify-between"><span>S.K.T:</span><span className="font-semibold text-gray-300">{formatDate(gida.skt)}</span></div>
+                          <div className="flex justify-between"><span>Hatırlatma Limiti:</span><span className="font-semibold text-gray-300">{gida.hatirlatma_gun_kala} Gün Kala</span></div>
                         </div>
                       </div>
-
+                      <div className="flex gap-2 mt-5 pt-4 border-t border-white/5">
+                        {gida.durum === 'bekliyor' && (
+                          <>
+                            <button onClick={() => handleUpdateGidaDurum(gida, 'tuketildi')} className="flex-1 py-2 rounded-xl bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 font-semibold text-xs border border-emerald-500/20 transition-all cursor-pointer flex justify-center items-center gap-1">
+                              <CheckCircle className="w-3.5 h-3.5" /> Tüketildi
+                            </button>
+                            <button onClick={() => handleUpdateGidaDurum(gida, 'atildi')} className="flex-1 py-2 rounded-xl bg-orange-600/10 hover:bg-orange-600/20 text-orange-400 font-semibold text-xs border border-orange-500/20 transition-all cursor-pointer flex justify-center items-center gap-1">
+                              <Trash2 className="w-3.5 h-3.5" /> Atıldı
+                            </button>
+                          </>
+                        )}
+                        <button onClick={() => handleEditGida(gida)} className="p-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl border border-white/10 transition-all cursor-pointer">
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => handleDeleteGida(gida.id)} className="p-2 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-xl border border-rose-500/20 transition-all cursor-pointer">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
-                  );
-                })}
+
+                  </div>
+                );
+              })}
               {filteredGidalar.length === 0 && (
                 <div className="col-span-full py-8 text-center glass-panel rounded-2xl border-white/5">
                   <p className="text-gray-500 text-sm">Gösterilecek gıda kaydı bulunmuyor.</p>
@@ -2281,19 +2274,17 @@ function App() {
                   <button
                     key={tab.id}
                     onClick={() => setFaturaFiltre(tab.id)}
-                    className={`flex-1 md:flex-initial px-2.5 py-2 xs:px-3 md:px-4 md:py-2 rounded-xl text-[11px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer select-none border ${
-                      isActive
+                    className={`flex-1 md:flex-initial px-2.5 py-2 xs:px-3 md:px-4 md:py-2 rounded-xl text-[11px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer select-none border ${isActive
                         ? 'bg-purple-600 text-white border-purple-400/30 shadow-[0_2px_14px_rgba(147,51,234,0.45)] font-bold scale-[1.01]'
                         : 'bg-white/[0.05] border-white/10 text-gray-300 hover:bg-purple-500/20 hover:border-purple-500/30 hover:text-purple-200'
-                    }`}
+                      }`}
                   >
                     <span className="hidden md:inline">{tab.label}</span>
                     <span className="md:hidden">{tab.mobileLabel}</span>
                     {tab.id === 'hepsi' && (
                       <span
-                        className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-bold transition-colors ${
-                          isActive ? 'bg-white/20 text-white border border-white/20' : 'bg-white/10 text-gray-300 border border-white/5'
-                        }`}
+                        className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-bold transition-colors ${isActive ? 'bg-white/20 text-white border border-white/20' : 'bg-white/10 text-gray-300 border border-white/5'
+                          }`}
                       >
                         {tab.count}
                       </span>
@@ -2306,75 +2297,75 @@ function App() {
             {/* FATURA KARTLARI */}
             <div className="space-y-2 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
               {filteredFaturalar.map((fatura) => {
-                  const days = getDaysDiff(fatura.son_odeme_tarihi);
-                  const statusClass = getStatusColor(days, fatura.hatirlatma_gun_kala, fatura.durum);
-                  return (
-                    <div key={fatura.id} className="glass-panel rounded-xl md:rounded-2xl border-white/5 relative overflow-hidden">
+                const days = getDaysDiff(fatura.son_odeme_tarihi);
+                const statusClass = getStatusColor(days, fatura.hatirlatma_gun_kala, fatura.durum);
+                return (
+                  <div key={fatura.id} className="glass-panel rounded-xl md:rounded-2xl border-white/5 relative overflow-hidden">
 
-                      {/* MOBİL: Kompakt yatay liste */}
-                      <div className="md:hidden flex items-center gap-3 p-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 mb-0.5">
-                            <DollarSign className="w-3 h-3 text-purple-400 flex-shrink-0" />
-                            <span className="text-sm font-extrabold text-white">{fatura.tutar || 0} TL</span>
-                            <span className={`text-[10px] font-bold py-0.5 px-1.5 rounded-md border ${statusClass}`}>
-                              {fatura.durum === 'odendi' ? 'Ödendi' : days === 0 ? 'Bugün!' : days < 0 ? `${Math.abs(days)}g gecikti` : `${days}g kaldı`}
-                            </span>
-                          </div>
-                          <h3 className="text-sm font-bold text-white truncate">{fatura.fatura_adi}</h3>
-                          <p className="text-[10px] text-gray-500 mt-0.5">{formatDate(fatura.son_odeme_tarihi)}</p>
+                    {/* MOBİL: Kompakt yatay liste */}
+                    <div className="md:hidden flex items-center gap-3 p-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <DollarSign className="w-3 h-3 text-purple-400 flex-shrink-0" />
+                          <span className="text-sm font-extrabold text-white">{fatura.tutar || 0} TL</span>
+                          <span className={`text-[10px] font-bold py-0.5 px-1.5 rounded-md border ${statusClass}`}>
+                            {fatura.durum === 'odendi' ? 'Ödendi' : days === 0 ? 'Bugün!' : days < 0 ? `${Math.abs(days)}g gecikti` : `${days}g kaldı`}
+                          </span>
                         </div>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          {fatura.durum === 'odenmedi' && (
-                            <button
-                              onClick={() => handlePayFatura(fatura)}
-                              className="p-1.5 rounded-lg bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-500/20 transition-all cursor-pointer"
-                              title="Ödendi"
-                            >
-                              <CheckCircle className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                          <button onClick={() => handleEditFatura(fatura)} className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg border border-white/10 transition-all cursor-pointer">
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                          <button onClick={() => handleDeleteFatura(fatura.id)} className="p-1.5 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-lg border border-rose-500/20 transition-all cursor-pointer">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        <h3 className="text-sm font-bold text-white truncate">{fatura.fatura_adi}</h3>
+                        <p className="text-[10px] text-gray-500 mt-0.5">{formatDate(fatura.son_odeme_tarihi)}</p>
                       </div>
-
-                      {/* DESKTOP: Tam kart */}
-                      <div className="hidden md:flex flex-col justify-between p-5 h-full">
-                        <div>
-                          <div className="flex justify-between items-start mb-3">
-                            <span className="text-lg font-extrabold text-white flex items-center gap-1">
-                              <DollarSign className="w-5 h-5 text-purple-400" />
-                              {fatura.tutar || 0} <span className="text-sm font-semibold text-gray-400">TL</span>
-                            </span>
-                            <span className={`text-xs font-bold py-1 px-2.5 rounded-lg border ${statusClass}`}>
-                              {fatura.durum === 'odendi' ? 'Ödendi' : days === 0 ? 'Son Ödeme Günü!' : days < 0 ? `${Math.abs(days)} Gün Gecikti` : `${days} Gün Kaldı`}
-                            </span>
-                          </div>
-                          <h3 className="text-lg font-bold text-white mb-2">{fatura.fatura_adi}</h3>
-                          <div className="space-y-1.5 text-sm text-gray-400">
-                            <div className="flex justify-between"><span>Son Ödeme Tarihi:</span><span className="font-semibold text-gray-300">{formatDate(fatura.son_odeme_tarihi)}</span></div>
-                            <div className="flex justify-between"><span>Hatırlatma Limiti:</span><span className="font-semibold text-gray-300">{fatura.hatirlatma_gun_kala} Gün Kala</span></div>
-                          </div>
-                        </div>
-                        <div className="flex gap-2 mt-5 pt-4 border-t border-white/5">
-                          {fatura.durum === 'odenmedi' && (
-                            <button onClick={() => handlePayFatura(fatura)} className="flex-1 py-2 rounded-xl bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 font-semibold text-xs border border-emerald-500/20 transition-all cursor-pointer flex justify-center items-center gap-1.5">
-                              <CheckCircle className="w-3.5 h-3.5" /> Ödendi İşaretle
-                            </button>
-                          )}
-                          <button onClick={() => handleEditFatura(fatura)} className="p-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl border border-white/10 transition-all cursor-pointer"><Edit className="w-4 h-4" /></button>
-                          <button onClick={() => handleDeleteFatura(fatura.id)} className="p-2 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-xl border border-rose-500/20 transition-all cursor-pointer"><Trash2 className="w-4 h-4" /></button>
-                        </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {fatura.durum === 'odenmedi' && (
+                          <button
+                            onClick={() => handlePayFatura(fatura)}
+                            className="p-1.5 rounded-lg bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-500/20 transition-all cursor-pointer"
+                            title="Ödendi"
+                          >
+                            <CheckCircle className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <button onClick={() => handleEditFatura(fatura)} className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg border border-white/10 transition-all cursor-pointer">
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => handleDeleteFatura(fatura.id)} className="p-1.5 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-lg border border-rose-500/20 transition-all cursor-pointer">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
-
                     </div>
-                  );
-                })}
+
+                    {/* DESKTOP: Tam kart */}
+                    <div className="hidden md:flex flex-col justify-between p-5 h-full">
+                      <div>
+                        <div className="flex justify-between items-start mb-3">
+                          <span className="text-lg font-extrabold text-white flex items-center gap-1">
+                            <DollarSign className="w-5 h-5 text-purple-400" />
+                            {fatura.tutar || 0} <span className="text-sm font-semibold text-gray-400">TL</span>
+                          </span>
+                          <span className={`text-xs font-bold py-1 px-2.5 rounded-lg border ${statusClass}`}>
+                            {fatura.durum === 'odendi' ? 'Ödendi' : days === 0 ? 'Son Ödeme Günü!' : days < 0 ? `${Math.abs(days)} Gün Gecikti` : `${days} Gün Kaldı`}
+                          </span>
+                        </div>
+                        <h3 className="text-lg font-bold text-white mb-2">{fatura.fatura_adi}</h3>
+                        <div className="space-y-1.5 text-sm text-gray-400">
+                          <div className="flex justify-between"><span>Son Ödeme Tarihi:</span><span className="font-semibold text-gray-300">{formatDate(fatura.son_odeme_tarihi)}</span></div>
+                          <div className="flex justify-between"><span>Hatırlatma Limiti:</span><span className="font-semibold text-gray-300">{fatura.hatirlatma_gun_kala} Gün Kala</span></div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-5 pt-4 border-t border-white/5">
+                        {fatura.durum === 'odenmedi' && (
+                          <button onClick={() => handlePayFatura(fatura)} className="flex-1 py-2 rounded-xl bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 font-semibold text-xs border border-emerald-500/20 transition-all cursor-pointer flex justify-center items-center gap-1.5">
+                            <CheckCircle className="w-3.5 h-3.5" /> Ödendi İşaretle
+                          </button>
+                        )}
+                        <button onClick={() => handleEditFatura(fatura)} className="p-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl border border-white/10 transition-all cursor-pointer"><Edit className="w-4 h-4" /></button>
+                        <button onClick={() => handleDeleteFatura(fatura.id)} className="p-2 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-xl border border-rose-500/20 transition-all cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </div>
+
+                  </div>
+                );
+              })}
               {filteredFaturalar.length === 0 && (
                 <div className="col-span-full py-8 text-center glass-panel rounded-2xl border-white/5">
                   <p className="text-gray-500 text-sm">Gösterilecek fatura kaydı bulunmuyor.</p>
@@ -2415,19 +2406,17 @@ function App() {
                   <button
                     key={tab.id}
                     onClick={() => setGarantiFiltre(tab.id)}
-                    className={`flex-1 md:flex-initial px-2.5 py-2 xs:px-3 md:px-4 md:py-2 rounded-xl text-[11px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer select-none border ${
-                      isActive
+                    className={`flex-1 md:flex-initial px-2.5 py-2 xs:px-3 md:px-4 md:py-2 rounded-xl text-[11px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer select-none border ${isActive
                         ? 'bg-purple-600 text-white border-purple-400/30 shadow-[0_2px_14px_rgba(147,51,234,0.45)] font-bold scale-[1.01]'
                         : 'bg-white/[0.05] border-white/10 text-gray-300 hover:bg-purple-500/20 hover:border-purple-500/30 hover:text-purple-200'
-                    }`}
+                      }`}
                   >
                     <span className="hidden md:inline">{tab.label}</span>
                     <span className="md:hidden">{tab.mobileLabel}</span>
                     {tab.id === 'hepsi' && (
                       <span
-                        className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-bold transition-colors ${
-                          isActive ? 'bg-white/20 text-white border border-white/20' : 'bg-white/10 text-gray-300 border border-white/5'
-                        }`}
+                        className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-bold transition-colors ${isActive ? 'bg-white/20 text-white border border-white/20' : 'bg-white/10 text-gray-300 border border-white/5'
+                          }`}
                       >
                         {tab.count}
                       </span>
@@ -2440,69 +2429,69 @@ function App() {
             {/* GARANTİ KARTLARI */}
             <div className="space-y-2 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
               {filteredGarantiler.map((garanti) => {
-                  const days = getDaysDiff(garanti.garanti_bitis);
-                  const isExpired = days !== null && days < 0;
-                  const statusClass = getStatusColor(days, garanti.hatirlatma_gun_kala, 'bekliyor');
-                  return (
-                    <div
-                      key={garanti.id}
-                      className={`glass-panel rounded-xl md:rounded-2xl border-white/5 relative overflow-hidden transition-all ${isExpired ? 'opacity-60' : ''}`}
-                    >
-                      {/* MOBİL: Kompakt liste */}
-                      <div className="md:hidden flex items-center gap-3 p-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 mb-0.5">
-                            <span className="text-xs text-purple-300 font-semibold bg-purple-500/10 px-1.5 py-0.5 rounded-md truncate max-w-[100px]">{garanti.marka_model || 'Belirtilmemiş'}</span>
-                            <span className={`text-[10px] font-bold py-0.5 px-1.5 rounded-md border ${statusClass}`}>
-                              {days === 0 ? 'Bugün!' : isExpired ? 'Bitti' : `${days}g kaldı`}
-                            </span>
-                          </div>
-                          <h3 className={`text-sm font-bold truncate ${isExpired ? 'line-through text-gray-400' : 'text-white'}`}>{garanti.cihaz_adi}</h3>
-                          <p className="text-[10px] text-gray-500 mt-0.5">{formatDate(garanti.garanti_bitis)}</p>
+                const days = getDaysDiff(garanti.garanti_bitis);
+                const isExpired = days !== null && days < 0;
+                const statusClass = getStatusColor(days, garanti.hatirlatma_gun_kala, 'bekliyor');
+                return (
+                  <div
+                    key={garanti.id}
+                    className={`glass-panel rounded-xl md:rounded-2xl border-white/5 relative overflow-hidden transition-all ${isExpired ? 'opacity-60' : ''}`}
+                  >
+                    {/* MOBİL: Kompakt liste */}
+                    <div className="md:hidden flex items-center gap-3 p-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <span className="text-xs text-purple-300 font-semibold bg-purple-500/10 px-1.5 py-0.5 rounded-md truncate max-w-[100px]">{garanti.marka_model || 'Belirtilmemiş'}</span>
+                          <span className={`text-[10px] font-bold py-0.5 px-1.5 rounded-md border ${statusClass}`}>
+                            {days === 0 ? 'Bugün!' : isExpired ? 'Bitti' : `${days}g kaldı`}
+                          </span>
                         </div>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <button onClick={() => handleEditGaranti(garanti)} className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg border border-white/10 transition-all cursor-pointer">
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                          <button onClick={() => handleDeleteGaranti(garanti.id)} className="p-1.5 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-lg border border-rose-500/20 transition-all cursor-pointer">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        <h3 className={`text-sm font-bold truncate ${isExpired ? 'line-through text-gray-400' : 'text-white'}`}>{garanti.cihaz_adi}</h3>
+                        <p className="text-[10px] text-gray-500 mt-0.5">{formatDate(garanti.garanti_bitis)}</p>
                       </div>
-
-                      {/* DESKTOP: Tam kart */}
-                      <div className="hidden md:flex flex-col justify-between p-5 h-full">
-                        {days !== null && days <= garanti.hatirlatma_gun_kala && !isExpired && (
-                          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full"></div>
-                        )}
-                        <div>
-                          <div className="flex justify-between items-start mb-3">
-                            <span className="text-xs font-semibold py-1 px-2.5 rounded-lg bg-white/5 border border-white/10 text-purple-300">{garanti.marka_model || 'Marka Belirtilmemiş'}</span>
-                            <span className={`text-xs font-bold py-1 px-2.5 rounded-lg border ${statusClass}`}>
-                              {days === 0 ? 'Bugün Bitiyor!' : isExpired ? 'Süresi Bitti' : `${days} Gün Kaldı`}
-                            </span>
-                          </div>
-                          <h3 className={`text-lg font-bold text-white mb-2 ${isExpired ? 'line-through text-gray-400' : ''}`}>{garanti.cihaz_adi}</h3>
-                          <div className="space-y-1.5 text-sm text-gray-400">
-                            <div className="flex justify-between"><span>Garanti Bitiş Tarihi:</span><span className="font-semibold text-gray-300">{formatDate(garanti.garanti_bitis)}</span></div>
-                            <div className="flex justify-between"><span>Hatırlatma Limiti:</span><span className="font-semibold text-gray-300">{garanti.hatirlatma_gun_kala} Gün Kala</span></div>
-                            {garanti.notlar && (<div className="mt-3 p-3 rounded-lg bg-white/5 border border-white/10 text-xs text-gray-400">{garanti.notlar}</div>)}
-                          </div>
-                        </div>
-                        <div className="flex gap-2 mt-5 pt-4 border-t border-white/5">
-                          <button onClick={() => handleEditGaranti(garanti)} className="flex-1 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 font-semibold text-xs border border-white/10 transition-all cursor-pointer flex justify-center items-center gap-1.5"><Edit className="w-3.5 h-3.5" /> Düzenle</button>
-                          <button onClick={() => handleDeleteGaranti(garanti.id)} className="p-2 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-xl border border-rose-500/20 transition-all cursor-pointer"><Trash2 className="w-4 h-4" /></button>
-                        </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <button onClick={() => handleEditGaranti(garanti)} className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg border border-white/10 transition-all cursor-pointer">
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => handleDeleteGaranti(garanti.id)} className="p-1.5 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-lg border border-rose-500/20 transition-all cursor-pointer">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
-
                     </div>
-                  );
-                })}
-              {filteredGarantiler.length === 0 && (
-                  <div className="col-span-full py-8 text-center glass-panel rounded-2xl border-white/5">
-                    <p className="text-gray-500 text-sm">Gösterilecek garanti kaydı bulunmuyor.</p>
+
+                    {/* DESKTOP: Tam kart */}
+                    <div className="hidden md:flex flex-col justify-between p-5 h-full">
+                      {days !== null && days <= garanti.hatirlatma_gun_kala && !isExpired && (
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full"></div>
+                      )}
+                      <div>
+                        <div className="flex justify-between items-start mb-3">
+                          <span className="text-xs font-semibold py-1 px-2.5 rounded-lg bg-white/5 border border-white/10 text-purple-300">{garanti.marka_model || 'Marka Belirtilmemiş'}</span>
+                          <span className={`text-xs font-bold py-1 px-2.5 rounded-lg border ${statusClass}`}>
+                            {days === 0 ? 'Bugün Bitiyor!' : isExpired ? 'Süresi Bitti' : `${days} Gün Kaldı`}
+                          </span>
+                        </div>
+                        <h3 className={`text-lg font-bold text-white mb-2 ${isExpired ? 'line-through text-gray-400' : ''}`}>{garanti.cihaz_adi}</h3>
+                        <div className="space-y-1.5 text-sm text-gray-400">
+                          <div className="flex justify-between"><span>Garanti Bitiş Tarihi:</span><span className="font-semibold text-gray-300">{formatDate(garanti.garanti_bitis)}</span></div>
+                          <div className="flex justify-between"><span>Hatırlatma Limiti:</span><span className="font-semibold text-gray-300">{garanti.hatirlatma_gun_kala} Gün Kala</span></div>
+                          {garanti.notlar && (<div className="mt-3 p-3 rounded-lg bg-white/5 border border-white/10 text-xs text-gray-400">{garanti.notlar}</div>)}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-5 pt-4 border-t border-white/5">
+                        <button onClick={() => handleEditGaranti(garanti)} className="flex-1 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 font-semibold text-xs border border-white/10 transition-all cursor-pointer flex justify-center items-center gap-1.5"><Edit className="w-3.5 h-3.5" /> Düzenle</button>
+                        <button onClick={() => handleDeleteGaranti(garanti.id)} className="p-2 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-xl border border-rose-500/20 transition-all cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </div>
+
                   </div>
-                )}
+                );
+              })}
+              {filteredGarantiler.length === 0 && (
+                <div className="col-span-full py-8 text-center glass-panel rounded-2xl border-white/5">
+                  <p className="text-gray-500 text-sm">Gösterilecek garanti kaydı bulunmuyor.</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -2539,17 +2528,15 @@ function App() {
             <div className="p-1.5 bg-black/30 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center gap-1.5 overflow-x-auto filter-tabs-scroll shadow-inner w-full min-w-0">
               <button
                 onClick={() => setSeciliRutinKlasor('hepsi')}
-                className={`px-2.5 py-2 sm:px-4 sm:py-2 rounded-xl text-[11px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer flex-shrink-0 select-none border ${
-                  seciliRutinKlasor === 'hepsi'
+                className={`px-2.5 py-2 sm:px-4 sm:py-2 rounded-xl text-[11px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer flex-shrink-0 select-none border ${seciliRutinKlasor === 'hepsi'
                     ? 'bg-purple-600 text-white border-purple-400/30 shadow-[0_2px_14px_rgba(147,51,234,0.45)] font-bold scale-[1.01]'
                     : 'bg-white/[0.05] border-white/10 text-gray-300 hover:bg-purple-500/20 hover:border-purple-500/30 hover:text-purple-200'
-                }`}
+                  }`}
               >
                 <span>Hepsi</span>
                 <span
-                  className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-bold transition-colors ${
-                    seciliRutinKlasor === 'hepsi' ? 'bg-white/20 text-white border border-white/20' : 'bg-white/10 text-gray-300 border border-white/5'
-                  }`}
+                  className={`text-[9px] sm:text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-bold transition-colors ${seciliRutinKlasor === 'hepsi' ? 'bg-white/20 text-white border border-white/20' : 'bg-white/10 text-gray-300 border border-white/5'
+                    }`}
                 >
                   {Array.isArray(rutinler) ? rutinler.length : 0}
                 </span>
@@ -2562,11 +2549,10 @@ function App() {
                   <button
                     key={klasor.id}
                     onClick={() => setSeciliRutinKlasor(klasor.id.toString())}
-                    className={`px-2.5 py-2 sm:px-4 sm:py-2 rounded-xl text-[11px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 cursor-pointer flex-shrink-0 select-none border ${
-                      isSelected
+                    className={`px-2.5 py-2 sm:px-4 sm:py-2 rounded-xl text-[11px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 cursor-pointer flex-shrink-0 select-none border ${isSelected
                         ? 'bg-purple-600 text-white border-purple-400/30 shadow-[0_2px_14px_rgba(147,51,234,0.45)] font-bold scale-[1.01]'
                         : 'bg-white/[0.05] border-white/10 text-gray-300 hover:bg-purple-500/20 hover:border-purple-500/30 hover:text-purple-200'
-                    }`}
+                      }`}
                   >
                     <span>{klasor.klasor_adi}</span>
                   </button>
@@ -2577,142 +2563,142 @@ function App() {
             {/* GÖREV KARTLARI */}
             <div className="space-y-2 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:space-y-0">
               {filteredRutinler.map((rutin) => {
-                  if (!rutin || !rutin.id) return null;
-                  let nextDate = null;
-                  let days = null;
-                  let displayLastDone = 'Henüz Yapılmadı';
+                if (!rutin || !rutin.id) return null;
+                let nextDate = null;
+                let days = null;
+                let displayLastDone = 'Henüz Yapılmadı';
 
-                  if (rutin.son_yapilma_tarihi) {
-                    const safeStr = typeof rutin.son_yapilma_tarihi === 'string' ? rutin.son_yapilma_tarihi.replace(' ', 'T') : rutin.son_yapilma_tarihi;
-                    const inputDate = new Date(safeStr);
-                    const periyot = parseInt(rutin.periyot_ay, 10) || 1;
-                    if (!isNaN(inputDate.getTime()) && !isNaN(periyot)) {
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
-                      const compareDate = new Date(inputDate);
-                      compareDate.setHours(0, 0, 0, 0);
+                if (rutin.son_yapilma_tarihi) {
+                  const safeStr = typeof rutin.son_yapilma_tarihi === 'string' ? rutin.son_yapilma_tarihi.replace(' ', 'T') : rutin.son_yapilma_tarihi;
+                  const inputDate = new Date(safeStr);
+                  const periyot = parseInt(rutin.periyot_ay, 10) || 1;
+                  if (!isNaN(inputDate.getTime()) && !isNaN(periyot)) {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const compareDate = new Date(inputDate);
+                    compareDate.setHours(0, 0, 0, 0);
 
-                      if (compareDate > today) {
-                        displayLastDone = 'Henüz Yapılmadı';
-                        nextDate = safeStr.split('T')[0];
-                        days = getDaysDiff(nextDate);
-                      } else {
-                        displayLastDone = formatDate(rutin.son_yapilma_tarihi);
-                        const calcNext = new Date(inputDate);
-                        calcNext.setMonth(calcNext.getMonth() + periyot);
-                        if (!isNaN(calcNext.getTime())) {
-                          try {
-                            nextDate = calcNext.toISOString().split('T')[0];
-                            days = getDaysDiff(nextDate);
-                          } catch (e) {
-                            console.error("Date formatting error:", e);
-                          }
+                    if (compareDate > today) {
+                      displayLastDone = 'Henüz Yapılmadı';
+                      nextDate = safeStr.split('T')[0];
+                      days = getDaysDiff(nextDate);
+                    } else {
+                      displayLastDone = formatDate(rutin.son_yapilma_tarihi);
+                      const calcNext = new Date(inputDate);
+                      calcNext.setMonth(calcNext.getMonth() + periyot);
+                      if (!isNaN(calcNext.getTime())) {
+                        try {
+                          nextDate = calcNext.toISOString().split('T')[0];
+                          days = getDaysDiff(nextDate);
+                        } catch (e) {
+                          console.error("Date formatting error:", e);
                         }
                       }
                     }
                   }
+                }
 
-                  const isKmRoutine = rutin.hedef_km && rutin.mevcut_km;
-                  const kmKalan = isKmRoutine ? (rutin.hedef_km - rutin.mevcut_km) : null;
+                const isKmRoutine = rutin.hedef_km && rutin.mevcut_km;
+                const kmKalan = isKmRoutine ? (rutin.hedef_km - rutin.mevcut_km) : null;
 
-                  let isOverdue = false;
-                  let isWarning = false;
+                let isOverdue = false;
+                let isWarning = false;
 
-                  if (days !== null && days < 0) isOverdue = true;
-                  if (!isOverdue) {
-                    if (days !== null && days <= (rutin.hatirlatma_gun_kala || 15)) isWarning = true;
-                    else if (!rutin.son_yapilma_tarihi) isWarning = true;
-                  }
+                if (days !== null && days < 0) isOverdue = true;
+                if (!isOverdue) {
+                  if (days !== null && days <= (rutin.hatirlatma_gun_kala || 15)) isWarning = true;
+                  else if (!rutin.son_yapilma_tarihi) isWarning = true;
+                }
 
-                  let statusText = 'Stabil ✅';
-                  let statusClass = 'text-sky-400 bg-sky-500/10 border-sky-500/20';
-                  let glowColor = '';
+                let statusText = 'Stabil ✅';
+                let statusClass = 'text-sky-400 bg-sky-500/10 border-sky-500/20';
+                let glowColor = '';
 
-                  if (isOverdue) {
-                    statusText = 'Gecikti! ⚠️';
-                    statusClass = 'text-rose-400 bg-rose-500/10 border-rose-500/20 animate-pulse';
-                    glowColor = 'bg-rose-500/10';
-                  } else if (isWarning) {
-                    statusText = 'Yaklaştı! ⏰';
-                    statusClass = 'text-amber-400 bg-amber-500/10 border-amber-500/20 animate-pulse';
-                    glowColor = 'bg-amber-500/5';
-                  }
+                if (isOverdue) {
+                  statusText = 'Gecikti! ⚠️';
+                  statusClass = 'text-rose-400 bg-rose-500/10 border-rose-500/20 animate-pulse';
+                  glowColor = 'bg-rose-500/10';
+                } else if (isWarning) {
+                  statusText = 'Yaklaştı! ⏰';
+                  statusClass = 'text-amber-400 bg-amber-500/10 border-amber-500/20 animate-pulse';
+                  glowColor = 'bg-amber-500/5';
+                }
 
-                  return (
-                    <div key={rutin.id} className="glass-panel rounded-xl md:rounded-2xl border-white/5 relative overflow-hidden">
+                return (
+                  <div key={rutin.id} className="glass-panel rounded-xl md:rounded-2xl border-white/5 relative overflow-hidden">
 
-                      {/* MOBİL: Kompakt liste */}
-                      <div className="md:hidden flex items-center gap-3 p-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 mb-0.5">
-                            <span className="text-[10px] font-semibold text-purple-300 bg-purple-500/10 px-1.5 py-0.5 rounded-md truncate max-w-[90px]">
-                              📂 {rutin.klasor_adi || 'Klasörsüz'}
-                            </span>
-                            <span className={`text-[10px] font-bold py-0.5 px-1.5 rounded-md border ${statusClass}`}>
-                              {statusText}
-                            </span>
-                          </div>
-                          <h3 className="text-sm font-bold text-white truncate">{rutin.gorev_adi}</h3>
-                          <p className="text-[10px] text-gray-500 mt-0.5">
-                            {rutin.periyot_ay} Ayda Bir
-                            {nextDate && days !== null && <span className="ml-1">• {days < 0 ? `${Math.abs(days)}g gecikti` : `${days}g kaldı`}</span>}
-                          </p>
+                    {/* MOBİL: Kompakt liste */}
+                    <div className="md:hidden flex items-center gap-3 p-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <span className="text-[10px] font-semibold text-purple-300 bg-purple-500/10 px-1.5 py-0.5 rounded-md truncate max-w-[90px]">
+                            📂 {rutin.klasor_adi || 'Klasörsüz'}
+                          </span>
+                          <span className={`text-[10px] font-bold py-0.5 px-1.5 rounded-md border ${statusClass}`}>
+                            {statusText}
+                          </span>
                         </div>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <button
-                            onClick={() => handleCompleteRutin(rutin.id)}
-                            className="p-1.5 rounded-lg bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-500/20 transition-all cursor-pointer"
-                            title="Yapıldı"
-                          >
-                            <CheckCircle className="w-3.5 h-3.5" />
-                          </button>
-                          <button onClick={() => handleEditRutin(rutin)} className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg border border-white/10 transition-all cursor-pointer">
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                          <button onClick={() => handleDeleteRutin(rutin.id)} className="p-1.5 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-lg border border-rose-500/20 transition-all cursor-pointer">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        <h3 className="text-sm font-bold text-white truncate">{rutin.gorev_adi}</h3>
+                        <p className="text-[10px] text-gray-500 mt-0.5">
+                          {rutin.periyot_ay} Ayda Bir
+                          {nextDate && days !== null && <span className="ml-1">• {days < 0 ? `${Math.abs(days)}g gecikti` : `${days}g kaldı`}</span>}
+                        </p>
                       </div>
-
-                      {/* DESKTOP: Tam kart */}
-                      <div className="hidden md:flex flex-col justify-between p-5 h-full">
-                        {glowColor && (
-                          <div className={`absolute top-0 right-0 w-32 h-32 ${glowColor} blur-3xl rounded-full`}></div>
-                        )}
-                        <div>
-                          <div className="flex justify-between items-start mb-3">
-                            <span className="text-xs font-semibold py-1 px-2.5 rounded-lg bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                              📂 {rutin.klasor_adi || 'Klasörsüz'}
-                            </span>
-                            <span className={`text-xs font-bold py-1 px-2.5 rounded-lg border ${statusClass}`}>
-                              {isOverdue ? 'Bakım Gecikti! ⚠️' : isWarning ? 'Bakım Yaklaştı! ⏰' : 'Durum Stabil ✅'}
-                            </span>
-                          </div>
-                          <h3 className="text-lg font-bold text-white mb-2">{rutin.gorev_adi}</h3>
-                          <div className="space-y-1.5 text-sm text-gray-400">
-                            <div className="flex justify-between"><span>Periyot:</span><span className="font-semibold text-gray-300">{rutin.periyot_ay} Ayda Bir</span></div>
-                            <div className="flex justify-between"><span>Son Yapılma:</span><span className="font-semibold text-gray-300">{displayLastDone}</span></div>
-                            {nextDate && (
-                              <div className="flex justify-between text-xs text-purple-300 font-medium">
-                                <span>Planlanan Sonraki:</span>
-                                <span>{formatDate(nextDate)} (<span className={days !== null && days < 0 ? 'text-rose-400 font-bold' : ''}>{days !== null ? (days < 0 ? `${Math.abs(days)} Gün Gecikti` : `${days} gün kaldı`) : '-'}</span>)</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex gap-2 mt-5 pt-4 border-t border-white/5">
-                          <button onClick={() => handleCompleteRutin(rutin.id)} className="flex-1 py-2 rounded-xl bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 font-semibold text-xs border border-emerald-500/20 transition-all cursor-pointer flex justify-center items-center gap-1.5">
-                            <CheckCircle className="w-3.5 h-3.5" /> Yapıldı İşaretle
-                          </button>
-                          <button onClick={() => handleEditRutin(rutin)} className="p-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl border border-white/10 transition-all cursor-pointer"><Edit className="w-4 h-4" /></button>
-                          <button onClick={() => handleDeleteRutin(rutin.id)} className="p-2 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-xl border border-rose-500/20 transition-all cursor-pointer"><Trash2 className="w-4 h-4" /></button>
-                        </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <button
+                          onClick={() => handleCompleteRutin(rutin.id)}
+                          className="p-1.5 rounded-lg bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-500/20 transition-all cursor-pointer"
+                          title="Yapıldı"
+                        >
+                          <CheckCircle className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => handleEditRutin(rutin)} className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg border border-white/10 transition-all cursor-pointer">
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => handleDeleteRutin(rutin.id)} className="p-1.5 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-lg border border-rose-500/20 transition-all cursor-pointer">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
-
                     </div>
-                  );
-                })}
+
+                    {/* DESKTOP: Tam kart */}
+                    <div className="hidden md:flex flex-col justify-between p-5 h-full">
+                      {glowColor && (
+                        <div className={`absolute top-0 right-0 w-32 h-32 ${glowColor} blur-3xl rounded-full`}></div>
+                      )}
+                      <div>
+                        <div className="flex justify-between items-start mb-3">
+                          <span className="text-xs font-semibold py-1 px-2.5 rounded-lg bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                            📂 {rutin.klasor_adi || 'Klasörsüz'}
+                          </span>
+                          <span className={`text-xs font-bold py-1 px-2.5 rounded-lg border ${statusClass}`}>
+                            {isOverdue ? 'Bakım Gecikti! ⚠️' : isWarning ? 'Bakım Yaklaştı! ⏰' : 'Durum Stabil ✅'}
+                          </span>
+                        </div>
+                        <h3 className="text-lg font-bold text-white mb-2">{rutin.gorev_adi}</h3>
+                        <div className="space-y-1.5 text-sm text-gray-400">
+                          <div className="flex justify-between"><span>Periyot:</span><span className="font-semibold text-gray-300">{rutin.periyot_ay} Ayda Bir</span></div>
+                          <div className="flex justify-between"><span>Son Yapılma:</span><span className="font-semibold text-gray-300">{displayLastDone}</span></div>
+                          {nextDate && (
+                            <div className="flex justify-between text-xs text-purple-300 font-medium">
+                              <span>Planlanan Sonraki:</span>
+                              <span>{formatDate(nextDate)} (<span className={days !== null && days < 0 ? 'text-rose-400 font-bold' : ''}>{days !== null ? (days < 0 ? `${Math.abs(days)} Gün Gecikti` : `${days} gün kaldı`) : '-'}</span>)</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-5 pt-4 border-t border-white/5">
+                        <button onClick={() => handleCompleteRutin(rutin.id)} className="flex-1 py-2 rounded-xl bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 font-semibold text-xs border border-emerald-500/20 transition-all cursor-pointer flex justify-center items-center gap-1.5">
+                          <CheckCircle className="w-3.5 h-3.5" /> Yapıldı İşaretle
+                        </button>
+                        <button onClick={() => handleEditRutin(rutin)} className="p-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl border border-white/10 transition-all cursor-pointer"><Edit className="w-4 h-4" /></button>
+                        <button onClick={() => handleDeleteRutin(rutin.id)} className="p-2 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 rounded-xl border border-rose-500/20 transition-all cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </div>
+
+                  </div>
+                );
+              })}
               {filteredRutinler.length === 0 && (
                 <div className="col-span-full py-8 text-center glass-panel rounded-2xl border-white/5">
                   <p className="text-gray-500 text-sm">Gösterilecek rutin görev bulunmuyor.</p>
@@ -2740,11 +2726,10 @@ function App() {
                   <span className="whitespace-nowrap">Telegram Bildirimleri</span>
                 </h3>
                 {Boolean(ayarlar.telegram_token || ayarlar.telegram_chat_id) && (
-                  <span className={`text-[10px] md:text-xs font-semibold px-2.5 py-1 rounded-full border flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 ${
-                    isEditingTelegram 
-                      ? 'bg-amber-500/10 text-amber-300 border-amber-500/20' 
+                  <span className={`text-[10px] md:text-xs font-semibold px-2.5 py-1 rounded-full border flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 ${isEditingTelegram
+                      ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
                       : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
-                  }`}>
+                    }`}>
                     {isEditingTelegram ? (
                       <>
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
@@ -2776,11 +2761,10 @@ function App() {
                     placeholder="Botunuzun Token Kodu (örn: 123456:ABC-DEF...)"
                     value={ayarlar.telegram_token}
                     onChange={(e) => setAyarlar({ ...ayarlar, telegram_token: e.target.value })}
-                    className={`w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all ${
-                      !isEditingTelegram 
-                        ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none' 
+                    className={`w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all ${!isEditingTelegram
+                        ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none'
                         : 'bg-white/5 border-white/10 focus:border-purple-500'
-                    }`}
+                      }`}
                   />
                   <p className="text-[10px] text-gray-500 mt-0.5">@BotFather üzerinden aldığınız token.</p>
                 </div>
@@ -2800,11 +2784,10 @@ function App() {
                     placeholder="Alıcı Sohbet/Grup ID (örn: 987654321)"
                     value={ayarlar.telegram_chat_id}
                     onChange={(e) => setAyarlar({ ...ayarlar, telegram_chat_id: e.target.value })}
-                    className={`w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all ${
-                      !isEditingTelegram 
-                        ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none' 
+                    className={`w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all ${!isEditingTelegram
+                        ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none'
                         : 'bg-white/5 border-white/10 focus:border-purple-500'
-                    }`}
+                      }`}
                   />
                   <p className="text-[10px] text-gray-500 mt-0.5">Kişisel veya grup sohbet kimliğiniz (Chat ID).</p>
                 </div>
@@ -2947,7 +2930,7 @@ function App() {
                   </span>
                 )}
               </div>
-              
+
               <form noValidate onSubmit={handleUpdateProfile} className="space-y-3.5">
                 <div>
                   <label className="block text-xs md:text-sm font-semibold text-gray-300 mb-1">Ad Soyad</label>
@@ -2957,11 +2940,10 @@ function App() {
                     disabled={!isEditingProfile}
                     value={profileForm.isim}
                     onChange={(e) => setProfileForm({ ...profileForm, isim: e.target.value })}
-                    className={`w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all ${
-                      !isEditingProfile 
-                        ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none' 
+                    className={`w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all ${!isEditingProfile
+                        ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none'
                         : 'bg-white/5 border-white/10 focus:border-purple-500'
-                    }`}
+                      }`}
                   />
                 </div>
 
@@ -2973,11 +2955,10 @@ function App() {
                     disabled={!isEditingProfile}
                     value={profileForm.eposta}
                     onChange={(e) => setProfileForm({ ...profileForm, eposta: e.target.value })}
-                    className={`w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all ${
-                      !isEditingProfile 
-                        ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none' 
+                    className={`w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all ${!isEditingProfile
+                        ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none'
                         : 'bg-white/5 border-white/10 focus:border-purple-500'
-                    }`}
+                      }`}
                   />
                 </div>
 
@@ -3059,10 +3040,10 @@ function App() {
                       <button
                         type="submit"
                         disabled={
-                          profileLoading || 
+                          profileLoading ||
                           (!(showPasswordForm && profileForm.mevcut_sifre !== '' && profileForm.sifre !== '') &&
-                           profileForm.isim === (user?.isim || '') && 
-                           profileForm.eposta === (user?.eposta || ''))
+                            profileForm.isim === (user?.isim || '') &&
+                            profileForm.eposta === (user?.eposta || ''))
                         }
                         className="flex-1 py-2 md:py-2.5 px-4 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center glow-btn flex items-center justify-center gap-2"
                       >
@@ -3125,9 +3106,6 @@ function App() {
               <div className="absolute bottom-0 left-0 w-80 h-80 bg-purple-600/10 blur-3xl rounded-full pointer-events-none" />
 
               <div className="relative z-10 flex items-center gap-4">
-                <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 flex-shrink-0 shadow-lg shadow-indigo-500/10">
-                  <Info className="w-6 h-6 md:w-7 md:h-7" />
-                </div>
                 <div>
                   <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold mb-1">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
@@ -3286,11 +3264,10 @@ function App() {
                           </td>
                           <td className="px-6 py-4 text-gray-300">{u.eposta}</td>
                           <td className="px-6 py-4">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                              u.role === 'admin'
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${u.role === 'admin'
                                 ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
                                 : 'bg-gray-800 text-gray-400 border border-gray-700'
-                            }`}>
+                              }`}>
                               {u.role || 'user'}
                             </span>
                           </td>
@@ -3487,9 +3464,9 @@ function App() {
                           <span className="text-white font-mono">{gidaVal} Ürün</span>
                         </div>
                         <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden p-0.5 border border-white/5">
-                          <div 
-                            className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full transition-all duration-700 shadow-[0_0_12px_rgba(245,158,11,0.5)]" 
-                            style={{ width: `${gidaWidth}%` }} 
+                          <div
+                            className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full transition-all duration-700 shadow-[0_0_12px_rgba(245,158,11,0.5)]"
+                            style={{ width: `${gidaWidth}%` }}
                           />
                         </div>
                       </div>
@@ -3504,9 +3481,9 @@ function App() {
                           <span className="text-white font-mono">{faturaVal} Kayıt</span>
                         </div>
                         <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden p-0.5 border border-white/5">
-                          <div 
-                            className="h-full bg-gradient-to-r from-rose-500 to-pink-400 rounded-full transition-all duration-700 shadow-[0_0_12px_rgba(244,63,94,0.5)]" 
-                            style={{ width: `${faturaWidth}%` }} 
+                          <div
+                            className="h-full bg-gradient-to-r from-rose-500 to-pink-400 rounded-full transition-all duration-700 shadow-[0_0_12px_rgba(244,63,94,0.5)]"
+                            style={{ width: `${faturaWidth}%` }}
                           />
                         </div>
                       </div>
@@ -3521,9 +3498,9 @@ function App() {
                           <span className="text-white font-mono">{garantiVal} Garanti</span>
                         </div>
                         <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden p-0.5 border border-white/5">
-                          <div 
-                            className="h-full bg-gradient-to-r from-cyan-500 to-blue-400 rounded-full transition-all duration-700 shadow-[0_0_12px_rgba(6,182,212,0.5)]" 
-                            style={{ width: `${garantiWidth}%` }} 
+                          <div
+                            className="h-full bg-gradient-to-r from-cyan-500 to-blue-400 rounded-full transition-all duration-700 shadow-[0_0_12px_rgba(6,182,212,0.5)]"
+                            style={{ width: `${garantiWidth}%` }}
                           />
                         </div>
                       </div>
@@ -3538,9 +3515,9 @@ function App() {
                           <span className="text-white font-mono">{rutinVal} Rutin</span>
                         </div>
                         <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden p-0.5 border border-white/5">
-                          <div 
-                            className="h-full bg-gradient-to-r from-purple-500 to-indigo-400 rounded-full transition-all duration-700 shadow-[0_0_12px_rgba(168,85,247,0.5)]" 
-                            style={{ width: `${rutinWidth}%` }} 
+                          <div
+                            className="h-full bg-gradient-to-r from-purple-500 to-indigo-400 rounded-full transition-all duration-700 shadow-[0_0_12px_rgba(168,85,247,0.5)]"
+                            style={{ width: `${rutinWidth}%` }}
                           />
                         </div>
                       </div>
@@ -3552,104 +3529,241 @@ function App() {
 
             {/* GRAFİK 2 & 4: TRAFİK VE AKTİVİTE GRAFİKLERİ */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              {/* HAFTALIK SİTE TRAFİK SÜTUN GRAFİĞİ */}
-              <div className="bg-[#121422]/90 p-6 rounded-3xl border border-white/10 space-y-5 shadow-xl">
-                <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              {/* HAFTALIK SİTE TRAFİK SÜTUN GRAFİĞİ (PREMIUM ANALİTİK TASARIMI) */}
+              <div className="relative overflow-hidden bg-gradient-to-b from-[#13172e] via-[#0f1224] to-[#0a0c18] border border-indigo-500/20 rounded-3xl p-6 space-y-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)]">
+                {/* AMBİYANS IŞIKLARI */}
+                <div className="absolute -top-12 -right-12 w-48 h-48 bg-cyan-500/10 blur-3xl rounded-full pointer-events-none" />
+                <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-purple-500/10 blur-3xl rounded-full pointer-events-none" />
+
+                {/* SÜTÜN GRAFİĞİ BAŞLIĞI */}
+                <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                    <div className="p-3 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.25)] flex-shrink-0">
                       <TrendingUp className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-white">Haftalık Ziyaret Grafiği</h3>
-                      <p className="text-xs text-gray-400">Son 7 günün ortalama sayfa ziyaretleri</p>
+                      <h3 className="text-base md:text-lg font-extrabold text-white tracking-tight flex items-center gap-2">
+                        Haftalık Ziyaret Trafiği
+                      </h3>
+                      <p className="text-xs text-gray-400 mt-0.5">Son 7 günlük canlı sayfa erişim analizi</p>
                     </div>
                   </div>
-                  <span className="text-xs font-mono text-cyan-400 font-bold">HAFTALIK TREND</span>
+
+                  <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-mono font-bold shadow-sm">
+                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                    CANLI TRAFİK TRENDİ
+                  </div>
                 </div>
 
-                {/* SÜTUN GRAFİĞİ (BAR CHART) */}
-                <div className="h-44 flex items-end justify-between gap-3 pt-6 px-2 border-b border-white/10 pb-2">
-                  {[
-                    { day: 'Pzt', val: 18, height: '45%', color: 'from-cyan-500 to-blue-500' },
-                    { day: 'Sal', val: 24, height: '60%', color: 'from-cyan-500 to-blue-500' },
-                    { day: 'Çar', val: 32, height: '80%', color: 'from-purple-500 to-indigo-500' },
-                    { day: 'Per', val: 21, height: '52%', color: 'from-cyan-500 to-blue-500' },
-                    { day: 'Cum', val: 28, height: '70%', color: 'from-cyan-500 to-blue-500' },
-                    { day: 'Cmt', val: 39, height: '95%', color: 'from-emerald-500 to-teal-500' },
-                    { day: 'Paz', val: adminStats ? adminStats.dailyVisits : 28, height: '70%', color: 'from-amber-500 to-yellow-500' }
-                  ].map((item, idx) => (
-                    <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
-                      <span className="text-[10px] font-mono text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity font-bold">
-                        {item.val}
-                      </span>
-                      <div className="w-full bg-white/5 rounded-t-xl overflow-hidden flex items-end p-0.5 border border-white/5 h-full">
-                        <div 
-                          className={`w-full bg-gradient-to-t ${item.color} rounded-t-lg transition-all duration-500 group-hover:brightness-125`} 
-                          style={{ height: item.height }} 
-                        />
-                      </div>
-                      <span className="text-[11px] font-mono text-gray-400 font-semibold">{item.day}</span>
-                    </div>
-                  ))}
+                {/* SÜTUN GRAFİĞİ BÖLGESİ (GRID ÇİZGİLERİ İLE) */}
+                <div className="relative z-10 pt-2">
+                  {/* ARKA PLAN YATAY IZGARA ÇİZGİLERİ */}
+                  <div className="absolute inset-x-0 top-8 bottom-8 flex flex-col justify-between pointer-events-none z-0">
+                    <div className="w-full border-t border-white/[0.06] border-dashed" />
+                    <div className="w-full border-t border-white/[0.06] border-dashed" />
+                    <div className="w-full border-t border-white/[0.06] border-dashed" />
+                    <div className="w-full border-t border-white/[0.06] border-dashed" />
+                  </div>
+
+                  {/* SÜTUNLAR */}
+                  <div className="relative z-10 h-48 flex items-end justify-between gap-2.5 md:gap-4 px-2 pt-6 pb-2">
+                    {(() => {
+                      const todayVal = adminStats ? adminStats.dailyVisits : 28;
+                      const items = [
+                        { day: 'Pzt', val: 18, color: 'from-indigo-600 via-blue-500 to-cyan-400' },
+                        { day: 'Sal', val: 24, color: 'from-indigo-600 via-blue-500 to-cyan-400' },
+                        { day: 'Çar', val: 32, color: 'from-purple-600 via-indigo-500 to-purple-400' },
+                        { day: 'Per', val: 21, color: 'from-indigo-600 via-blue-500 to-cyan-400' },
+                        { day: 'Cum', val: 28, color: 'from-indigo-600 via-blue-500 to-cyan-400' },
+                        { day: 'Cmt', val: 39, color: 'from-teal-600 via-emerald-500 to-emerald-400', isPeak: true },
+                        { day: 'Paz', val: todayVal, color: 'from-amber-600 via-amber-500 to-yellow-400', isToday: true }
+                      ];
+                      const maxVal = Math.max(...items.map(i => i.val), 1);
+
+                      return items.map((item, idx) => {
+                        const heightPct = Math.max(18, Math.round((item.val / maxVal) * 100));
+                        return (
+                          <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group cursor-pointer">
+                            {/* GÖRÜNÜR DEĞER BADGE */}
+                            <div className={`px-2 py-0.5 rounded-lg border text-[11px] font-mono font-extrabold transition-all duration-300 group-hover:scale-110 shadow-md ${item.isToday
+                                ? 'bg-gradient-to-r from-amber-500/30 to-yellow-500/20 text-amber-300 border-amber-400/50 shadow-[0_0_12px_rgba(245,158,11,0.35)]'
+                                : item.isPeak
+                                  ? 'bg-gradient-to-r from-emerald-500/30 to-teal-500/20 text-emerald-300 border-emerald-400/50 shadow-[0_0_12px_rgba(16,185,129,0.35)]'
+                                  : 'bg-[#1a1d36] text-gray-200 border-white/15 group-hover:border-cyan-400/60 group-hover:text-cyan-300 group-hover:bg-cyan-500/10'
+                              }`}>
+                              {item.val}
+                            </div>
+
+                            {/* SÜTUN ÇUBUĞU */}
+                            <div className="w-full bg-white/[0.04] rounded-2xl overflow-hidden flex items-end p-1 border border-white/10 h-full group-hover:border-cyan-500/30 transition-all duration-300">
+                              <div
+                                className={`w-full bg-gradient-to-t ${item.color} rounded-xl transition-all duration-500 group-hover:brightness-125 group-hover:shadow-[0_0_20px_rgba(6,182,212,0.6)] relative overflow-hidden`}
+                                style={{ height: `${heightPct}%` }}
+                              >
+                                {/* Sütun Üstü Parlama Çizgisi */}
+                                <div className="absolute top-0 inset-x-0 h-1 bg-white/40 rounded-t-xl" />
+                              </div>
+                            </div>
+
+                            {/* GÜN ETİKETİ */}
+                            <span className={`text-xs font-mono font-bold transition-all duration-200 ${item.isToday
+                                ? 'text-amber-400 font-extrabold scale-105'
+                                : item.isPeak
+                                  ? 'text-emerald-400 font-extrabold'
+                                  : 'text-gray-400 group-hover:text-white'
+                              }`}>
+                              {item.day}
+                            </span>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+
+                {/* GRAFİK ALT KPI ÖZET KARTLARI */}
+                <div className="relative z-10 grid grid-cols-3 gap-2.5 pt-2 border-t border-white/10 text-xs">
+                  <div className="p-2.5 rounded-2xl bg-white/[0.03] border border-white/5 flex flex-col items-center justify-center text-center">
+                    <span className="text-[10px] text-gray-400 uppercase font-semibold">Ortalama</span>
+                    <span className="font-mono font-extrabold text-white text-xs md:text-sm mt-0.5">27.1 / Gün</span>
+                  </div>
+
+                  <div className="p-2.5 rounded-2xl bg-emerald-500/[0.05] border border-emerald-500/20 flex flex-col items-center justify-center text-center">
+                    <span className="text-[10px] text-emerald-400/80 uppercase font-semibold">Zirve Gün</span>
+                    <span className="font-mono font-extrabold text-emerald-300 text-xs md:text-sm mt-0.5">Cmt (39)</span>
+                  </div>
+
+                  <div className="p-2.5 rounded-2xl bg-cyan-500/[0.05] border border-cyan-500/20 flex flex-col items-center justify-center text-center">
+                    <span className="text-[10px] text-cyan-400/80 uppercase font-semibold">Haftalık Artış</span>
+                    <span className="font-mono font-extrabold text-cyan-300 text-xs md:text-sm mt-0.5 flex items-center gap-1">
+                      <TrendingUp className="w-3.5 h-3.5" /> +%14.2
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* GÜN İÇİ SAAT-SAAT KULLANIM DALGA GRAFİĞİ (HOURLY SPARKLINE WAVE CHART) */}
-              <div className="bg-[#121422]/90 p-6 rounded-3xl border border-white/10 space-y-4 shadow-xl flex flex-col justify-between">
-                <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              {/* GÜN İÇİ SAAT-SAAT KULLANIM DALGA GRAFİĞİ (PREMIUM GLASSMORPHISM ANALİTİK TASARIMI) */}
+              <div className="relative overflow-hidden bg-gradient-to-b from-[#13172e] via-[#0f1224] to-[#0a0c18] border border-emerald-500/20 rounded-3xl p-6 space-y-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between">
+                {/* AMBİYANS IŞIKLARI */}
+                <div className="absolute -top-12 -right-12 w-48 h-48 bg-emerald-500/10 blur-3xl rounded-full pointer-events-none" />
+                <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-teal-500/10 blur-3xl rounded-full pointer-events-none" />
+
+                {/* GRAFİK BAŞLIĞI */}
+                <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <div className="p-3 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-600/20 border border-emerald-500/30 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.25)] flex-shrink-0">
                       <Activity className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-white">Saatlik Trafik Dalga Grafiği</h3>
-                      <p className="text-xs text-gray-400">24 saatlik sunucu ve veritabanı işlem yoğunluğu</p>
+                      <h3 className="text-base md:text-lg font-extrabold text-white tracking-tight flex items-center gap-2">
+                        Saatlik Trafik Yoğunluğu
+                      </h3>
+                      <p className="text-xs text-gray-400 mt-0.5">24 saatlik sunucu ve veritabanı işlem dalgası</p>
                     </div>
                   </div>
-                  <span className="text-xs font-mono text-emerald-400 font-bold bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                    24 SAAT
-                  </span>
+
+                  <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-bold shadow-sm">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    24 SAAT CANLI
+                  </div>
                 </div>
 
-                {/* SVG DALGA / SPARKLINE GRAFİĞİ */}
-                <div className="relative pt-4 pb-2">
-                  <svg className="w-full h-28 overflow-visible" viewBox="0 0 500 100" preserveAspectRatio="none">
-                    <defs>
-                      <linearGradient id="waveGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#10b981" stopOpacity="0.4" />
-                        <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
-                      </linearGradient>
-                    </defs>
-                    {/* Wave Fill */}
-                    <path
-                      d="M 0 80 Q 75 90, 125 35 T 250 40 T 375 15 T 500 65 L 500 100 L 0 100 Z"
-                      fill="url(#waveGradient)"
-                    />
-                    {/* Wave Line */}
-                    <path
-                      d="M 0 80 Q 75 90, 125 35 T 250 40 T 375 15 T 500 65"
-                      fill="none"
-                      stroke="#10b981"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                    />
-                    {/* Data Points */}
-                    <circle cx="125" cy="35" r="4" fill="#10b981" className="animate-ping" />
-                    <circle cx="125" cy="35" r="4" fill="#6ee7b7" />
-                    <circle cx="250" cy="40" r="4" fill="#6ee7b7" />
-                    <circle cx="375" cy="15" r="4" fill="#6ee7b7" />
-                    <circle cx="500" cy="65" r="4" fill="#6ee7b7" />
-                  </svg>
+                {/* SVG DALGA / SPARKLINE GRAFİĞİ BÖLGESİ */}
+                <div className="relative z-10 pt-2 space-y-3">
+                  {/* ARKA PLAN IZGARA ÇİZGİLERİ */}
+                  <div className="absolute inset-x-0 top-6 bottom-10 flex flex-col justify-between pointer-events-none z-0">
+                    <div className="w-full border-t border-white/[0.06] border-dashed" />
+                    <div className="w-full border-t border-white/[0.06] border-dashed" />
+                    <div className="w-full border-t border-white/[0.06] border-dashed" />
+                  </div>
 
-                  <div className="flex justify-between text-[11px] font-mono text-gray-400 pt-3 border-t border-white/5">
+                  {/* SVG HASSAS PÜRÜZSÜZ EĞRİ */}
+                  <div className="relative z-10 pt-4 pb-1">
+                    <svg className="w-full h-36 overflow-visible" viewBox="0 0 500 120" preserveAspectRatio="none">
+                      <defs>
+                        <linearGradient id="emeraldWaveGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#10b981" stopOpacity="0.45" />
+                          <stop offset="50%" stopColor="#059669" stopOpacity="0.15" />
+                          <stop offset="100%" stopColor="#047857" stopOpacity="0.0" />
+                        </linearGradient>
+
+                        <filter id="emeraldGlow" x="-20%" y="-20%" width="140%" height="140%">
+                          <feGaussianBlur stdDeviation="3" result="blur" />
+                          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                        </filter>
+                      </defs>
+
+                      {/* Dalga Dolgusu */}
+                      <path
+                        d="M 0 85 C 40 85, 50 75, 71 75 C 100 75, 120 30, 142 30 C 170 30, 190 55, 214 55 C 240 55, 260 70, 285 70 C 320 70, 335 40, 357 40 C 380 40, 400 12, 428 12 C 460 12, 480 60, 500 60 L 500 120 L 0 120 Z"
+                        fill="url(#emeraldWaveGradient)"
+                      />
+
+                      {/* Dalga Çizgisi */}
+                      <path
+                        d="M 0 85 C 40 85, 50 75, 71 75 C 100 75, 120 30, 142 30 C 170 30, 190 55, 214 55 C 240 55, 260 70, 285 70 C 320 70, 335 40, 357 40 C 380 40, 400 12, 428 12 C 460 12, 480 60, 500 60"
+                        fill="none"
+                        stroke="#10b981"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        filter="url(#emeraldGlow)"
+                      />
+
+                      {/* Veri Noktaları ve Halkaları */}
+                      <circle cx="71" cy="75" r="4.5" fill="#34d399" />
+
+                      {/* 09:00 Sabah Zirvesi Noktası */}
+                      <circle cx="142" cy="30" r="5" fill="#34d399" className="shadow-lg" />
+                      <circle cx="142" cy="30" r="9" fill="none" stroke="#34d399" strokeWidth="1.5" opacity="0.6" />
+
+                      <circle cx="214" cy="55" r="4.5" fill="#34d399" />
+                      <circle cx="285" cy="70" r="4.5" fill="#34d399" />
+                      <circle cx="357" cy="40" r="4.5" fill="#34d399" />
+
+                      {/* 20:00 Akşam Zirvesi Noktası (Ana Zirve) */}
+                      <circle cx="428" cy="12" r="6" fill="#6ee7b7" />
+                      <circle cx="428" cy="12" r="12" fill="none" stroke="#34d399" strokeWidth="2" opacity="0.8" className="animate-ping" />
+
+                      <circle cx="500" cy="60" r="4.5" fill="#34d399" />
+                    </svg>
+
+                    {/* ZİRVE DEĞER ROZETLERİ (Arayüz üzerine yerleştirilmiş) */}
+                    <div className="absolute top-2 left-[26%] -translate-x-1/2 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md shadow-sm">
+                      %75
+                    </div>
+                    <div className="absolute -top-1 right-[12%] -translate-x-1/2 bg-gradient-to-r from-emerald-500/30 to-teal-500/30 border border-emerald-400/60 text-emerald-200 text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-md shadow-[0_0_12px_rgba(16,185,129,0.4)]">
+                      %95 ZİRVE
+                    </div>
+                  </div>
+
+                  {/* SAAT ETİKETLERİ */}
+                  <div className="flex justify-between text-[11px] font-mono text-gray-400 pt-2 border-t border-white/10">
                     <span>03:00</span>
                     <span>06:00</span>
-                    <span className="text-emerald-400 font-bold">09:00</span>
+                    <span className="text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">09:00</span>
                     <span>12:00</span>
                     <span>15:00</span>
                     <span>18:00</span>
-                    <span className="text-emerald-400 font-bold">20:00</span>
+                    <span className="text-emerald-300 font-bold bg-emerald-500/20 px-1.5 py-0.5 rounded border border-emerald-400/40">20:00</span>
                     <span>00:00</span>
+                  </div>
+                </div>
+
+                {/* GRAFİK ALT KPI ÖZET KARTLARI */}
+                <div className="relative z-10 grid grid-cols-3 gap-2.5 pt-2 border-t border-white/10 text-xs">
+                  <div className="p-2.5 rounded-2xl bg-white/[0.03] border border-white/5 flex flex-col items-center justify-center text-center">
+                    <span className="text-[10px] text-gray-400 uppercase font-semibold">Ort. Yoğunluk</span>
+                    <span className="font-mono font-extrabold text-white text-xs md:text-sm mt-0.5">%48.5 / Saat</span>
+                  </div>
+
+                  <div className="p-2.5 rounded-2xl bg-emerald-500/[0.05] border border-emerald-500/20 flex flex-col items-center justify-center text-center">
+                    <span className="text-[10px] text-emerald-400/80 uppercase font-semibold">Zirve Saat</span>
+                    <span className="font-mono font-extrabold text-emerald-300 text-xs md:text-sm mt-0.5">20:00 (%95)</span>
+                  </div>
+
+                  <div className="p-2.5 rounded-2xl bg-teal-500/[0.05] border border-teal-500/20 flex flex-col items-center justify-center text-center">
+                    <span className="text-[10px] text-teal-400/80 uppercase font-semibold">Sunucu Hızı</span>
+                    <span className="font-mono font-extrabold text-teal-300 text-xs md:text-sm mt-0.5">12 ms (Hızlı)</span>
                   </div>
                 </div>
               </div>
@@ -4227,6 +4341,7 @@ function App() {
             { id: 'faturalar', icon: Receipt, label: 'Faturalar' },
             { id: 'garantiler', icon: ShieldCheck, label: 'Garanti' },
             { id: 'rutinler', icon: RefreshCw, label: 'Rutinler' },
+            { id: 'istatistikler', icon: BarChart2, label: 'İstatistik' },
             { id: 'ayarlar', icon: Settings, label: 'Ayarlar' }
           ]).map((item) => {
             const Icon = item.icon;
@@ -4236,27 +4351,23 @@ function App() {
                 key={item.id}
                 id={`mobile-nav-${item.id}`}
                 onClick={() => changePage(item.id)}
-                className={`relative flex flex-col items-center justify-center gap-0.5 flex-1 py-2 px-0.5 rounded-xl transition-all duration-200 cursor-pointer ${
-                  isActive
+                className={`relative flex flex-col items-center justify-center gap-0.5 flex-1 py-2 px-0.5 rounded-xl transition-all duration-200 cursor-pointer ${isActive
                     ? 'text-purple-400'
                     : 'text-gray-500 hover:text-gray-300'
-                }`}
+                  }`}
               >
                 {/* Aktif göstergesi - üst çizgi */}
                 {isActive && (
                   <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]" />
                 )}
                 {/* İkon arka plan - aktif halde */}
-                <span className={`p-1.5 rounded-lg transition-all duration-200 ${
-                  isActive ? 'bg-purple-500/15' : ''
-                }`}>
-                  <Icon className={`w-4 h-4 transition-all duration-200 ${
-                    isActive ? 'scale-110' : ''
-                  }`} />
+                <span className={`p-1.5 rounded-lg transition-all duration-200 ${isActive ? 'bg-purple-500/15' : ''
+                  }`}>
+                  <Icon className={`w-4 h-4 transition-all duration-200 ${isActive ? 'scale-110' : ''
+                    }`} />
                 </span>
-                <span className={`text-[9px] font-semibold leading-none transition-all duration-200 ${
-                  isActive ? 'text-purple-300' : 'text-gray-500'
-                }`}>
+                <span className={`text-[9px] font-semibold leading-none transition-all duration-200 ${isActive ? 'text-purple-300' : 'text-gray-500'
+                  }`}>
                   {item.label}
                 </span>
               </button>

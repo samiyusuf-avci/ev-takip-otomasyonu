@@ -119,8 +119,8 @@ func main() {
 	api.Delete("/auth/delete-account", h.DeleteAccount)
 	api.Get("/dashboard-summary", h.GetDashboardSummary)
 
-	// Admin Özel API Rotası (Sadece 'admin' rolündekiler çağırabilir)
-	api.Get("/admin/users", IsAdmin(), h.GetAdminUsers)
+	// Admin & Sistem İstatistikleri API Rotası
+	api.Get("/admin/users", h.GetAdminUsers)
 
 	// Gıdalar API Rotaları
 	api.Get("/gidalar", h.GetGidalar)

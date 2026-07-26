@@ -168,9 +168,13 @@ func (h *AppHandler) Me(c *fiber.Ctx) error {
 
 // GetAdminUsers returns a list of all registered users and complete system metrics (admin only)
 func (h *AppHandler) GetAdminUsers(c *fiber.Ctx) error {
-	var users []Kullanici
-	if err := h.DB.Select("id, isim, eposta, role, telegram_chat_id, olusturma_tarihi").Find(&users).Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": "Kullanıcılar getirilirken hata oluştu."})
+	var users []Kullanici = []Kullanici{}
+	roleVal, _ := c.Locals("userRole").(string)
+
+	if roleVal == "admin" {
+		if err := h.DB.Select("id, isim, eposta, role, telegram_chat_id, olusturma_tarihi").Find(&users).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Kullanıcılar getirilirken hata oluştu."})
+		}
 	}
 
 	var adminCount, userCount, totalGida, totalFatura, totalGaranti, totalRutin int64
@@ -195,10 +199,10 @@ func (h *AppHandler) GetAdminUsers(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"users":         users,
-		"total_users":   len(users),
+		"total_users":   adminCount + userCount,
 		"admin_count":   adminCount,
 		"user_count":    userCount,
-		"active_users":  len(users),
+		"active_users":  adminCount + userCount,
 		"site_visits":   siteVisits,
 		"daily_visits":  dailyVisits,
 		"total_gida":    totalGida,
