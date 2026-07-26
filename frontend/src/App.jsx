@@ -41,7 +41,10 @@ import {
   Clock,
   ChevronDown,
   MoreVertical,
-  ArrowLeft
+  ArrowLeft,
+  MessageSquare,
+  Inbox,
+  Check
 } from 'lucide-react';
 
 // -------------------------------------------------------------
@@ -130,6 +133,7 @@ function App() {
   const [profileLoading, setProfileLoading] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showTelegramGuide, setShowTelegramGuide] = useState(false);
+  const [showSikayetGuide, setShowSikayetGuide] = useState(false);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [deleteAccountLoading, setDeleteAccountLoading] = useState(false);
   const [deleteAccountPassword, setDeleteAccountPassword] = useState('');
@@ -172,7 +176,76 @@ function App() {
     }
   }, []);
 
+  // Şikayet & Geri Bildirim Durumları
+  const [sikayetForm, setSikayetForm] = useState({ baslik: '', mesaj: '' });
+  const [sikayetLoading, setSikayetLoading] = useState(false);
+  const [adminSikayetler, setAdminSikayetler] = useState([]);
+  const [adminSikayetStats, setAdminSikayetStats] = useState({ toplam: 0, bekliyor: 0, incelendi: 0, cozuldu: 0 });
+  const [adminSikayetlerLoading, setAdminSikayetlerLoading] = useState(false);
+  const [adminSikayetFilter, setAdminSikayetFilter] = useState('tum');
+  const [openSikayetDropdownId, setOpenSikayetDropdownId] = useState(null);
 
+  const fetchAdminSikayetler = useCallback(async () => {
+    setAdminSikayetlerLoading(true);
+    try {
+      const res = await API.get('/admin/sikayetler');
+      setAdminSikayetler(res.data?.sikayetler || []);
+      setAdminSikayetStats({
+        toplam: res.data?.toplam || 0,
+        bekliyor: res.data?.bekliyor_sayisi || 0,
+        incelendi: res.data?.incelendi_sayisi || 0,
+        cozuldu: res.data?.cozuldu_sayisi || 0,
+      });
+    } catch (err) {
+      console.error('Şikayetler çekilemedi:', err);
+    } finally {
+      setAdminSikayetlerLoading(false);
+    }
+  }, []);
+
+  const handleSendSikayet = async (e) => {
+    if (e) e.preventDefault();
+    if (!sikayetForm.baslik.trim() || !sikayetForm.mesaj.trim()) {
+      showToast('Lütfen şikayet başlığı ve mesajını doldurun.', 'error');
+      return;
+    }
+    setSikayetLoading(true);
+    try {
+      const res = await API.post('/sikayetler', sikayetForm);
+      setSikayetForm({ baslik: '', mesaj: '' });
+      showToast(res.data?.message || 'Şikayetiniz yöneticilere iletildi.');
+    } catch (err) {
+      showToast(err.response?.data?.error || 'Şikayet gönderilemedi.', 'error');
+    } finally {
+      setSikayetLoading(false);
+    }
+  };
+
+  const handleUpdateSikayetDurum = async (id, newStatus) => {
+    try {
+      await API.put(`/admin/sikayetler/${id}/durum`, { durum: newStatus });
+      showToast('Şikayet durumu güncellendi.');
+      fetchAdminSikayetler();
+    } catch (err) {
+      showToast(err.response?.data?.error || 'Durum güncellenirken hata oluştu.', 'error');
+    }
+  };
+
+  const handleDeleteSikayet = (id) => {
+    askConfirm(
+      'Şikayet Kaydını Sil 🗑️',
+      'Bu şikayet kaydını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.',
+      async () => {
+        try {
+          await API.delete(`/admin/sikayetler/${id}`);
+          showToast('Şikayet başarıyla silindi.');
+          fetchAdminSikayetler();
+        } catch (err) {
+          showToast(err.response?.data?.error || 'Silinirken hata oluştu.', 'error');
+        }
+      }
+    );
+  };
 
   const handleDeleteAccount = async (e) => {
     if (e) e.preventDefault();
@@ -643,8 +716,8 @@ function App() {
 
     const isAdmin = user.role === 'admin';
     const validPages = isAdmin
-      ? ['admin', 'istatistikler', 'ayarlar']
-      : ['dashboard', 'gidalar', 'faturalar', 'garantiler', 'rutinler', 'istatistikler', 'ayarlar'];
+      ? ['admin', 'istatistikler', 'sikayetler', 'ayarlar']
+      : ['dashboard', 'gidalar', 'faturalar', 'garantiler', 'rutinler', 'ayarlar'];
 
     const currentHash = window.location.hash.replace('#', '').split('-')[0];
 
@@ -659,7 +732,7 @@ function App() {
           window.history.replaceState({ page: 'admin' }, '', '#admin');
         }
         return 'admin';
-      } else if (!isAdmin && activePage === 'admin') {
+      } else if (!isAdmin && !validPages.includes(activePage)) {
         if (window.location.hash !== '#dashboard') {
           window.history.replaceState({ page: 'dashboard' }, '', '#dashboard');
         }
@@ -687,12 +760,15 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [user?.id, user?.role, closeAllModals]);
 
-  // Admin/Sistem verisini Admin veya İstatistikler sekmesindeyken 1 kez çek
+  // Admin/Sistem verisini Admin, İstatistikler veya Şikayetler sekmesindeyken 1 kez çek
   useEffect(() => {
-    if ((currentPage === 'admin' || currentPage === 'istatistikler') && user) {
+    if ((currentPage === 'admin' || currentPage === 'istatistikler' || currentPage === 'sikayetler') && user) {
       fetchAdminUsers();
+      if (user.role === 'admin') {
+        fetchAdminSikayetler();
+      }
     }
-  }, [currentPage, user, fetchAdminUsers]);
+  }, [currentPage, user, fetchAdminUsers, fetchAdminSikayetler]);
 
 
 
@@ -718,7 +794,7 @@ function App() {
     setAdminUsersLoading(true);
     const minWait = new Promise(resolve => setTimeout(resolve, 500));
     try {
-      await Promise.all([fetchAdminUsers(), minWait]);
+      await Promise.all([fetchAdminUsers(), fetchAdminSikayetler(), minWait]);
       showToast('Sistem verileri ve grafikler güncellendi', 'success');
     } catch (err) {
       showToast('Veriler güncellenirken bir hata oluştu', 'error');
@@ -1366,6 +1442,22 @@ function App() {
     }
   };
 
+  const handleSendAdminReport = async () => {
+    setLoading(true);
+    try {
+      const res = await API.post('/admin/send-report');
+      if (res.data.success) {
+        showToast('Günlük Admin Özeti (Kullanıcı, Ziyaretçi, Şikayet) Telegram üzerinden gönderildi! 📊');
+      } else {
+        showToast(res.data.error || 'Admin raporu gönderilemedi.', 'error');
+      }
+    } catch (err) {
+      showToast(`Admin raporu gönderilirken hata oluştu: ${err.response?.data?.error || err.message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
 
   if (!user) {
@@ -1553,9 +1645,10 @@ function App() {
             <p className="text-[10px] text-purple-400/80 font-medium truncate whitespace-nowrap">Ev Takip Otomasyonu</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0 relative z-50">
           <button
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               setShowProfileMenu(false);
               setShowNotificationMenu(prev => !prev);
             }}
@@ -1565,7 +1658,8 @@ function App() {
             <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
           <button
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               setShowNotificationMenu(false);
               setShowProfileMenu(prev => !prev);
             }}
@@ -1605,6 +1699,19 @@ function App() {
               >
                 {loading ? 'Gönderiliyor...' : 'Raporu Şimdi Gönder'}
               </button>
+
+              {user?.role === 'admin' && (
+                <button
+                  onClick={async () => {
+                    setShowNotificationMenu(false);
+                    await handleSendAdminReport();
+                  }}
+                  disabled={loading}
+                  className="w-full py-2 px-3 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1 shadow-sm"
+                >
+                  📊 Admin Özeti Gönder
+                </button>
+              )}
             </div>
           </>
         )}
@@ -1630,16 +1737,6 @@ function App() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                {user?.role === 'admin' && (
-                  <button
-                    onClick={() => { changePage('admin'); setShowProfileMenu(false); }}
-                    className="w-full flex items-center gap-2 py-2 px-3 text-xs text-purple-300 hover:text-white hover:bg-purple-500/10 rounded-lg transition-all text-left border border-purple-500/20"
-                  >
-                    <User className="w-3.5 h-3.5 text-purple-400" />
-                    Admin Paneli
-                  </button>
-                )}
-
                 <button
                   onClick={() => { changePage('ayarlar'); setShowProfileMenu(false); }}
                   className="w-full flex items-center gap-2 py-2 px-3 text-xs text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left"
@@ -1683,6 +1780,7 @@ function App() {
             {(user?.role === 'admin' ? [
               { id: 'admin', name: 'Admin Paneli', icon: User },
               { id: 'istatistikler', name: 'Sistem İstatistikleri', icon: BarChart2 },
+              { id: 'sikayetler', name: 'Şikayetler', icon: MessageSquare },
               { id: 'ayarlar', name: 'Ayarlar', icon: Settings }
             ] : [
               { id: 'dashboard', name: 'Ana Sayfa', icon: LayoutDashboard },
@@ -1690,7 +1788,6 @@ function App() {
               { id: 'faturalar', name: 'Fatura Takibi', icon: Receipt },
               { id: 'garantiler', name: 'Garanti Takibi', icon: ShieldCheck },
               { id: 'rutinler', name: 'Rutinler', icon: RefreshCw },
-              { id: 'istatistikler', name: 'İstatistikler', icon: BarChart2 },
               { id: 'ayarlar', name: 'Ayarlar', icon: Settings }
             ]).map((item) => {
               const Icon = item.icon;
@@ -2710,371 +2807,860 @@ function App() {
         )}
 
         {/* -------------------------------------------------------------
+            PAGE: ŞİKAYETLER & GERİ BİLDİRİMLER (ADMIN DEDICATED TAB)
+           ------------------------------------------------------------- */}
+        {currentPage === 'sikayetler' && user?.role === 'admin' && (
+          <div className="space-y-6 w-full animate-fade-in">
+            {/* HEADER */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-semibold mb-2">
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  Kullanıcı Destek & Geri Bildirim Merkezi
+                </div>
+                <h2 className="text-2xl font-extrabold text-white tracking-tight">
+                  Gelen Şikayetler & Geri Bildirimler
+                </h2>
+                <p className="text-gray-400 text-xs md:text-sm mt-0.5">
+                  Kullanıcılardan gelen destek, istek ve bildirim mesajlarını inceleyin ve durumlarını yönetin.
+                </p>
+              </div>
+
+              <button
+                onClick={fetchAdminSikayetler}
+                disabled={adminSikayetlerLoading}
+                className="px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 active:scale-95 text-purple-300 border border-purple-500/30 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${adminSikayetlerLoading ? 'animate-spin' : ''}`} />
+                {adminSikayetlerLoading ? 'Yenileniyor...' : 'Yenile'}
+              </button>
+            </div>
+
+            {/* YEKPARE BİLEŞİK İSTATİSTİK VE FİLTRE BAR SİSTEMİ (KART YERİNE SIFIR-KART TASARIM) */}
+            <div className="bg-[#121421]/80 border border-white/10 rounded-2xl p-2.5 shadow-xl backdrop-blur-xl space-y-2.5">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {/* Tümü */}
+                <button
+                  onClick={() => setAdminSikayetFilter('tum')}
+                  className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 text-left cursor-pointer group ${
+                    adminSikayetFilter === 'tum'
+                      ? 'bg-purple-600/20 border-purple-500/50 text-white shadow-lg shadow-purple-500/10 ring-1 ring-purple-500/40'
+                      : 'bg-white/[0.02] border-white/5 text-gray-400 hover:bg-white/[0.05] hover:border-white/10 hover:text-gray-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`p-2 rounded-lg border transition-colors ${
+                      adminSikayetFilter === 'tum' ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-white/5 text-gray-400 border-white/10 group-hover:text-purple-400'
+                    }`}>
+                      <MessageSquare className="w-4 h-4" />
+                    </div>
+                    <div className="truncate">
+                      <p className="text-[11px] font-bold uppercase tracking-wider opacity-80">Toplam Bildirim</p>
+                      <p className="text-[11px] text-gray-400 group-hover:text-gray-300">Tüm Kayıtlar</p>
+                    </div>
+                  </div>
+                  <span className={`text-lg font-extrabold px-2.5 py-0.5 rounded-lg ${
+                    adminSikayetFilter === 'tum' ? 'bg-purple-500/30 text-purple-200' : 'bg-white/5 text-gray-300'
+                  }`}>
+                    {adminSikayetStats.toplam}
+                  </span>
+                </button>
+
+                {/* Bekleyenler */}
+                <button
+                  onClick={() => setAdminSikayetFilter('bekliyor')}
+                  className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 text-left cursor-pointer group ${
+                    adminSikayetFilter === 'bekliyor'
+                      ? 'bg-amber-500/20 border-amber-500/50 text-white shadow-lg shadow-amber-500/10 ring-1 ring-amber-500/40'
+                      : 'bg-white/[0.02] border-white/5 text-gray-400 hover:bg-white/[0.05] hover:border-white/10 hover:text-gray-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`p-2 rounded-lg border transition-colors ${
+                      adminSikayetFilter === 'bekliyor' ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-white/5 text-gray-400 border-white/10 group-hover:text-amber-400'
+                    }`}>
+                      <Inbox className="w-4 h-4" />
+                    </div>
+                    <div className="truncate">
+                      <p className="text-[11px] font-bold uppercase tracking-wider opacity-80">Bekleyenler</p>
+                      <p className="text-[11px] text-amber-400/80">İncelenmesi Gereken</p>
+                    </div>
+                  </div>
+                  <span className={`text-lg font-extrabold px-2.5 py-0.5 rounded-lg ${
+                    adminSikayetFilter === 'bekliyor' ? 'bg-amber-500/30 text-amber-200' : 'bg-white/5 text-amber-400'
+                  }`}>
+                    {adminSikayetStats.bekliyor}
+                  </span>
+                </button>
+
+                {/* İncelenenler */}
+                <button
+                  onClick={() => setAdminSikayetFilter('incelendi')}
+                  className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 text-left cursor-pointer group ${
+                    adminSikayetFilter === 'incelendi'
+                      ? 'bg-sky-500/20 border-sky-500/50 text-white shadow-lg shadow-sky-500/10 ring-1 ring-sky-500/40'
+                      : 'bg-white/[0.02] border-white/5 text-gray-400 hover:bg-white/[0.05] hover:border-white/10 hover:text-gray-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`p-2 rounded-lg border transition-colors ${
+                      adminSikayetFilter === 'incelendi' ? 'bg-sky-500/20 text-sky-300 border-sky-500/30' : 'bg-white/5 text-gray-400 border-white/10 group-hover:text-sky-400'
+                    }`}>
+                      <Clock className="w-4 h-4" />
+                    </div>
+                    <div className="truncate">
+                      <p className="text-[11px] font-bold uppercase tracking-wider opacity-80">İncelenenler</p>
+                      <p className="text-[11px] text-sky-400/80">İşlemdeki Bildirimler</p>
+                    </div>
+                  </div>
+                  <span className={`text-lg font-extrabold px-2.5 py-0.5 rounded-lg ${
+                    adminSikayetFilter === 'incelendi' ? 'bg-sky-500/30 text-sky-200' : 'bg-white/5 text-sky-400'
+                  }`}>
+                    {adminSikayetStats.incelendi}
+                  </span>
+                </button>
+
+                {/* Çözülenler */}
+                <button
+                  onClick={() => setAdminSikayetFilter('cozuldu')}
+                  className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 text-left cursor-pointer group ${
+                    adminSikayetFilter === 'cozuldu'
+                      ? 'bg-emerald-500/20 border-emerald-500/50 text-white shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-500/40'
+                      : 'bg-white/[0.02] border-white/5 text-gray-400 hover:bg-white/[0.05] hover:border-white/10 hover:text-gray-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`p-2 rounded-lg border transition-colors ${
+                      adminSikayetFilter === 'cozuldu' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-white/5 text-gray-400 border-white/10 group-hover:text-emerald-400'
+                    }`}>
+                      <CheckCircle className="w-4 h-4" />
+                    </div>
+                    <div className="truncate">
+                      <p className="text-[11px] font-bold uppercase tracking-wider opacity-80">Çözülenler</p>
+                      <p className="text-[11px] text-emerald-400/80">Tamamlananlar</p>
+                    </div>
+                  </div>
+                  <span className={`text-lg font-extrabold px-2.5 py-0.5 rounded-lg ${
+                    adminSikayetFilter === 'cozuldu' ? 'bg-emerald-500/30 text-emerald-200' : 'bg-white/5 text-emerald-400'
+                  }`}>
+                    {adminSikayetStats.cozuldu}
+                  </span>
+                </button>
+              </div>
+
+              {/* VISUAL STATUS DISTRIBUTION PROGRESS BAR */}
+              {adminSikayetStats.toplam > 0 && (
+                <div className="px-1 space-y-1">
+                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden flex gap-0.5">
+                    {adminSikayetStats.bekliyor > 0 && (
+                      <div
+                        style={{ width: `${(adminSikayetStats.bekliyor / adminSikayetStats.toplam) * 100}%` }}
+                        className="h-full bg-amber-400 transition-all duration-500"
+                        title={`Bekleyen: ${adminSikayetStats.bekliyor}`}
+                      />
+                    )}
+                    {adminSikayetStats.incelendi > 0 && (
+                      <div
+                        style={{ width: `${(adminSikayetStats.incelendi / adminSikayetStats.toplam) * 100}%` }}
+                        className="h-full bg-sky-400 transition-all duration-500"
+                        title={`İncelenen: ${adminSikayetStats.incelendi}`}
+                      />
+                    )}
+                    {adminSikayetStats.cozuldu > 0 && (
+                      <div
+                        style={{ width: `${(adminSikayetStats.cozuldu / adminSikayetStats.toplam) * 100}%` }}
+                        className="h-full bg-emerald-400 transition-all duration-500"
+                        title={`Çözülen: ${adminSikayetStats.cozuldu}`}
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* TABLO CONTAINER */}
+            <div className="glass-panel rounded-3xl border border-white/10 overflow-hidden shadow-2xl space-y-4">
+              <div className="p-5 md:p-6 border-b border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-base md:text-lg font-bold text-white flex items-center gap-2">
+                    <span>Şikayet Listesi ve Detaylar</span>
+                    <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-white/10 text-gray-300 border border-white/10">
+                      {adminSikayetFilter === 'tum' && 'Tüm Bildirimler'}
+                      {adminSikayetFilter === 'bekliyor' && 'Bekleyen Bildirimler'}
+                      {adminSikayetFilter === 'incelendi' && 'İşlemdeki Bildirimler'}
+                      {adminSikayetFilter === 'cozuldu' && 'Çözülen Bildirimler'}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-gray-400 mt-0.5">Tüm bildirimleri durumlarına göre yukarıdaki sekmelerden filtreleyerek inceleyebilirsiniz.</p>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-gray-300">
+                  <thead className="bg-white/5 text-gray-400 text-xs uppercase tracking-wider border-b border-white/5">
+                    <tr>
+                      <th className="px-6 py-4 font-semibold">ID</th>
+                      <th className="px-6 py-4 font-semibold">Gönderen Kullanıcı</th>
+                      <th className="px-6 py-4 font-semibold">Başlık & Mesaj Detayı</th>
+                      <th className="px-6 py-4 font-semibold">Durum</th>
+                      <th className="px-6 py-4 font-semibold">Tarih</th>
+                      <th className="px-6 py-4 font-semibold text-right">Durum Değiştir / İşlem</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {adminSikayetlerLoading ? (
+                      <tr>
+                        <td colSpan="6" className="px-6 py-10 text-center text-gray-400 font-medium">Şikayetler yükleniyor...</td>
+                      </tr>
+                    ) : (() => {
+                      const filteredList = adminSikayetler.filter((s) => {
+                        if (adminSikayetFilter === 'tum') return true;
+                        return s.durum === adminSikayetFilter;
+                      });
+
+                      if (filteredList.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan="6" className="px-6 py-10 text-center text-gray-500 font-medium">
+                              Henüz bildirilen şikayet veya geri bildirim bulunmuyor.
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return filteredList.map((s) => {
+                        const statusBadge =
+                          s.durum === 'cozuldu'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            : s.durum === 'incelendi'
+                            ? 'bg-sky-500/10 text-sky-400 border-sky-500/20'
+                            : 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+
+                        const statusText =
+                          s.durum === 'cozuldu'
+                            ? 'Çözüldü'
+                            : s.durum === 'incelendi'
+                            ? 'İncelendi'
+                            : 'Bekliyor';
+                        return (
+                          <tr key={`sikayet-tab-${s.id}`} className="hover:bg-white/[0.02] transition-colors">
+                            <td className="px-6 py-4 font-mono text-xs text-gray-400">#{s.id}</td>
+                            <td className="px-6 py-4">
+                              <div className="font-semibold text-white">{s.kullanici_isim || 'Kullanıcı'}</div>
+                              <div className="text-xs text-gray-400">{s.kullanici_eposta}</div>
+                            </td>
+                            <td className="px-6 py-4 max-w-md">
+                              <div className="font-bold text-white mb-1">{s.baslik}</div>
+                              <div className="text-xs text-gray-300 leading-relaxed whitespace-pre-wrap">{s.mesaj}</div>
+                            </td>
+                            <td className="px-6 py-4">
+                               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${statusBadge}`}>
+                                 {statusText}
+                               </span>
+                             </td>
+                             <td className="px-6 py-4 text-xs text-gray-400 whitespace-nowrap">
+                               {s.olusturma_tarihi ? formatDate(s.olusturma_tarihi) : '-'}
+                             </td>
+                             <td className="px-6 py-4 text-right whitespace-nowrap">
+                               <div className="flex items-center justify-end gap-2">
+                                 <div className="relative inline-block text-left">
+                                   <button
+                                     type="button"
+                                     onClick={() => setOpenSikayetDropdownId(openSikayetDropdownId === s.id ? null : s.id)}
+                                     className={`px-3 py-1.5 rounded-xl text-xs font-bold border inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-sm ${
+                                       s.durum === 'bekliyor'
+                                         ? 'bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25 ring-1 ring-amber-500/20'
+                                         : s.durum === 'incelendi'
+                                         ? 'bg-sky-500/15 text-sky-300 border-sky-500/30 hover:bg-sky-500/25 ring-1 ring-sky-500/20'
+                                         : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25 ring-1 ring-emerald-500/20'
+                                     }`}
+                                   >
+                                     <span>
+                                       {s.durum === 'bekliyor' && 'Bekliyor'}
+                                       {s.durum === 'incelendi' && 'İncelendi'}
+                                       {s.durum === 'cozuldu' && 'Çözüldü'}
+                                     </span>
+                                     <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${openSikayetDropdownId === s.id ? 'rotate-180' : ''}`} />
+                                   </button>
+
+                                   {openSikayetDropdownId === s.id && (
+                                     <>
+                                       <div
+                                         className="fixed inset-0 z-40 bg-transparent"
+                                         onClick={() => setOpenSikayetDropdownId(null)}
+                                       />
+                                       <div className="absolute right-0 mt-1 z-50 w-36 bg-[#161828] border border-white/15 rounded-xl shadow-2xl p-1 animate-scale-in space-y-0.5">
+                                         <button
+                                           type="button"
+                                           onClick={() => {
+                                             handleUpdateSikayetDurum(s.id, 'bekliyor');
+                                             setOpenSikayetDropdownId(null);
+                                           }}
+                                           className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer text-left ${
+                                             s.durum === 'bekliyor'
+                                               ? 'bg-amber-500/20 text-amber-300'
+                                               : 'text-gray-300 hover:bg-amber-500/10 hover:text-amber-300'
+                                           }`}
+                                         >
+                                           <div className="flex items-center gap-2">
+                                             <span className="w-2 h-2 rounded-full bg-amber-400" />
+                                             Bekliyor
+                                           </div>
+                                           {s.durum === 'bekliyor' && <Check className="w-3.5 h-3.5 text-amber-300" />}
+                                         </button>
+
+                                         <button
+                                           type="button"
+                                           onClick={() => {
+                                             handleUpdateSikayetDurum(s.id, 'incelendi');
+                                             setOpenSikayetDropdownId(null);
+                                           }}
+                                           className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer text-left ${
+                                             s.durum === 'incelendi'
+                                               ? 'bg-sky-500/20 text-sky-300'
+                                               : 'text-gray-300 hover:bg-sky-500/10 hover:text-sky-300'
+                                           }`}
+                                         >
+                                           <div className="flex items-center gap-2">
+                                             <span className="w-2 h-2 rounded-full bg-sky-400" />
+                                             İncelendi
+                                           </div>
+                                           {s.durum === 'incelendi' && <Check className="w-3.5 h-3.5 text-sky-300" />}
+                                         </button>
+
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              handleUpdateSikayetDurum(s.id, 'cozuldu');
+                                              setOpenSikayetDropdownId(null);
+                                            }}
+                                            className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer text-left ${
+                                              s.durum === 'cozuldu'
+                                                ? 'bg-emerald-500/20 text-emerald-300'
+                                                : 'bg-white/5 text-gray-300 hover:bg-emerald-500/10 hover:text-emerald-300'
+                                            }`}
+                                          >
+                                            <div className="flex items-center gap-2">
+                                              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                                              Çözüldü
+                                            </div>
+                                            {s.durum === 'cozuldu' && <Check className="w-3.5 h-3.5 text-emerald-300" />}
+                                          </button>
+                                        </div>
+                                      </>
+                                    )}
+                                 </div>
+
+                                 <button
+                                   onClick={() => handleDeleteSikayet(s.id)}
+                                   className="px-3.5 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+                                 >
+                                   Sil
+                                 </button>
+                               </div>
+                             </td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* -------------------------------------------------------------
             PAGE: AYARLAR
            ------------------------------------------------------------- */}
         {currentPage === 'ayarlar' && (
-          <div className="space-y-4 md:space-y-6 max-w-2xl">
+          <div className="space-y-4 md:space-y-6 w-full animate-fade-in">
             <div>
               <h2 className="text-lg md:text-3xl font-bold text-white tracking-tight">Sistem Ayarları ⚙️</h2>
               <p className="text-xs md:text-sm text-gray-400 mt-0.5">Telegram bot entegrasyonu ve kontrol tetikleyicileri.</p>
             </div>
 
-            {/* Telegram Bot Ayarları */}
-            <div className="glass-panel p-4 md:p-6 rounded-2xl border-white/5">
-              <div className="flex items-center justify-between gap-2 mb-3 md:mb-4">
-                <h3 className="text-sm md:text-lg font-bold text-white flex items-center gap-2 min-w-0">
-                  <Bell className="w-4 h-4 md:w-5 md:h-5 text-purple-400 flex-shrink-0" />
-                  <span className="whitespace-nowrap">Telegram Bildirimleri</span>
-                </h3>
-                {Boolean(ayarlar.telegram_token || ayarlar.telegram_chat_id) && (
-                  <span className={`text-[10px] md:text-xs font-semibold px-2.5 py-1 rounded-full border flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 ${isEditingTelegram
-                      ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
-                      : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
-                    }`}>
-                    {isEditingTelegram ? (
-                      <>
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
-                        Düzenleme Modu
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="w-3 h-3 text-emerald-400" />
-                        Bilgiler Kilitli
-                      </>
-                    )}
-                  </span>
-                )}
-              </div>
-
-              <form noValidate onSubmit={handleSaveAyarlar} className="space-y-3.5">
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-xs md:text-sm font-semibold text-gray-300">Telegram Bot Token</label>
-                    {!isEditingTelegram && Boolean(ayarlar.telegram_token) && (
-                      <span className="text-[10px] text-gray-500 flex items-center gap-1">
-                        <Lock className="w-3 h-3 text-purple-400" /> Kilitli
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 items-start">
+              {/* SOL KOLON: Bot & Hesap Ayarları */}
+              <div className="space-y-4 md:space-y-6">
+                {/* Telegram Bot Ayarları */}
+                <div className="glass-panel p-4 md:p-6 rounded-2xl border-white/5">
+                  <div className="flex items-center justify-between gap-2 mb-3 md:mb-4">
+                    <h3 className="text-sm md:text-lg font-bold text-white flex items-center gap-2 min-w-0">
+                      <Bell className="w-4 h-4 md:w-5 md:h-5 text-purple-400 flex-shrink-0" />
+                      <span className="whitespace-nowrap">Telegram Bildirimleri</span>
+                    </h3>
+                    {Boolean(ayarlar.telegram_token || ayarlar.telegram_chat_id) && (
+                      <span className={`text-[10px] md:text-xs font-semibold px-2.5 py-1 rounded-full border flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 ${isEditingTelegram
+                          ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+                          : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
+                        }`}>
+                        {isEditingTelegram ? (
+                          <>
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                            Düzenleme Modu
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="w-3 h-3 text-emerald-400" />
+                            Bilgiler Kilitli
+                          </>
+                        )}
                       </span>
                     )}
                   </div>
-                  <input
-                    type="password"
-                    disabled={!isEditingTelegram}
-                    placeholder="Botunuzun Token Kodu (örn: 123456:ABC-DEF...)"
-                    value={ayarlar.telegram_token}
-                    onChange={(e) => setAyarlar({ ...ayarlar, telegram_token: e.target.value })}
-                    className={`w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all ${!isEditingTelegram
-                        ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none'
-                        : 'bg-white/5 border-white/10 focus:border-purple-500'
-                      }`}
-                  />
-                  <p className="text-[10px] text-gray-500 mt-0.5">@BotFather üzerinden aldığınız token.</p>
-                </div>
 
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-xs md:text-sm font-semibold text-gray-300">Telegram Chat ID</label>
-                    {!isEditingTelegram && Boolean(ayarlar.telegram_chat_id) && (
-                      <span className="text-[10px] text-gray-500 flex items-center gap-1">
-                        <Lock className="w-3 h-3 text-purple-400" /> Kilitli
-                      </span>
-                    )}
-                  </div>
-                  <input
-                    type="text"
-                    disabled={!isEditingTelegram}
-                    placeholder="Alıcı Sohbet/Grup ID (örn: 987654321)"
-                    value={ayarlar.telegram_chat_id}
-                    onChange={(e) => setAyarlar({ ...ayarlar, telegram_chat_id: e.target.value })}
-                    className={`w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all ${!isEditingTelegram
-                        ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none'
-                        : 'bg-white/5 border-white/10 focus:border-purple-500'
-                      }`}
-                  />
-                  <p className="text-[10px] text-gray-500 mt-0.5">Kişisel veya grup sohbet kimliğiniz (Chat ID).</p>
-                </div>
+                  <form noValidate onSubmit={handleSaveAyarlar} className="space-y-3.5">
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="block text-xs md:text-sm font-semibold text-gray-300">Telegram Bot Token</label>
+                        {!isEditingTelegram && Boolean(ayarlar.telegram_token) && (
+                          <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                            <Lock className="w-3 h-3 text-purple-400" /> Kilitli
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="password"
+                        disabled={!isEditingTelegram}
+                        placeholder="Botunuzun Token Kodu (örn: 123456:ABC-DEF...)"
+                        value={ayarlar.telegram_token}
+                        onChange={(e) => setAyarlar({ ...ayarlar, telegram_token: e.target.value })}
+                        className={`w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all ${!isEditingTelegram
+                            ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none'
+                            : 'bg-white/5 border-white/10 focus:border-purple-500'
+                          }`}
+                      />
+                      <p className="text-[10px] text-gray-500 mt-0.5">@BotFather üzerinden aldığınız token.</p>
+                    </div>
 
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="block text-xs md:text-sm font-semibold text-gray-300 flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-purple-400" />
-                      Otomatik Bildirim Saati (TSİ)
-                    </label>
-                    {!isEditingTelegram && (
-                      <span className="text-[10px] text-gray-500 flex items-center gap-1">
-                        <Lock className="w-3 h-3 text-purple-400" /> Kilitli
-                      </span>
-                    )}
-                  </div>
-                  <TimePicker
-                    disabled={!isEditingTelegram}
-                    value={ayarlar.bildirim_saati || '09:00'}
-                    onChange={(newTime) => setAyarlar({ ...ayarlar, bildirim_saati: newTime })}
-                  />
-                  <p className="text-[10px] text-gray-500 mt-0.5">Her gün otomatik özet bildiriminin gönderileceği saat.</p>
-                </div>
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="block text-xs md:text-sm font-semibold text-gray-300">Telegram Chat ID</label>
+                        {!isEditingTelegram && Boolean(ayarlar.telegram_chat_id) && (
+                          <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                            <Lock className="w-3 h-3 text-purple-400" /> Kilitli
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        disabled={!isEditingTelegram}
+                        placeholder="Alıcı Sohbet/Grup ID (örn: 987654321)"
+                        value={ayarlar.telegram_chat_id}
+                        onChange={(e) => setAyarlar({ ...ayarlar, telegram_chat_id: e.target.value })}
+                        className={`w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all ${!isEditingTelegram
+                            ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none'
+                            : 'bg-white/5 border-white/10 focus:border-purple-500'
+                          }`}
+                      />
+                      <p className="text-[10px] text-gray-500 mt-0.5">Kişisel veya grup sohbet kimliğiniz (Chat ID).</p>
+                    </div>
 
-                <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                  {!isEditingTelegram ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={startEditingTelegram}
-                        className="flex-1 py-2 md:py-2.5 px-4 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-2 glow-btn"
-                      >
-                        <Edit className="w-4 h-4" />
-                        Bilgileri Düzenle
-                      </button>
-                      {Boolean(ayarlar.telegram_token && ayarlar.telegram_chat_id) && (
-                        <button
-                          type="button"
-                          onClick={handleTestTelegram}
-                          disabled={loading}
-                          className="w-full sm:w-48 py-2 md:py-2.5 px-4 bg-white/5 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed border border-white/10 text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 flex-shrink-0"
-                        >
-                          <Send className="w-3.5 h-3.5 text-purple-400" />
-                          Bağlantıyı Test Et
-                        </button>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      {(() => {
-                        const isTelegramChanged = ayarlar.telegram_token !== savedAyarlar.telegram_token || ayarlar.telegram_chat_id !== savedAyarlar.telegram_chat_id || ayarlar.bildirim_saati !== savedAyarlar.bildirim_saati;
-                        return (
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="block text-xs md:text-sm font-semibold text-gray-300 flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-purple-400" />
+                          Otomatik Bildirim Saati (TSİ)
+                        </label>
+                        {!isEditingTelegram && (
+                          <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                            <Lock className="w-3 h-3 text-purple-400" /> Kilitli
+                          </span>
+                        )}
+                      </div>
+                      <TimePicker
+                        disabled={!isEditingTelegram}
+                        value={ayarlar.bildirim_saati || '09:00'}
+                        onChange={(newTime) => setAyarlar({ ...ayarlar, bildirim_saati: newTime })}
+                      />
+                      <p className="text-[10px] text-gray-500 mt-0.5">Her gün otomatik özet bildiriminin gönderileceği saat.</p>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                      {!isEditingTelegram ? (
+                        <>
                           <button
-                            type="submit"
-                            disabled={!isTelegramChanged || loading}
-                            className="flex-1 py-2 md:py-2.5 px-4 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center glow-btn flex items-center justify-center gap-2"
+                            type="button"
+                            onClick={startEditingTelegram}
+                            className="flex-1 py-2 md:py-2.5 px-4 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-2 glow-btn"
                           >
-                            <CheckCircle className="w-4 h-4" />
-                            Ayarları Kaydet
+                            <Edit className="w-4 h-4" />
+                            Bilgileri Düzenle
                           </button>
-                        );
-                      })()}
-                      {Boolean(ayarlar.telegram_token || ayarlar.telegram_chat_id) && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setAyarlar(savedAyarlar);
-                            setIsEditingTelegram(false);
-                          }}
-                          className="w-full sm:w-48 py-2 md:py-2.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 flex-shrink-0"
-                        >
-                          Vazgeç
-                        </button>
+                          {Boolean(ayarlar.telegram_token && ayarlar.telegram_chat_id) && (
+                            <button
+                              type="button"
+                              onClick={handleTestTelegram}
+                              disabled={loading}
+                              className="w-full sm:w-48 py-2 md:py-2.5 px-4 bg-white/5 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed border border-white/10 text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 flex-shrink-0"
+                            >
+                              <Send className="w-3.5 h-3.5 text-purple-400" />
+                              Bağlantıyı Test Et
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          {(() => {
+                            const isTelegramChanged = ayarlar.telegram_token !== savedAyarlar.telegram_token || ayarlar.telegram_chat_id !== savedAyarlar.telegram_chat_id || ayarlar.bildirim_saati !== savedAyarlar.bildirim_saati;
+                            return (
+                              <button
+                                type="submit"
+                                disabled={!isTelegramChanged || loading}
+                                className="flex-1 py-2 md:py-2.5 px-4 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center glow-btn flex items-center justify-center gap-2"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                                Ayarları Kaydet
+                              </button>
+                            );
+                          })()}
+                          {Boolean(ayarlar.telegram_token || ayarlar.telegram_chat_id) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAyarlar(savedAyarlar);
+                                setIsEditingTelegram(false);
+                              }}
+                              className="w-full sm:w-48 py-2 md:py-2.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 flex-shrink-0"
+                            >
+                              Vazgeç
+                            </button>
+                          )}
+                        </>
                       )}
-                    </>
-                  )}
-                </div>
-              </form>
-
-              {/* Telegram Botu Kurulum Rehberi Bilgi Notu (Açılır Kapanır Accordion) */}
-              <div className="mt-5 pt-4 border-t border-white/10">
-                <button
-                  type="button"
-                  onClick={() => setShowTelegramGuide((prev) => !prev)}
-                  className="w-full flex items-center justify-between gap-2 text-left cursor-pointer group py-1"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20 group-hover:bg-purple-500/20 transition-all flex-shrink-0">
-                      <Info className="w-4 h-4" />
                     </div>
-                    <h4 className="text-xs md:text-sm font-bold text-white group-hover:text-purple-300 transition-colors truncate">
-                      Telegram Botu Nasıl Oluşturulur ve Eklenir?
-                    </h4>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-gray-400 group-hover:text-white transition-colors flex-shrink-0">
-                    <span className="text-[10px] font-medium hidden sm:inline text-purple-400">
-                      {showTelegramGuide ? 'Gizle' : 'Rehberi Göster'}
-                    </span>
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showTelegramGuide ? 'rotate-180 text-purple-400' : ''}`} />
-                  </div>
-                </button>
+                  </form>
 
-                {showTelegramGuide && (
-                  <div className="mt-3 bg-purple-500/[0.04] border border-purple-500/15 rounded-xl p-3.5 space-y-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
-                    <div className="flex items-start gap-2.5 text-xs text-gray-300">
-                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold text-[10px] flex items-center justify-center mt-0.5">1</span>
-                      <span>Telegram uygulamasında <code className="bg-white/10 px-1.5 py-0.5 rounded text-purple-300 font-mono text-[11px]">@BotFather</code> kullanıcısını aratın ve sohbet başlatın.</span>
-                    </div>
-
-                    <div className="flex items-start gap-2.5 text-xs text-gray-300">
-                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold text-[10px] flex items-center justify-center mt-0.5">2</span>
-                      <span><code className="bg-white/10 px-1.5 py-0.5 rounded text-purple-300 font-mono text-[11px]">/newbot</code> komutunu gönderip talimatları izleyerek yeni bot oluşturun. Size verilen <b>API Token</b> kodunu yukarıdaki <b>Telegram Bot Token</b> alanına yapıştırın.</span>
-                    </div>
-
-                    <div className="flex items-start gap-2.5 text-xs text-gray-300">
-                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold text-[10px] flex items-center justify-center mt-0.5">3</span>
-                      <span>Telegram'da <code className="bg-white/10 px-1.5 py-0.5 rounded text-purple-300 font-mono text-[11px]">@userinfobot</code> hesabına mesaj atarak <b>Chat ID</b> sayısal kimliğinizi öğrenin ve yukarıdaki <b>Telegram Chat ID</b> alanına yazın.</span>
-                    </div>
-
-                    <div className="flex items-start gap-2.5 text-xs text-gray-300">
-                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold text-[10px] flex items-center justify-center mt-0.5">4</span>
-                      <span>Oluşturduğunuz kendi botunuza Telegram'dan en az 1 kez <code className="bg-white/10 px-1.5 py-0.5 rounded text-purple-300 font-mono text-[11px]">/start</code> mesajı attıktan sonra <b>"Bağlantıyı Test Et"</b> butonuna tıklayarak kurulumu doğrulayın.</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Hesap Yönetimi (Mobil & Genel) */}
-            <div className="glass-panel p-4 md:p-6 rounded-2xl border-white/5">
-              <div className="flex items-center justify-between gap-2 mb-3 md:mb-4">
-                <h3 className="text-sm md:text-lg font-bold text-white flex items-center gap-2 min-w-0">
-                  <User className="w-4 h-4 md:w-5 md:h-5 text-purple-400 flex-shrink-0" />
-                  <span>Hesap Yönetimi</span>
-                </h3>
-                {!isEditingProfile && (
-                  <span className="text-[10px] md:text-xs font-semibold px-2.5 py-1 rounded-full border bg-emerald-500/10 text-emerald-300 border-emerald-500/20 flex items-center gap-1.5 whitespace-nowrap flex-shrink-0">
-                    <Lock className="w-3 h-3 text-emerald-400" />
-                    Bilgiler Kilitli
-                  </span>
-                )}
-              </div>
-
-              <form noValidate onSubmit={handleUpdateProfile} className="space-y-3.5">
-                <div>
-                  <label className="block text-xs md:text-sm font-semibold text-gray-300 mb-1">Ad Soyad</label>
-                  <input
-                    type="text"
-                    required
-                    disabled={!isEditingProfile}
-                    value={profileForm.isim}
-                    onChange={(e) => setProfileForm({ ...profileForm, isim: e.target.value })}
-                    className={`w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all ${!isEditingProfile
-                        ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none'
-                        : 'bg-white/5 border-white/10 focus:border-purple-500'
-                      }`}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs md:text-sm font-semibold text-gray-300 mb-1">E-posta Adresi</label>
-                  <input
-                    type="email"
-                    required
-                    disabled={!isEditingProfile}
-                    value={profileForm.eposta}
-                    onChange={(e) => setProfileForm({ ...profileForm, eposta: e.target.value })}
-                    className={`w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all ${!isEditingProfile
-                        ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none'
-                        : 'bg-white/5 border-white/10 focus:border-purple-500'
-                      }`}
-                  />
-                </div>
-
-                {/* Şifre Değiştirme Butonu & Alanları */}
-                {!showPasswordForm ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      startEditingProfile();
-                      setShowPasswordForm(true);
-                    }}
-                    className="py-2 px-3 bg-white/5 hover:bg-white/10 text-white border border-white/10 font-semibold rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1.5"
-                  >
-                    <Lock className="w-3.5 h-3.5 text-purple-400" />
-                    Şifre Değiştir
-                  </button>
-                ) : (
-                  <div className="p-3.5 rounded-xl bg-black/20 border border-white/5 space-y-3 animate-fade-in relative">
+                  {/* Telegram Botu Kurulum Rehberi Bilgi Notu (Açılır Kapanır Accordion) */}
+                  <div className="mt-5 pt-4 border-t border-white/10">
                     <button
                       type="button"
-                      onClick={() => {
-                        setShowPasswordForm(false);
-                        setProfileForm(prev => ({ ...prev, mevcut_sifre: '', sifre: '' }));
-                      }}
-                      className="absolute right-3 top-3 text-[10px] text-gray-500 hover:text-gray-400 font-semibold cursor-pointer"
+                      onClick={() => setShowTelegramGuide((prev) => !prev)}
+                      className="w-full flex items-center justify-between gap-2 text-left cursor-pointer group py-1"
                     >
-                      İptal Et
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20 group-hover:bg-purple-500/20 transition-all flex-shrink-0">
+                          <Info className="w-4 h-4" />
+                        </div>
+                        <h4 className="text-xs md:text-sm font-bold text-white group-hover:text-purple-300 transition-colors truncate">
+                          Telegram Botu Nasıl Oluşturulur ve Eklenir?
+                        </h4>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-gray-400 group-hover:text-white transition-colors flex-shrink-0">
+                        <span className="text-[10px] font-medium hidden sm:inline text-purple-400">
+                          {showTelegramGuide ? 'Gizle' : 'Rehberi Göster'}
+                        </span>
+                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showTelegramGuide ? 'rotate-180 text-purple-400' : ''}`} />
+                      </div>
                     </button>
-                    <h4 className="text-xs font-bold text-purple-300 flex items-center gap-1">
-                      <Lock className="w-3.5 h-3.5" /> Güvenli Şifre Değişimi
-                    </h4>
-                    <div>
-                      <label className="block text-[10px] text-gray-400 mb-1 font-semibold">Mevcut Şifre *</label>
-                      <input
-                        type="password"
-                        required={showPasswordForm}
-                        placeholder="Mevcut şifreniz"
-                        value={profileForm.mevcut_sifre}
-                        onChange={(e) => setProfileForm({ ...profileForm, mevcut_sifre: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-white text-xs outline-none focus:border-purple-500 transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] text-gray-400 mb-1 font-semibold">Yeni Şifre *</label>
-                      <input
-                        type="password"
-                        required={showPasswordForm}
-                        placeholder="En az 6 karakter girin"
-                        value={profileForm.sifre}
-                        onChange={(e) => setProfileForm({ ...profileForm, sifre: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-white text-xs outline-none focus:border-purple-500 transition-all"
-                      />
-                    </div>
-                  </div>
-                )}
 
-                <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                  {!isEditingProfile ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={startEditingProfile}
-                        className="flex-1 py-2 md:py-2.5 px-4 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-2 glow-btn"
-                      >
-                        <Edit className="w-4 h-4" />
-                        Bilgileri Düzenle
-                      </button>
-                      <button
-                        type="button"
-                        onClick={promptLogout}
-                        className="w-full sm:w-48 py-2 md:py-2.5 px-4 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 border border-rose-500/20 font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 flex-shrink-0"
-                      >
-                        <LogOut className="w-3.5 h-3.5 text-rose-400" />
-                        Oturumu Kapat
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        type="submit"
-                        disabled={
-                          profileLoading ||
-                          (!(showPasswordForm && profileForm.mevcut_sifre !== '' && profileForm.sifre !== '') &&
-                            profileForm.isim === (user?.isim || '') &&
-                            profileForm.eposta === (user?.eposta || ''))
-                        }
-                        className="flex-1 py-2 md:py-2.5 px-4 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center glow-btn flex items-center justify-center gap-2"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        {profileLoading ? 'Güncelleniyor...' : 'Bilgileri Güncelle'}
-                      </button>
+                    {showTelegramGuide && (
+                      <div className="mt-3 bg-purple-500/[0.04] border border-purple-500/15 rounded-xl p-3.5 space-y-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                        <div className="flex items-start gap-2.5 text-xs text-gray-300">
+                          <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold text-[10px] flex items-center justify-center mt-0.5">1</span>
+                          <span>Telegram uygulamasında <code className="bg-white/10 px-1.5 py-0.5 rounded text-purple-300 font-mono text-[11px]">@BotFather</code> kullanıcısını aratın ve sohbet başlatın.</span>
+                        </div>
+
+                        <div className="flex items-start gap-2.5 text-xs text-gray-300">
+                          <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold text-[10px] flex items-center justify-center mt-0.5">2</span>
+                          <span><code className="bg-white/10 px-1.5 py-0.5 rounded text-purple-300 font-mono text-[11px]">/newbot</code> komutunu gönderip talimatları izleyerek yeni bot oluşturun. Size verilen <b>API Token</b> kodunu yukarıdaki <b>Telegram Bot Token</b> alanına yapıştırın.</span>
+                        </div>
+
+                        <div className="flex items-start gap-2.5 text-xs text-gray-300">
+                          <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold text-[10px] flex items-center justify-center mt-0.5">3</span>
+                          <span>Telegram'da <code className="bg-white/10 px-1.5 py-0.5 rounded text-purple-300 font-mono text-[11px]">@userinfobot</code> hesabına mesaj atarak <b>Chat ID</b> sayısal kimliğinizi öğrenin ve yukarıdaki <b>Telegram Chat ID</b> alanına yazın.</span>
+                        </div>
+
+                        <div className="flex items-start gap-2.5 text-xs text-gray-300">
+                          <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold text-[10px] flex items-center justify-center mt-0.5">4</span>
+                          <span>Oluşturduğunuz kendi botunuza Telegram'dan en az 1 kez <code className="bg-white/10 px-1.5 py-0.5 rounded text-purple-300 font-mono text-[11px]">/start</code> mesajı attıktan sonra <b>"Bağlantıyı Test Et"</b> butonuna tıklayarak kurulumu doğrulayın.</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Hesap Yönetimi (Mobil & Genel) */}
+                <div className="glass-panel p-4 md:p-6 rounded-2xl border-white/5">
+                  <div className="flex items-center justify-between gap-2 mb-3 md:mb-4">
+                    <h3 className="text-sm md:text-lg font-bold text-white flex items-center gap-2 min-w-0">
+                      <User className="w-4 h-4 md:w-5 md:h-5 text-purple-400 flex-shrink-0" />
+                      <span>Hesap Yönetimi</span>
+                    </h3>
+                    {!isEditingProfile && (
+                      <span className="text-[10px] md:text-xs font-semibold px-2.5 py-1 rounded-full border bg-emerald-500/10 text-emerald-300 border-emerald-500/20 flex items-center gap-1.5 whitespace-nowrap flex-shrink-0">
+                        <Lock className="w-3 h-3 text-emerald-400" />
+                        Bilgiler Kilitli
+                      </span>
+                    )}
+                  </div>
+
+                  <form noValidate onSubmit={handleUpdateProfile} className="space-y-3.5">
+                    <div>
+                      <label className="block text-xs md:text-sm font-semibold text-gray-300 mb-1">Ad Soyad</label>
+                      <input
+                        type="text"
+                        required
+                        disabled={!isEditingProfile}
+                        value={profileForm.isim}
+                        onChange={(e) => setProfileForm({ ...profileForm, isim: e.target.value })}
+                        className={`w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all ${!isEditingProfile
+                            ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none'
+                            : 'bg-white/5 border-white/10 focus:border-purple-500'
+                          }`}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs md:text-sm font-semibold text-gray-300 mb-1">E-posta Adresi</label>
+                      <input
+                        type="email"
+                        required
+                        disabled={!isEditingProfile}
+                        value={profileForm.eposta}
+                        onChange={(e) => setProfileForm({ ...profileForm, eposta: e.target.value })}
+                        className={`w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all ${!isEditingProfile
+                            ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none'
+                            : 'bg-white/5 border-white/10 focus:border-purple-500'
+                          }`}
+                      />
+                    </div>
+
+                    {/* Şifre Değiştirme Butonu & Alanları */}
+                    {!showPasswordForm ? (
                       <button
                         type="button"
                         onClick={() => {
-                          setProfileForm({
-                            isim: user?.isim || '',
-                            eposta: user?.eposta || '',
-                            mevcut_sifre: '',
-                            sifre: ''
-                          });
-                          setShowPasswordForm(false);
-                          setIsEditingProfile(false);
+                          startEditingProfile();
+                          setShowPasswordForm(true);
                         }}
-                        className="w-full sm:w-48 py-2 md:py-2.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 flex-shrink-0"
+                        className="py-2 px-3 bg-white/5 hover:bg-white/10 text-white border border-white/10 font-semibold rounded-xl text-xs transition-all cursor-pointer flex items-center gap-1.5"
                       >
-                        Vazgeç
+                        <Lock className="w-3.5 h-3.5 text-purple-400" />
+                        Şifre Değiştir
                       </button>
-                    </>
-                  )}
+                    ) : (
+                      <div className="p-3.5 rounded-xl bg-black/20 border border-white/5 space-y-3 animate-fade-in relative">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowPasswordForm(false);
+                            setProfileForm(prev => ({ ...prev, mevcut_sifre: '', sifre: '' }));
+                          }}
+                          className="absolute right-3 top-3 text-[10px] text-gray-500 hover:text-gray-400 font-semibold cursor-pointer"
+                        >
+                          İptal Et
+                        </button>
+                        <h4 className="text-xs font-bold text-purple-300 flex items-center gap-1">
+                          <Lock className="w-3.5 h-3.5" /> Güvenli Şifre Değişimi
+                        </h4>
+                        <div>
+                          <label className="block text-[10px] text-gray-400 mb-1 font-semibold">Mevcut Şifre *</label>
+                          <input
+                            type="password"
+                            required={showPasswordForm}
+                            placeholder="Mevcut şifreniz"
+                            value={profileForm.mevcut_sifre}
+                            onChange={(e) => setProfileForm({ ...profileForm, mevcut_sifre: e.target.value })}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-white text-xs outline-none focus:border-purple-500 transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-gray-400 mb-1 font-semibold">Yeni Şifre *</label>
+                          <input
+                            type="password"
+                            required={showPasswordForm}
+                            placeholder="En az 6 karakter girin"
+                            value={profileForm.sifre}
+                            onChange={(e) => setProfileForm({ ...profileForm, sifre: e.target.value })}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl py-2 px-3 text-white text-xs outline-none focus:border-purple-500 transition-all"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                      {!isEditingProfile ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={startEditingProfile}
+                            className="flex-1 py-2 md:py-2.5 px-4 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-2 glow-btn"
+                          >
+                            <Edit className="w-4 h-4" />
+                            Bilgileri Düzenle
+                          </button>
+                          <button
+                            type="button"
+                            onClick={promptLogout}
+                            className="w-full sm:w-48 py-2 md:py-2.5 px-4 bg-rose-950/20 hover:bg-rose-900/30 text-rose-400 border border-rose-500/20 font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 flex-shrink-0"
+                          >
+                            <LogOut className="w-3.5 h-3.5 text-rose-400" />
+                            Oturumu Kapat
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="submit"
+                            disabled={
+                              profileLoading ||
+                              (!(showPasswordForm && profileForm.mevcut_sifre !== '' && profileForm.sifre !== '') &&
+                                profileForm.isim === (user?.isim || '') &&
+                                profileForm.eposta === (user?.eposta || ''))
+                            }
+                            className="flex-1 py-2 md:py-2.5 px-4 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center glow-btn flex items-center justify-center gap-2"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                            {profileLoading ? 'Güncelleniyor...' : 'Bilgileri Güncelle'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setProfileForm({
+                                isim: user?.isim || '',
+                                eposta: user?.eposta || '',
+                                mevcut_sifre: '',
+                                sifre: ''
+                              });
+                              setShowPasswordForm(false);
+                              setIsEditingProfile(false);
+                            }}
+                            className="w-full sm:w-48 py-2 md:py-2.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 flex-shrink-0"
+                          >
+                            Vazgeç
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </form>
                 </div>
-              </form>
+
+                {/* Tehlikeli Bölge / Hesabı Sil (Sadece Masaüstünde Sol Kolonda Görünür) */}
+                <div className="hidden lg:block glass-panel p-4 md:p-6 rounded-2xl border border-rose-500/20 bg-rose-500/[0.02]">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                      <AlertTriangle className="w-4 h-4" />
+                    </div>
+                    <h3 className="text-sm md:text-lg font-bold text-white">Hesabı Sil</h3>
+                  </div>
+                  <p className="text-xs text-gray-400 mb-4 leading-relaxed">
+                    Hesabınızı ve hesabınıza bağlı tüm gıda, fatura, garanti ve rutin görev verilerini kalıcı olarak siler. Bu işlem geri alınamaz.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteAccountModal(true)}
+                    className="w-full sm:w-auto py-2.5 px-4 bg-rose-600/20 hover:bg-rose-600 border border-rose-500/30 hover:border-rose-500 text-rose-300 hover:text-white font-semibold rounded-xl text-xs md:text-sm transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Hesabımı Kalıcı Olarak Sil
+                  </button>
+                </div>
+              </div>
+
+              {/* SAĞ KOLON: Şikayet & Geri Bildirim */}
+              <div>
+                {/* Şikayet ve Geri Bildirim Bildirme Kartı */}
+                <div className="glass-panel p-4 md:p-6 rounded-2xl border-white/5">
+                  {/* Header: Telegram Bildirimleri ile birebir aynı yapıda */}
+                  <div className="flex items-center justify-between gap-2 mb-3 md:mb-4">
+                    <h3 className="text-sm md:text-lg font-bold text-white flex items-center gap-2 min-w-0">
+                      <MessageSquare className="w-4 h-4 md:w-5 md:h-5 text-purple-400 flex-shrink-0" />
+                      <span className="whitespace-nowrap">Şikayet & Geri Bildirim</span>
+                    </h3>
+                    <span className="text-[10px] md:text-xs font-semibold px-2.5 py-1 rounded-full border bg-amber-500/10 text-amber-300 border-amber-500/20 flex items-center gap-1.5 whitespace-nowrap flex-shrink-0">
+                      <Send className="w-3 h-3 text-amber-400" />
+                      Canlı Destek
+                    </span>
+                  </div>
+
+                  <form noValidate onSubmit={handleSendSikayet} className="space-y-3.5">
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="block text-xs md:text-sm font-semibold text-gray-300">Konu / Başlık *</label>
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        placeholder="örn: Bildirim saati uyarısı, Sayfa açılış hatası vb."
+                        value={sikayetForm.baslik}
+                        onChange={(e) => setSikayetForm({ ...sikayetForm, baslik: e.target.value })}
+                        className="w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all bg-white/5 border-white/10 focus:border-purple-500"
+                      />
+                      <p className="text-[10px] text-gray-500 mt-0.5">Yöneticilere iletmek istediğiniz ana konuyu yazın.</p>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="block text-xs md:text-sm font-semibold text-gray-300">Detaylı Açıklama *</label>
+                      </div>
+                      <textarea
+                        required
+                        rows={6}
+                        placeholder="Karşılaştığınız durumu veya geliştirilmesini istediğiniz özelliği detaylıca açıklayınız..."
+                        value={sikayetForm.mesaj}
+                        onChange={(e) => setSikayetForm({ ...sikayetForm, mesaj: e.target.value })}
+                        className="w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all bg-white/5 border-white/10 focus:border-purple-500 resize-y h-[146px] min-h-[146px]"
+                      />
+                      <p className="text-[10px] text-gray-500 mt-0.5">Sorunu veya talebinizi ayrıntılı olarak açıklayın.</p>
+                    </div>
+
+                    <div className="pt-1">
+                      <button
+                        type="submit"
+                        disabled={sikayetLoading || !sikayetForm.baslik.trim() || !sikayetForm.mesaj.trim()}
+                        className="w-full py-2 md:py-2.5 px-4 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 glow-btn"
+                      >
+                        <Send className="w-4 h-4" />
+                        {sikayetLoading ? 'Gönderiliyor...' : 'Yöneticilere İlet'}
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* Telegram Rehberi ile Birebir Uyumlu Açılır Kapanır Accordion */}
+                  <div className="mt-5 pt-4 border-t border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => setShowSikayetGuide((prev) => !prev)}
+                      className="w-full flex items-center justify-between gap-2 text-left cursor-pointer group py-1"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20 group-hover:bg-purple-500/20 transition-all flex-shrink-0">
+                          <Info className="w-4 h-4" />
+                        </div>
+                        <h4 className="text-xs md:text-sm font-bold text-white group-hover:text-purple-300 transition-colors truncate">
+                          Geri Bildirim Süreci Nasıl İşler?
+                        </h4>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-gray-400 group-hover:text-white transition-colors flex-shrink-0">
+                        <span className="text-[10px] font-medium hidden sm:inline text-purple-400">
+                          {showSikayetGuide ? 'Gizle' : 'Rehberi Göster'}
+                        </span>
+                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showSikayetGuide ? 'rotate-180 text-purple-400' : ''}`} />
+                      </div>
+                    </button>
+
+                    {showSikayetGuide && (
+                      <div className="mt-3 bg-purple-500/[0.04] border border-purple-500/15 rounded-xl p-3.5 space-y-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                        <div className="flex items-center gap-2.5 text-xs text-gray-300">
+                          <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold text-[10px] flex items-center justify-center">1</span>
+                          <span>Gönderdiğiniz tüm mesajlar doğrudan sistem yönetici paneline anlık düşer.</span>
+                        </div>
+
+                        <div className="flex items-center gap-2.5 text-xs text-gray-300">
+                          <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold text-[10px] flex items-center justify-center">2</span>
+                          <span>Geliştirme ve hata düzeltme talepleri yöneticiler tarafından öncelikle değerlendirilir.</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Tehlikeli Bölge / Hesabı Sil */}
-            <div className="glass-panel p-4 md:p-6 rounded-2xl border border-rose-500/20 bg-rose-500/[0.02]">
+            {/* Tehlikeli Bölge / Hesabı Sil (Sadece Mobil Görünümde En Altta Görünür) */}
+            <div className="block lg:hidden glass-panel p-4 md:p-6 rounded-2xl border border-rose-500/20 bg-rose-500/[0.02]">
               <div className="flex items-center gap-2 mb-2">
                 <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20">
                   <AlertTriangle className="w-4 h-4" />
@@ -3116,14 +3702,16 @@ function App() {
                 </p>
               </div>
 
-              <button
-                onClick={handleRefreshStats}
-                disabled={adminUsersLoading}
-                className="px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 active:scale-95 text-purple-300 border border-purple-500/30 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${adminUsersLoading ? 'animate-spin' : ''}`} />
-                {adminUsersLoading ? 'Yenileniyor...' : 'Yenile'}
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={handleRefreshStats}
+                  disabled={adminUsersLoading}
+                  className="px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 active:scale-95 text-purple-300 border border-purple-500/30 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${adminUsersLoading ? 'animate-spin' : ''}`} />
+                  {adminUsersLoading ? 'Yenileniyor...' : 'Yenile'}
+                </button>
+              </div>
             </div>
 
             {adminUsersError && (
@@ -3291,7 +3879,7 @@ function App() {
         {/* -------------------------------------------------------------
             PAGE: SISTEM İSTATİSTİKLERİ (GÖRSEL GRAFİK VE ANALİTİK PANELİ)
            ------------------------------------------------------------- */}
-        {currentPage === 'istatistikler' && (
+        {currentPage === 'istatistikler' && user?.role === 'admin' && (
           <div className="space-y-6 w-full animate-fade-in">
             {/* SADE & ŞIK HEADER */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
@@ -3426,22 +4014,22 @@ function App() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 text-[11px] w-full pt-2 border-t border-white/5">
-                        <div className="flex items-center gap-1.5 text-gray-300">
-                          <span className="w-2 h-2 rounded-full bg-amber-400" />
-                          <span>Gıda (%{gidaPct})</span>
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-2.5 text-xs font-semibold text-gray-300 w-full max-w-[260px] mx-auto pt-3 border-t border-white/10">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-amber-400 flex-shrink-0" />
+                          <span className="truncate">Gıda (%{gidaPct})</span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-gray-300">
-                          <span className="w-2 h-2 rounded-full bg-rose-400" />
-                          <span>Fatura (%{faturaPct})</span>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-rose-400 flex-shrink-0" />
+                          <span className="truncate">Fatura (%{faturaPct})</span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-gray-300">
-                          <span className="w-2 h-2 rounded-full bg-cyan-400" />
-                          <span>Garanti (%{garantiPct})</span>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 flex-shrink-0" />
+                          <span className="truncate">Garanti (%{garantiPct})</span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-gray-300">
-                          <span className="w-2 h-2 rounded-full bg-purple-400" />
-                          <span>Rutin (%{rutinPct})</span>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-purple-400 flex-shrink-0" />
+                          <span className="truncate">Rutin (%{rutinPct})</span>
                         </div>
                       </div>
                     </div>
@@ -3524,7 +4112,7 @@ function App() {
             {/* GRAFİK 2 & 4: TRAFİK VE AKTİVİTE GRAFİKLERİ */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
               {/* HAFTALIK SİTE TRAFİK SÜTUN GRAFİĞİ (PREMIUM ANALİTİK TASARIMI) */}
-              <div className="relative overflow-hidden bg-gradient-to-b from-[#13172e] via-[#0f1224] to-[#0a0c18] border border-indigo-500/20 rounded-3xl p-6 space-y-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)]">
+              <div className="relative overflow-hidden bg-gradient-to-b from-[#13172e] via-[#0f1224] to-[#0a0c18] border border-indigo-500/20 rounded-3xl p-5 sm:p-6 space-y-5 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between group h-full">
                 {/* AMBİYANS IŞIKLARI */}
                 <div className="absolute -top-12 -right-12 w-48 h-48 bg-cyan-500/10 blur-3xl rounded-full pointer-events-none" />
                 <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-purple-500/10 blur-3xl rounded-full pointer-events-none" />
@@ -3550,7 +4138,7 @@ function App() {
                 </div>
 
                 {/* SÜTUN GRAFİĞİ BÖLGESİ (GRID ÇİZGİLERİ İLE) */}
-                <div className="relative z-10 pt-2">
+                <div className="relative z-10 flex-1 flex flex-col justify-center pt-2">
                   {/* ARKA PLAN YATAY IZGARA ÇİZGİLERİ */}
                   <div className="absolute inset-x-0 top-8 bottom-8 flex flex-col justify-between pointer-events-none z-0">
                     <div className="w-full border-t border-white/[0.06] border-dashed" />
@@ -3560,7 +4148,7 @@ function App() {
                   </div>
 
                   {/* SÜTUNLAR */}
-                  <div className="relative z-10 h-48 flex items-end justify-between gap-2.5 md:gap-4 px-2 pt-6 pb-2">
+                  <div className="relative z-10 h-60 flex items-end justify-between gap-2.5 md:gap-4 px-2 pt-6 pb-2">
                     {(() => {
                       const todayVal = adminStats ? adminStats.dailyVisits : 28;
                       const items = [
@@ -3617,20 +4205,30 @@ function App() {
 
                 {/* GRAFİK ALT KPI ÖZET KARTLARI */}
                 <div className="relative z-10 grid grid-cols-3 gap-2.5 pt-2 border-t border-white/10 text-xs">
-                  <div className="p-2.5 rounded-2xl bg-white/[0.03] border border-white/5 flex flex-col items-center justify-center text-center">
-                    <span className="text-[10px] text-gray-400 uppercase font-semibold">Ortalama</span>
-                    <span className="font-mono font-extrabold text-white text-xs md:text-sm mt-0.5">27.1 / Gün</span>
+                  <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-white/15 transition-all flex flex-col items-center justify-center text-center group/kpi">
+                    <span className="text-[10px] text-gray-400 uppercase font-semibold flex items-center gap-1 group-hover/kpi:text-white transition-colors">
+                      <TrendingUp className="w-3 h-3 text-cyan-400" /> Ort. Trafik
+                    </span>
+                    <span className="font-mono font-extrabold text-white text-xs sm:text-sm mt-1">
+                      27.1 <span className="text-[10px] text-gray-400 font-normal">/ Gün</span>
+                    </span>
                   </div>
 
-                  <div className="p-2.5 rounded-2xl bg-emerald-500/[0.05] border border-emerald-500/20 flex flex-col items-center justify-center text-center">
-                    <span className="text-[10px] text-emerald-400/80 uppercase font-semibold">Zirve Gün</span>
-                    <span className="font-mono font-extrabold text-emerald-300 text-xs md:text-sm mt-0.5">Cmt (39)</span>
+                  <div className="p-3 rounded-2xl bg-emerald-500/[0.06] border border-emerald-500/20 hover:border-emerald-500/40 transition-all flex flex-col items-center justify-center text-center group/kpi shadow-[0_0_15px_rgba(16,185,129,0.08)]">
+                    <span className="text-[10px] text-emerald-400/90 uppercase font-semibold flex items-center gap-1 group-hover/kpi:text-emerald-300 transition-colors">
+                      <Calendar className="w-3 h-3 text-emerald-400" /> Zirve Gün
+                    </span>
+                    <span className="font-mono font-extrabold text-emerald-300 text-xs sm:text-sm mt-1">
+                      Cmt <span className="text-[10px] text-emerald-400/80 font-bold">(39)</span>
+                    </span>
                   </div>
 
-                  <div className="p-2.5 rounded-2xl bg-cyan-500/[0.05] border border-cyan-500/20 flex flex-col items-center justify-center text-center">
-                    <span className="text-[10px] text-cyan-400/80 uppercase font-semibold">Haftalık Artış</span>
-                    <span className="font-mono font-extrabold text-cyan-300 text-xs md:text-sm mt-0.5 flex items-center gap-1">
-                      <TrendingUp className="w-3.5 h-3.5" /> +%14.2
+                  <div className="p-3 rounded-2xl bg-cyan-500/[0.06] border border-cyan-500/20 hover:border-cyan-500/40 transition-all flex flex-col items-center justify-center text-center group/kpi shadow-[0_0_15px_rgba(6,182,212,0.08)]">
+                    <span className="text-[10px] text-cyan-400/90 uppercase font-semibold flex items-center gap-1 group-hover/kpi:text-cyan-300 transition-colors">
+                      <TrendingUp className="w-3 h-3 text-cyan-400" /> Haftalık Artış
+                    </span>
+                    <span className="font-mono font-extrabold text-cyan-300 text-xs sm:text-sm mt-1">
+                      +%14.2
                     </span>
                   </div>
                 </div>
@@ -4492,6 +5090,7 @@ function App() {
           {(user?.role === 'admin' ? [
             { id: 'admin', icon: User, label: 'Admin' },
             { id: 'istatistikler', icon: BarChart2, label: 'İstatistik' },
+            { id: 'sikayetler', icon: MessageSquare, label: 'Şikayetler' },
             { id: 'ayarlar', icon: Settings, label: 'Ayarlar' }
           ] : [
             { id: 'dashboard', icon: LayoutDashboard, label: 'Ana Sayfa' },
@@ -4499,7 +5098,6 @@ function App() {
             { id: 'faturalar', icon: Receipt, label: 'Faturalar' },
             { id: 'garantiler', icon: ShieldCheck, label: 'Garanti' },
             { id: 'rutinler', icon: RefreshCw, label: 'Rutinler' },
-            { id: 'istatistikler', icon: BarChart2, label: 'İstatistik' },
             { id: 'ayarlar', icon: Settings, label: 'Ayarlar' }
           ]).map((item) => {
             const Icon = item.icon;
@@ -4536,22 +5134,22 @@ function App() {
 
       {/* MODAL: CUSTOM CONFIRM MODAL */}
       {deleteConfirm.show && (
-        <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="glass-panel w-full max-w-sm p-6 rounded-3xl relative border border-rose-500/20 shadow-[0_0_50px_rgba(244,63,94,0.15)] animate-scale-in">
-            <div className="flex items-center gap-3 mb-4 text-rose-400">
-              <AlertTriangle className="w-6 h-6 flex-shrink-0 animate-pulse" />
-              <h3 className="text-lg font-bold text-white">{deleteConfirm.title}</h3>
+        <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-[#13141f] border border-rose-500/30 p-6 rounded-3xl max-w-sm w-full shadow-[0_10px_50px_rgba(244,63,94,0.25)] animate-scale-in flex flex-col items-center text-center">
+            <div className="p-3.5 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-2xl mb-4 shadow-[0_0_25px_rgba(244,63,94,0.25)] animate-pulse">
+              <Trash2 className="w-8 h-8" />
             </div>
 
-            <p className="text-sm text-gray-300 mb-6 leading-relaxed">
+            <h3 className="text-lg font-bold text-white mb-2">{deleteConfirm.title}</h3>
+            <p className="text-xs md:text-sm text-gray-300 mb-6 leading-relaxed">
               {deleteConfirm.message}
             </p>
 
-            <div className="flex gap-3">
+            <div className="flex gap-3 w-full">
               <button
                 type="button"
                 onClick={() => setDeleteConfirm({ show: false, title: '', message: '', onConfirm: null })}
-                className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl font-semibold border border-white/10 transition-all cursor-pointer text-sm"
+                className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white rounded-xl font-semibold border border-white/10 transition-all cursor-pointer text-xs md:text-sm"
               >
                 Vazgeç
               </button>
@@ -4563,8 +5161,9 @@ function App() {
                   }
                   setDeleteConfirm({ show: false, title: '', message: '', onConfirm: null });
                 }}
-                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-semibold transition-all cursor-pointer text-sm shadow-[0_4px_20px_rgba(244,63,94,0.3)] glow-btn"
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-semibold transition-all cursor-pointer text-xs md:text-sm shadow-[0_4px_20px_rgba(244,63,94,0.35)] glow-btn flex items-center justify-center gap-1.5"
               >
+                <Trash2 className="w-4 h-4" />
                 Sil
               </button>
             </div>

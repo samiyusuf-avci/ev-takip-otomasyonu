@@ -99,3 +99,19 @@ type Ayarlar struct {
 func (Ayarlar) TableName() string {
 	return "ayarlar"
 }
+
+type Sikayet struct {
+	ID              uint      `json:"id" gorm:"primaryKey;autoIncrement;column:id"`
+	KullaniciID     uint      `json:"kullanici_id" gorm:"column:kullanici_id"`
+	KullaniciIsim   string    `json:"kullanici_isim" gorm:"column:kullanici_isim"`
+	KullaniciEposta string    `json:"kullanici_eposta" gorm:"column:kullanici_eposta"`
+	Baslik          string    `json:"baslik" gorm:"not null;column:baslik"`
+	Mesaj           string    `json:"mesaj" gorm:"not null;column:mesaj"`
+	Durum           string    `json:"durum" gorm:"default:bekliyor;column:durum"` // 'bekliyor', 'incelendi', 'cozuldu'
+	OlusturmaTarihi time.Time `json:"olusturma_tarihi" gorm:"default:CURRENT_TIMESTAMP;column:olusturma_tarihi"`
+}
+
+func (Sikayet) TableName() string {
+	return "sikayetler"
+}
+

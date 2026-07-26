@@ -195,20 +195,62 @@ func (h *AppHandler) GetAdminUsers(c *fiber.Ctx) error {
 		h.DB.Create(&Ayarlar{Anahtar: "site_visits", Deger: "148"})
 	}
 
-	dailyVisits := int64(28)
+	todayZero := getTodayZeroTime()
+	todayStr := time.Now().Format("2006-01-02")
+
+	var dailyVisitsSetting, dailyDateSetting Ayarlar
+	dailyVisits := int64(0)
+	h.DB.Where("anahtar = ?", "daily_visit_date").First(&dailyDateSetting)
+	if dailyDateSetting.Deger != todayStr {
+		h.DB.Where("anahtar = ?", "daily_visit_date").Assign(Ayarlar{Deger: todayStr}).FirstOrCreate(&dailyDateSetting)
+		h.DB.Where("anahtar = ?", "daily_visits").Assign(Ayarlar{Deger: "0"}).FirstOrCreate(&dailyVisitsSetting)
+	} else {
+		if err := h.DB.Where("anahtar = ?", "daily_visits").First(&dailyVisitsSetting).Error; err == nil && dailyVisitsSetting.Deger != "" {
+			if val, err := strconv.ParseInt(dailyVisitsSetting.Deger, 10, 64); err == nil {
+				dailyVisits = val
+			}
+		}
+	}
+
+	var dailyUsers, dailyComplaints int64
+	h.DB.Model(&Kullanici{}).Where("olusturma_tarihi >= ?", todayZero).Count(&dailyUsers)
+	h.DB.Model(&Sikayet{}).Where("olusturma_tarihi >= ?", todayZero).Count(&dailyComplaints)
 
 	return c.JSON(fiber.Map{
-		"users":         users,
-		"total_users":   adminCount + userCount,
-		"admin_count":   adminCount,
-		"user_count":    userCount,
-		"active_users":  adminCount + userCount,
-		"site_visits":   siteVisits,
-		"daily_visits":  dailyVisits,
-		"total_gida":    totalGida,
-		"total_fatura":  totalFatura,
-		"total_garanti": totalGaranti,
-		"total_rutin":   totalRutin,
+		"users":            users,
+		"total_users":      adminCount + userCount,
+		"admin_count":      adminCount,
+		"user_count":       userCount,
+		"active_users":     adminCount + userCount,
+		"site_visits":      siteVisits,
+		"daily_visits":     dailyVisits,
+		"daily_users":      dailyUsers,
+		"daily_complaints": dailyComplaints,
+		"total_gida":       totalGida,
+		"total_fatura":     totalFatura,
+		"total_garanti":    totalGaranti,
+		"total_rutin":      totalRutin,
+	})
+}
+
+// SendAdminReport handles manual triggering of the daily admin report to Telegram
+func (h *AppHandler) SendAdminReport(c *fiber.Ctx) error {
+	roleVal, _ := c.Locals("userRole").(string)
+	if roleVal != "admin" {
+		return c.Status(403).JSON(fiber.Map{"error": "Bu işlem için admin yetkisi gereklidir."})
+	}
+
+	sent, err := sendAdminSummaryReport(h.DB)
+	if err != nil || !sent {
+		return c.Status(500).JSON(fiber.Map{
+			"success": false,
+			"error":   "Admin raporu gönderilemedi. Lütfen Telegram Bot Token ve Chat ID ayarlarınızı kontrol edin.",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": "Günlük Admin Özeti Telegram üzerinden başarıyla gönderildi!",
 	})
 }
 
@@ -1038,3 +1080,126 @@ func (h *AppHandler) SendTestTelegram(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{"success": true})
 }
+
+// -------------------------------------------------------------
+// ŞİKAYET & GERİ BİLDİRİM HANDLERS
+// -------------------------------------------------------------
+
+type CreateSikayetReq struct {
+	Baslik string `json:"baslik"`
+	Mesaj  string `json:"mesaj"`
+}
+
+func (h *AppHandler) CreateSikayet(c *fiber.Ctx) error {
+	userID := c.Locals("userID").(uint)
+
+	var req CreateSikayetReq
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Geçersiz istek gövdesi."})
+	}
+
+	if strings.TrimSpace(req.Baslik) == "" || strings.TrimSpace(req.Mesaj) == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Lütfen başlık ve mesaj alanlarını doldurun."})
+	}
+
+	var user Kullanici
+	if err := h.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Kullanıcı bulunamadı."})
+	}
+
+	sikayet := Sikayet{
+		KullaniciID:     user.ID,
+		KullaniciIsim:   user.Isim,
+		KullaniciEposta: user.Eposta,
+		Baslik:          strings.TrimSpace(req.Baslik),
+		Mesaj:           strings.TrimSpace(req.Mesaj),
+		Durum:           "bekliyor",
+		OlusturmaTarihi: time.Now(),
+	}
+
+	if err := h.DB.Create(&sikayet).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Şikayet kaydedilirken bir hata oluştu."})
+	}
+
+	return c.Status(201).JSON(fiber.Map{
+		"message": "Şikayetiniz yöneticilere iletildi. İlginiz için teşekkür ederiz.",
+		"sikayet": sikayet,
+	})
+}
+
+func (h *AppHandler) GetAdminSikayetler(c *fiber.Ctx) error {
+	var sikayetler []Sikayet
+	if err := h.DB.Order("id DESC").Find(&sikayetler).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Şikayetler getirilemedi."})
+	}
+
+	var bekliyorSayisi, incelendiSayisi, cozulduSayisi int64
+	h.DB.Model(&Sikayet{}).Where("durum = ?", "bekliyor").Count(&bekliyorSayisi)
+	h.DB.Model(&Sikayet{}).Where("durum = ?", "incelendi").Count(&incelendiSayisi)
+	h.DB.Model(&Sikayet{}).Where("durum = ?", "cozuldu").Count(&cozulduSayisi)
+
+	return c.JSON(fiber.Map{
+		"sikayetler":       sikayetler,
+		"toplam":          len(sikayetler),
+		"bekliyor_sayisi": bekliyorSayisi,
+		"incelendi_sayisi": incelendiSayisi,
+		"cozuldu_sayisi":  cozulduSayisi,
+	})
+}
+
+type UpdateSikayetDurumReq struct {
+	Durum string `json:"durum"`
+}
+
+func (h *AppHandler) UpdateSikayetDurum(c *fiber.Ctx) error {
+	idStr := c.Params("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Geçersiz şikayet ID."})
+	}
+
+	var req UpdateSikayetDurumReq
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Geçersiz istek gövdesi."})
+	}
+
+	durum := strings.TrimSpace(req.Durum)
+	if durum != "bekliyor" && durum != "incelendi" && durum != "cozuldu" {
+		return c.Status(400).JSON(fiber.Map{"error": "Geçersiz durum değeri."})
+	}
+
+	var sikayet Sikayet
+	if err := h.DB.Where("id = ?", id).First(&sikayet).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Şikayet bulunamadı."})
+	}
+
+	sikayet.Durum = durum
+	if err := h.DB.Save(&sikayet).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Şikayet durumu güncellenemedi."})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "Şikayet durumu güncellendi.",
+		"sikayet": sikayet,
+	})
+}
+
+func (h *AppHandler) DeleteSikayet(c *fiber.Ctx) error {
+	idStr := c.Params("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Geçersiz şikayet ID."})
+	}
+
+	var sikayet Sikayet
+	if err := h.DB.Where("id = ?", id).First(&sikayet).Error; err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Şikayet bulunamadı."})
+	}
+
+	if err := h.DB.Delete(&sikayet).Error; err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Şikayet silinemedi."})
+	}
+
+	return c.JSON(fiber.Map{"message": "Şikayet başarıyla silindi."})
+}
+

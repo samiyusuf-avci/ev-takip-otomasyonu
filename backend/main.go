@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/glebarez/sqlite"
@@ -83,6 +85,7 @@ func main() {
 			lastNotifiedKey = currentKey
 			fmt.Printf("Zamanlanmış otomatik kontrol tetiklendi (Saat %s TSİ).\n", currentHM)
 			checkAndNotify(db)
+			sendAdminSummaryReport(db)
 		}
 	})
 	if err != nil {
@@ -97,6 +100,40 @@ func main() {
 
 	// CORS Ayarları
 	app.Use(SetupCORS())
+
+	// Ziyaretçi Sayacı Middleware
+	app.Use(func(c *fiber.Ctx) error {
+		path := c.Path()
+		if !strings.HasPrefix(path, "/assets") && !strings.HasSuffix(path, ".ico") && !strings.HasSuffix(path, ".png") && !strings.HasSuffix(path, ".jpg") {
+			go func() {
+				todayStr := time.Now().Format("2006-01-02")
+				var dateSetting, dailySetting, siteSetting Ayarlar
+				db.Where("anahtar = ?", "daily_visit_date").First(&dateSetting)
+
+				if dateSetting.Deger != todayStr {
+					db.Where("anahtar = ?", "daily_visit_date").Assign(Ayarlar{Deger: todayStr}).FirstOrCreate(&dateSetting)
+					db.Where("anahtar = ?", "daily_visits").Assign(Ayarlar{Deger: "1"}).FirstOrCreate(&dailySetting)
+				} else {
+					if err := db.Where("anahtar = ?", "daily_visits").First(&dailySetting).Error; err == nil && dailySetting.Deger != "" {
+						if count, err := strconv.ParseInt(dailySetting.Deger, 10, 64); err == nil {
+							db.Model(&Ayarlar{}).Where("anahtar = ?", "daily_visits").Update("deger", strconv.FormatInt(count+1, 10))
+						}
+					} else {
+						db.Create(&Ayarlar{Anahtar: "daily_visits", Deger: "1"})
+					}
+				}
+
+				if err := db.Where("anahtar = ?", "site_visits").First(&siteSetting).Error; err == nil && siteSetting.Deger != "" {
+					if count, err := strconv.ParseInt(siteSetting.Deger, 10, 64); err == nil {
+						db.Model(&Ayarlar{}).Where("anahtar = ?", "site_visits").Update("deger", strconv.FormatInt(count+1, 10))
+					}
+				} else {
+					db.Create(&Ayarlar{Anahtar: "site_visits", Deger: "149"})
+				}
+			}()
+		}
+		return c.Next()
+	})
 
 	// Handlers Yapılandırması
 	h := &AppHandler{
@@ -157,9 +194,16 @@ func main() {
 	api.Get("/ayarlar", h.GetAyarlar)
 	api.Post("/ayarlar", h.SaveAyarlar)
 
-	// Test Bildirim Rotaları
+	// Şikayet & Geri Bildirim API Rotaları
+	api.Post("/sikayetler", h.CreateSikayet)
+	api.Get("/admin/sikayetler", h.GetAdminSikayetler)
+	api.Put("/admin/sikayetler/:id/durum", h.UpdateSikayetDurum)
+	api.Delete("/admin/sikayetler/:id", h.DeleteSikayet)
+
+	// Test & Admin Bildirim Rotaları
 	api.Post("/test-bildirim", h.TestBildirim)
 	api.Post("/send-test-telegram", h.SendTestTelegram)
+	api.Post("/admin/send-report", h.SendAdminReport)
 
 	// Sunucuyu Çalıştır
 	addr := fmt.Sprintf(":%s", port)
@@ -271,6 +315,17 @@ func initDatabase(db *gorm.DB) error {
 		`CREATE TABLE IF NOT EXISTS ayarlar (
 			anahtar TEXT PRIMARY KEY,
 			deger TEXT
+		);`,
+		`CREATE TABLE IF NOT EXISTS sikayetler (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			kullanici_id INTEGER,
+			kullanici_isim TEXT,
+			kullanici_eposta TEXT,
+			baslik TEXT NOT NULL,
+			mesaj TEXT NOT NULL,
+			durum TEXT DEFAULT 'bekliyor',
+			olusturma_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (kullanici_id) REFERENCES kullanicilar(id) ON DELETE CASCADE
 		);`,
 	}
 
@@ -422,6 +477,41 @@ func serveAdminHTML(c *fiber.Ctx) error {
                 </table>
             </div>
         </div>
+
+        <!-- Complaints Table Card -->
+        <div class="bg-slate-900/60 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl">
+            <div class="p-6 border-b border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-white">Gelen Şikayetler & Geri Bildirimler</h2>
+                    <p class="text-xs text-slate-400">Kullanıcılardan gelen destek ve bildirim mesajları</p>
+                </div>
+                <div id="sikayetSummaryBadges" class="flex items-center gap-2 text-xs font-semibold">
+                    <span class="px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full" id="badgeBekliyor">0 Bekliyor</span>
+                    <span class="px-3 py-1 bg-sky-500/10 text-sky-400 border border-sky-500/20 rounded-full" id="badgeIncelendi">0 İncelendi</span>
+                    <span class="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full" id="badgeCozuldu">0 Çözüldü</span>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-slate-300">
+                    <thead class="bg-slate-950/80 text-slate-400 uppercase text-[11px] tracking-wider border-b border-slate-800">
+                        <tr>
+                            <th class="px-6 py-4 font-semibold">#ID</th>
+                            <th class="px-6 py-4 font-semibold">Gönderen</th>
+                            <th class="px-6 py-4 font-semibold">Başlık & Mesaj</th>
+                            <th class="px-6 py-4 font-semibold">Durum</th>
+                            <th class="px-6 py-4 font-semibold">Tarih</th>
+                            <th class="px-6 py-4 font-semibold text-right">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sikayetTableBody" class="divide-y divide-slate-800/80">
+                        <tr>
+                            <td colspan="6" class="px-6 py-10 text-center text-slate-500">Şikayetler yükleniyor...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -463,12 +553,95 @@ func serveAdminHTML(c *fiber.Ctx) error {
                 document.getElementById('statDailyVisits').textContent = data.daily_visits || 28;
 
                 renderTable(rawUsersData);
+                fetchSikayetler(token);
 
             } catch (err) {
                 errorAlert.textContent = err.message;
                 errorAlert.classList.remove('hidden');
                 tableBody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-rose-400 font-medium">' + err.message + '</td></tr>';
             }
+        }
+
+        async function fetchSikayetler(token) {
+            const sikayetBody = document.getElementById('sikayetTableBody');
+            try {
+                const res = await fetch('/api/admin/sikayetler', {
+                    headers: { 'Authorization': 'Bearer ' + (token || localStorage.getItem('token')) }
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                document.getElementById('badgeBekliyor').textContent = (data.bekliyor_sayisi || 0) + ' Bekliyor';
+                document.getElementById('badgeIncelendi').textContent = (data.incelendi_sayisi || 0) + ' İncelendi';
+                document.getElementById('badgeCozuldu').textContent = (data.cozuldu_sayisi || 0) + ' Çözüldü';
+                renderSikayetTable(data.sikayetler || []);
+            } catch (e) {
+                sikayetBody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-rose-400">Şikayetler yüklenemedi.</td></tr>';
+            }
+        }
+
+        function renderSikayetTable(sikayetler) {
+            const sikayetBody = document.getElementById('sikayetTableBody');
+            if (!sikayetler || sikayetler.length === 0) {
+                sikayetBody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 font-medium">Henüz gelen bir şikayet yok.</td></tr>';
+                return;
+            }
+
+            sikayetBody.innerHTML = sikayetler.map(function(s) {
+                var durumBadge = '<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">Bekliyor</span>';
+                if (s.durum === 'incelendi') {
+                    durumBadge = '<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">İncelendi</span>';
+                } else if (s.durum === 'cozuldu') {
+                    durumBadge = '<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Çözüldü</span>';
+                }
+
+                var created = s.olusturma_tarihi ? new Date(s.olusturma_tarihi).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
+
+                return '<tr class="hover:bg-slate-900/80 transition">' +
+                    '<td class="px-6 py-4 font-mono text-xs text-slate-400">#' + s.id + '</td>' +
+                    '<td class="px-6 py-4 font-semibold text-white">' +
+                        '<div>' + (s.kullanici_isim || 'Kullanıcı') + '</div>' +
+                        '<div class="text-xs text-slate-400 font-normal">' + (s.kullanici_eposta || '') + '</div>' +
+                    '</td>' +
+                    '<td class="px-6 py-4 text-slate-200">' +
+                        '<div class="font-bold text-slate-100 mb-0.5">' + (s.baslik || '') + '</div>' +
+                        '<div class="text-xs text-slate-400 whitespace-pre-wrap">' + (s.mesaj || '') + '</div>' +
+                    '</td>' +
+                    '<td class="px-6 py-4">' + durumBadge + '</td>' +
+                    '<td class="px-6 py-4 text-slate-400 text-xs">' + created + '</td>' +
+                    '<td class="px-6 py-4 text-right space-x-2">' +
+                        '<select onchange="updateSikayetStatus(' + s.id + ', this.value)" class="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 outline-none cursor-pointer">' +
+                            '<option value="bekliyor" ' + (s.durum === 'bekliyor' ? 'selected' : '') + '>Bekliyor</option>' +
+                            '<option value="incelendi" ' + (s.durum === 'incelendi' ? 'selected' : '') + '>İncelendi</option>' +
+                            '<option value="cozuldu" ' + (s.durum === 'cozuldu' ? 'selected' : '') + '>Çözüldü</option>' +
+                        '</select>' +
+                        '<button onclick="deleteSikayet(' + s.id + ')" class="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-lg text-xs font-semibold cursor-pointer">Sil</button>' +
+                    '</td>' +
+                '</tr>';
+            }).join('');
+        }
+
+        async function updateSikayetStatus(id, newStatus) {
+            const token = localStorage.getItem('token');
+            try {
+                const res = await fetch('/api/admin/sikayetler/' + id + '/durum', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ durum: newStatus })
+                });
+                if (res.ok) fetchSikayetler(token);
+            } catch (e) {}
+        }
+
+        async function deleteSikayet(id) {
+            if (!confirm('Bu şikayet kaydını silmek istediğinize emin misiniz?')) return;
+            const token = localStorage.getItem('token');
+            try {
+                const res = await fetch('/api/admin/sikayetler/' + id, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (res.ok) fetchSikayetler(token);
+            } catch (e) {}
         }
 
         function renderTable(users) {

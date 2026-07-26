@@ -91,6 +91,84 @@ func sendTelegramMessage(db *gorm.DB, message string) (bool, error) {
 	return true, nil
 }
 
+// sendAdminSummaryReport calculates daily registered users, daily site visitors, and daily complaints, then sends a Telegram report to admin users.
+func sendAdminSummaryReport(db *gorm.DB) (bool, error) {
+	todayZero := getTodayZeroTime()
+	todayStr := time.Now().Format("02.01.2006")
+
+	// 1. Günlük Kayıt Olan İnsan Sayısı
+	var dailyUsersCount int64
+	db.Model(&Kullanici{}).Where("olusturma_tarihi >= ?", todayZero).Count(&dailyUsersCount)
+
+	// 2. Günlük Şikayet Sayısı
+	var dailyComplaintsCount int64
+	db.Model(&Sikayet{}).Where("olusturma_tarihi >= ?", todayZero).Count(&dailyComplaintsCount)
+
+	// 3. Günlük Siteyi Ziyaret Eden Sayısı
+	var visitSetting Ayarlar
+	dailyVisitsCount := int64(0)
+	if err := db.Where("anahtar = ?", "daily_visits").First(&visitSetting).Error; err == nil && visitSetting.Deger != "" {
+		if val, err := strconv.ParseInt(visitSetting.Deger, 10, 64); err == nil {
+			dailyVisitsCount = val
+		}
+	}
+
+	reportMsg := fmt.Sprintf(
+		"📊 <b>Akıllı Ev Asistanı - Günlük Admin Özeti</b>\n"+
+			"📅 <i>Tarih: %s</i>\n\n"+
+			"👤 <b>Günlük Kayıt Olan Kullanıcı:</b> %d kişi\n"+
+			"🌐 <b>Günlük Site Ziyaretçisi:</b> %d kişi\n"+
+			"📩 <b>Günlük Gönderilen Şikayet:</b> %d adet\n\n"+
+			"⚡ <i>Sistem Durumu: Aktif & Çalışıyor</i>",
+		todayStr, dailyUsersCount, dailyVisitsCount, dailyComplaintsCount,
+	)
+
+	// Telegram alıcıları: Admin rolüne sahip kullanıcıların chat ID'leri veya genel telegram_chat_id
+	var adminUsers []Kullanici
+	db.Where("role = ? AND telegram_chat_id != ''", "admin").Find(&adminUsers)
+
+	sentAny := false
+	var tokenSetting Ayarlar
+	if err := db.Where("anahtar = ?", "telegram_token").First(&tokenSetting).Error; err == nil && tokenSetting.Deger != "" {
+		bot, err := tgbotapi.NewBotAPI(tokenSetting.Deger)
+		if err == nil {
+			// Gönderilecek chat_id listesi
+			chatIDMap := make(map[string]bool)
+
+			// 1. Admin kullanıcıların chat_id'leri
+			for _, admin := range adminUsers {
+				if admin.TelegramChatID != "" {
+					chatIDMap[admin.TelegramChatID] = true
+				}
+			}
+
+			// 2. Genel Ayarlardaki telegram_chat_id
+			var defaultChatID Ayarlar
+			if err := db.Where("anahtar = ? AND deger != ''", "telegram_chat_id").First(&defaultChatID).Error; err == nil {
+				chatIDMap[defaultChatID.Deger] = true
+			}
+
+			for chatID := range chatIDMap {
+				if chatIDInt, err := strconv.ParseInt(chatID, 10, 64); err == nil {
+					msg := tgbotapi.NewMessage(chatIDInt, reportMsg)
+					msg.ParseMode = "HTML"
+					_, err = bot.Send(msg)
+					if err == nil {
+						sentAny = true
+					}
+				}
+			}
+		}
+	}
+
+	if !sentAny {
+		// Fallback to sendTelegramMessage
+		sentAny, _ = sendTelegramMessage(db, reportMsg)
+	}
+
+	return sentAny, nil
+}
+
 // checkAndNotify scans all reminders and sends Telegram notifications if needed
 func checkAndNotify(db *gorm.DB) (bool, int, int, error) {
 	fmt.Println("Hatırlatıcılar taranıyor...")
