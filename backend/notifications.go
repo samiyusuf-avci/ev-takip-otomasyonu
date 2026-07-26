@@ -352,3 +352,185 @@ func checkAndNotify(db *gorm.DB) (bool, int, int, error) {
 	fmt.Printf("Bildirim özeti %d kullanıcıya gönderildi (%d toplam uyarı).\n", totalSent, totalAlertsCount)
 	return true, totalSent, totalAlertsCount, nil
 }
+
+// checkAndNotifyForUser scans reminders for a specific user and sends Telegram notification if needed
+func checkAndNotifyForUser(db *gorm.DB, userID uint) (bool, bool, int, error) {
+	var user Kullanici
+	if err := db.First(&user, userID).Error; err != nil {
+		return false, false, 0, fmt.Errorf("Kullanıcı bulunamadı: %v", err)
+	}
+
+	var chatIDSetting Ayarlar
+	defaultChatID := ""
+	if err := db.Where("anahtar = ? AND deger != ''", "telegram_chat_id").First(&chatIDSetting).Error; err == nil {
+		defaultChatID = chatIDSetting.Deger
+	}
+
+	userChatID := user.TelegramChatID
+	if userChatID == "" {
+		userChatID = defaultChatID
+	}
+
+	if userChatID == "" {
+		return false, false, 0, fmt.Errorf("Telegram Chat ID tanımlı değil")
+	}
+
+	var tokenSetting Ayarlar
+	if err := db.Where("anahtar = ?", "telegram_token").First(&tokenSetting).Error; err != nil {
+		return false, false, 0, fmt.Errorf("Telegram bot token bulunamadı: %v", err)
+	}
+	token := tokenSetting.Deger
+	if token == "" {
+		return false, false, 0, fmt.Errorf("Telegram bot token bulunamadı")
+	}
+
+	bot, err := tgbotapi.NewBotAPI(token)
+	if err != nil {
+		return false, false, 0, fmt.Errorf("Telegram bot başlatılamadı: %v", err)
+	}
+
+	todayStr := time.Now().Format("02.01.2006")
+	var alerts []string
+	alertsCount := 0
+
+	// 1. GIDALAR KONTROLÜ
+	var gidalar []Gida
+	if err := db.Where("durum = 'bekliyor' AND kullanici_id = ?", user.ID).Find(&gidalar).Error; err == nil {
+		var gidaAlerts []string
+		for _, gida := range gidalar {
+			days, err := getDaysRemaining(gida.SKT)
+			if err == nil {
+				if days < 0 {
+					if days == -1 {
+						gidaAlerts = append(gidaAlerts, fmt.Sprintf("⚠️ <b>%s</b> (S.K.T. 1 gün geçti!)", gida.UrunAdi))
+					}
+				} else if days <= gida.HatirlatmaGunKala {
+					if days == 0 {
+						gidaAlerts = append(gidaAlerts, fmt.Sprintf("⏰ <b>%s</b> (Bugün son gün!)", gida.UrunAdi))
+					} else {
+						gidaAlerts = append(gidaAlerts, fmt.Sprintf("⏰ <b>%s</b> (%d gün kaldı)", gida.UrunAdi, days))
+					}
+				}
+			}
+		}
+		if len(gidaAlerts) > 0 {
+			alertsCount += len(gidaAlerts)
+			alerts = append(alerts, fmt.Sprintf("🥑 <b>Gıda Son Kullanma Uyarıları:</b>\n%s", strings.Join(gidaAlerts, "\n")))
+		}
+	}
+
+	// 2. FATURALAR KONTROLÜ
+	var faturalar []Fatura
+	if err := db.Where("durum = 'odenmedi' AND kullanici_id = ?", user.ID).Find(&faturalar).Error; err == nil {
+		var faturaAlerts []string
+		for _, fatura := range faturalar {
+			days, err := getDaysRemaining(fatura.SonOdemeTarihi)
+			if err == nil {
+				tutar := 0.0
+				if fatura.Tutar != nil {
+					tutar = *fatura.Tutar
+				}
+				if days < 0 {
+					if days == -1 {
+						faturaAlerts = append(faturaAlerts, fmt.Sprintf("⚠️ <b>%s</b> (Son ödeme tarihi 1 gün geçti! Tutar: %.2f TL)", fatura.FaturaAdi, tutar))
+					}
+				} else if days <= fatura.HatirlatmaGunKala {
+					if days == 0 {
+						faturaAlerts = append(faturaAlerts, fmt.Sprintf("💵 <b>%s</b> (Bugün son ödeme günü! - Tutar: %.2f TL)", fatura.FaturaAdi, tutar))
+					} else {
+						faturaAlerts = append(faturaAlerts, fmt.Sprintf("💵 <b>%s</b> (%d gün kaldı - Tutar: %.2f TL)", fatura.FaturaAdi, days, tutar))
+					}
+				}
+			}
+		}
+		if len(faturaAlerts) > 0 {
+			alertsCount += len(faturaAlerts)
+			alerts = append(alerts, fmt.Sprintf("💸 <b>Fatura Son Ödeme Uyarıları:</b>\n%s", strings.Join(faturaAlerts, "\n")))
+		}
+	}
+
+	// 3. GARANTİLER KONTROLÜ
+	var garantiler []Garanti
+	if err := db.Where("kullanici_id = ?", user.ID).Find(&garantiler).Error; err == nil {
+		var garantiAlerts []string
+		for _, garanti := range garantiler {
+			days, err := getDaysRemaining(garanti.GarantiBitis)
+			if err == nil {
+				if days < 0 {
+					if days == -1 {
+						garantiAlerts = append(garantiAlerts, fmt.Sprintf("⚠️ <b>%s</b> (%s) - Garanti süresi 1 gün önce bitti!", garanti.CihazAdi, garanti.MarkaModel))
+					}
+				} else if days <= garanti.HatirlatmaGunKala {
+					garantiAlerts = append(garantiAlerts, fmt.Sprintf("🔌 <b>%s</b> (%s) - Garanti bitimine %d gün kaldı.", garanti.CihazAdi, garanti.MarkaModel, days))
+				}
+			}
+		}
+		if len(garantiAlerts) > 0 {
+			alertsCount += len(garantiAlerts)
+			alerts = append(alerts, fmt.Sprintf("🛡️ <b>Garanti Süresi Uyarıları:</b>\n%s", strings.Join(garantiAlerts, "\n")))
+		}
+	}
+
+	// 4. RUTİNLER KONTROLÜ
+	var rutinler []RutinWithKlasor
+	if err := db.Table("rutinler r").
+		Select("r.*, k.klasor_adi").
+		Joins("LEFT JOIN rutin_klasorleri k ON r.klasor_id = k.id").
+		Where("r.kullanici_id = ?", user.ID).
+		Scan(&rutinler).Error; err == nil {
+		var rutinAlerts []string
+		for _, rutin := range rutinler {
+			folderText := ""
+			if rutin.KlasorAdi != "" {
+				folderText = fmt.Sprintf("[%s] ", rutin.KlasorAdi)
+			}
+
+			if rutin.SonYapilmaTarihi != nil && *rutin.SonYapilmaTarihi != "" {
+				nextDate, err := getNextRoutineDate(*rutin.SonYapilmaTarihi, rutin.PeriyotAy)
+				if err == nil {
+					today := getTodayZeroTime()
+					diffDays := int(math.Round(nextDate.Sub(today).Hours() / 24.0))
+					if diffDays <= rutin.HatirlatmaGunKala {
+						if diffDays < 0 {
+							if diffDays == -1 {
+								rutinAlerts = append(rutinAlerts, fmt.Sprintf("🔁 <b>%s%s</b> (Zamanı 1 gün geçti!)", folderText, rutin.GorevAdi))
+							}
+						} else if diffDays == 0 {
+							rutinAlerts = append(rutinAlerts, fmt.Sprintf("🔁 <b>%s%s</b> (Yapılmasına bugün son!)", folderText, rutin.GorevAdi))
+						} else {
+							rutinAlerts = append(rutinAlerts, fmt.Sprintf("🔁 <b>%s%s</b> (Yapılmasına %d gün kaldı)", folderText, rutin.GorevAdi, diffDays))
+						}
+					}
+				}
+			} else {
+				rutinAlerts = append(rutinAlerts, fmt.Sprintf("🔁 <b>%s%s</b> (Henüz hiç yapılmadı!)", folderText, rutin.GorevAdi))
+			}
+		}
+		if len(rutinAlerts) > 0 {
+			alertsCount += len(rutinAlerts)
+			alerts = append(alerts, fmt.Sprintf("📅 <b>Rutin Görev Zamanı Uyarıları:</b>\n%s", strings.Join(rutinAlerts, "\n")))
+		}
+	}
+
+	if len(alerts) > 0 {
+		header := fmt.Sprintf("🏠 <b>Akıllı Ev ve Yaşam Asistanı Günlük Özeti</b>\n<i>Kullanıcı: %s</i>\n<i>Tarih: %s</i>\n\n", user.Isim, todayStr)
+		finalMessage := header + strings.Join(alerts, "\n\n")
+
+		chatIDInt, err := strconv.ParseInt(userChatID, 10, 64)
+		if err != nil {
+			return true, false, alertsCount, fmt.Errorf("Geçersiz Telegram Chat ID: %v", err)
+		}
+
+		msg := tgbotapi.NewMessage(chatIDInt, finalMessage)
+		msg.ParseMode = "HTML"
+		_, err = bot.Send(msg)
+		if err != nil {
+			return true, false, alertsCount, fmt.Errorf("Telegram bildirim hatası: %v", err)
+		}
+
+		return true, true, alertsCount, nil
+	}
+
+	return true, false, 0, nil
+}
+

@@ -996,20 +996,30 @@ type SaveAyarlarReq struct {
 
 func (h *AppHandler) SaveAyarlar(c *fiber.Ctx) error {
 	userID := c.Locals("userID").(uint)
+	roleVal, _ := c.Locals("userRole").(string)
 
 	var req SaveAyarlarReq
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Geçersiz veri biçimi."})
 	}
 
-	tokenSetting := Ayarlar{Anahtar: "telegram_token", Deger: req.TelegramToken}
-	if err := h.DB.Save(&tokenSetting).Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	if req.TelegramToken != "" {
+		tokenSetting := Ayarlar{Anahtar: "telegram_token", Deger: req.TelegramToken}
+		if err := h.DB.Save(&tokenSetting).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		}
 	}
 
-	chatIDSetting := Ayarlar{Anahtar: "telegram_chat_id", Deger: req.TelegramChatID}
-	if err := h.DB.Save(&chatIDSetting).Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	// Sadece Admin rolü genel telegram_chat_id ayarını güncelleyebilir veya ilk kez tanımlanıyorsa
+	if roleVal == "admin" || req.TelegramChatID != "" {
+		var existingChatID Ayarlar
+		err := h.DB.Where("anahtar = ?", "telegram_chat_id").First(&existingChatID).Error
+		if roleVal == "admin" || err != nil || existingChatID.Deger == "" {
+			chatIDSetting := Ayarlar{Anahtar: "telegram_chat_id", Deger: req.TelegramChatID}
+			if err := h.DB.Save(&chatIDSetting).Error; err != nil {
+				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			}
+		}
 	}
 
 	if req.BildirimSaati != "" {
@@ -1031,14 +1041,25 @@ func (h *AppHandler) SaveAyarlar(c *fiber.Ctx) error {
 // -------------------------------------------------------------
 
 func (h *AppHandler) TestBildirim(c *fiber.Ctx) error {
-	success, sentCount, alertsCount, err := checkAndNotify(h.DB)
+	userIDVal := c.Locals("userID")
+	if userIDVal == nil {
+		return c.Status(401).JSON(fiber.Map{"error": "Yetkisiz erişim."})
+	}
+	userID := userIDVal.(uint)
+
+	success, sent, alertsCount, err := checkAndNotifyForUser(h.DB, userID)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 
+	sentCount := 0
+	if sent {
+		sentCount = 1
+	}
+
 	return c.JSON(fiber.Map{
 		"success":        success,
-		"sent":           sentCount > 0,
+		"sent":           sent,
 		"sentUsersCount": sentCount,
 		"alertsCount":    alertsCount,
 	})
