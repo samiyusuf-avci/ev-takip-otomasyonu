@@ -1434,6 +1434,9 @@ function App() {
   };
 
   const handleTriggerDailyReport = async () => {
+    if (user?.role === 'admin') {
+      return handleSendAdminReport();
+    }
     setLoading(true);
     try {
       const res = await API.post('/test-bildirim');
@@ -1697,7 +1700,10 @@ function App() {
               </div>
 
               <p className="text-[10px] text-gray-400 leading-relaxed">
-                Yaklaşan tüm görevleri ve son tarihleri tarayarak Telegram'a anlık durum raporu gönderir.
+                {user?.role === 'admin'
+                  ? "Sistemdeki kullanıcı, ziyaretçi ve şikayet istatistiklerini Telegram'a admin özeti olarak gönderir."
+                  : "Yaklaşan tüm görevleri ve son tarihleri tarayarak Telegram'a anlık durum raporu gönderir."
+                }
               </p>
 
               <button
@@ -1710,19 +1716,6 @@ function App() {
               >
                 {loading ? 'Gönderiliyor...' : 'Raporu Şimdi Gönder'}
               </button>
-
-              {user?.role === 'admin' && (
-                <button
-                  onClick={async () => {
-                    setShowNotificationMenu(false);
-                    await handleSendAdminReport();
-                  }}
-                  disabled={loading}
-                  className="w-full py-2 px-3 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1 shadow-sm"
-                >
-                  📊 Admin Özeti Gönder
-                </button>
-              )}
             </div>
           </>
         )}
