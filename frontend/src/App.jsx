@@ -165,6 +165,8 @@ function App() {
           totalFatura: res.data.total_fatura || 0,
           totalGaranti: res.data.total_garanti || 0,
           totalRutin: res.data.total_rutin || 0,
+          weeklyVisits: res.data.weekly_visits || [],
+          hourlyTraffic: res.data.hourly_traffic || [],
         });
       } else {
         setAdminUsers(Array.isArray(res.data) ? res.data : []);
@@ -4130,99 +4132,128 @@ function App() {
                 </div>
 
                 {/* SÜTUN GRAFİĞİ BÖLGESİ (GRID ÇİZGİLERİ İLE) */}
-                <div className="relative z-10 flex-1 flex flex-col justify-center pt-2">
+                <div className="relative z-10 flex-1 flex flex-col justify-between pt-2">
                   {/* ARKA PLAN YATAY IZGARA ÇİZGİLERİ */}
-                  <div className="absolute inset-x-0 top-8 bottom-8 flex flex-col justify-between pointer-events-none z-0">
+                  <div className="absolute inset-x-0 top-8 bottom-24 flex flex-col justify-between pointer-events-none z-0">
                     <div className="w-full border-t border-white/[0.06] border-dashed" />
                     <div className="w-full border-t border-white/[0.06] border-dashed" />
                     <div className="w-full border-t border-white/[0.06] border-dashed" />
                     <div className="w-full border-t border-white/[0.06] border-dashed" />
                   </div>
 
-                  {/* SÜTUNLAR */}
-                  <div className="relative z-10 h-60 flex items-end justify-between gap-2.5 md:gap-4 px-2 pt-6 pb-2">
-                    {(() => {
-                      const todayVal = adminStats ? adminStats.dailyVisits : 28;
-                      const items = [
-                        { day: 'Pzt', val: 18, color: 'from-indigo-600 via-blue-500 to-cyan-400' },
-                        { day: 'Sal', val: 24, color: 'from-indigo-600 via-blue-500 to-cyan-400' },
-                        { day: 'Çar', val: 32, color: 'from-purple-600 via-indigo-500 to-purple-400' },
-                        { day: 'Per', val: 21, color: 'from-indigo-600 via-blue-500 to-cyan-400' },
-                        { day: 'Cum', val: 28, color: 'from-indigo-600 via-blue-500 to-cyan-400' },
-                        { day: 'Cmt', val: 39, color: 'from-teal-600 via-emerald-500 to-emerald-400', isPeak: true },
-                        { day: 'Paz', val: todayVal, color: 'from-amber-600 via-amber-500 to-yellow-400', isToday: true }
-                      ];
-                      const maxVal = Math.max(...items.map(i => i.val), 1);
+                  {(() => {
+                    const itemsRaw = (adminStats && adminStats.weeklyVisits && adminStats.weeklyVisits.length === 7)
+                      ? adminStats.weeklyVisits.map((item, idx) => ({
+                          day: item.day,
+                          val: item.val,
+                          isToday: item.is_today,
+                          color: item.is_today
+                            ? 'from-amber-600 via-amber-500 to-yellow-400'
+                            : idx === 5
+                              ? 'from-teal-600 via-emerald-500 to-emerald-400'
+                              : 'from-indigo-600 via-blue-500 to-cyan-400'
+                        }))
+                      : [
+                          { day: 'Pzt', val: 18, color: 'from-indigo-600 via-blue-500 to-cyan-400' },
+                          { day: 'Sal', val: 24, color: 'from-indigo-600 via-blue-500 to-cyan-400' },
+                          { day: 'Çar', val: 32, color: 'from-purple-600 via-indigo-500 to-purple-400' },
+                          { day: 'Per', val: 21, color: 'from-indigo-600 via-blue-500 to-cyan-400' },
+                          { day: 'Cum', val: 28, color: 'from-indigo-600 via-blue-500 to-cyan-400' },
+                          { day: 'Cmt', val: 39, color: 'from-teal-600 via-emerald-500 to-emerald-400' },
+                          { day: 'Paz', val: adminStats ? adminStats.dailyVisits : 28, color: 'from-amber-600 via-amber-500 to-yellow-400', isToday: true }
+                        ];
+                    const maxVal = Math.max(...itemsRaw.map(i => i.val), 1);
+                    const peakItem = itemsRaw.reduce((prev, curr) => (curr.val > prev.val ? curr : prev), itemsRaw[0]);
 
-                      return items.map((item, idx) => {
-                        const heightPct = Math.max(18, Math.round((item.val / maxVal) * 100));
-                        return (
-                          <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group cursor-pointer">
-                            {/* GÖRÜNÜR DEĞER BADGE */}
-                            <div className={`px-2 py-0.5 rounded-lg border text-[11px] font-mono font-extrabold transition-all duration-200 shadow-md ${item.isToday
-                              ? 'bg-gradient-to-r from-amber-500/30 to-yellow-500/20 text-amber-300 border-amber-400/50 shadow-[0_0_12px_rgba(245,158,11,0.35)]'
-                              : item.isPeak
-                                ? 'bg-gradient-to-r from-emerald-500/30 to-teal-500/20 text-emerald-300 border-emerald-400/50 shadow-[0_0_12px_rgba(16,185,129,0.35)]'
-                                : 'bg-[#1a1d36] text-gray-200 border-white/15 group-hover:border-cyan-400/60 group-hover:text-cyan-300 group-hover:bg-cyan-500/20 group-hover:shadow-[0_0_12px_rgba(6,182,212,0.3)]'
-                              }`}>
-                              {item.val}
-                            </div>
+                    const items = itemsRaw.map(item => ({
+                      ...item,
+                      isPeak: item.day === peakItem.day
+                    }));
 
-                            {/* SÜTUN ÇUBUĞU */}
-                            <div className="w-full bg-white/[0.04] rounded-2xl overflow-hidden flex items-end p-1 border border-white/10 h-full group-hover:border-cyan-500/40 transition-all duration-200">
-                              <div
-                                className={`w-full bg-gradient-to-t ${item.color} rounded-xl transition-all duration-300 group-hover:brightness-125 group-hover:shadow-[0_0_20px_rgba(6,182,212,0.6)] relative overflow-hidden`}
-                                style={{ height: `${heightPct}%` }}
-                              >
-                                {/* Sütun Üstü Parlama Çizgisi */}
-                                <div className="absolute top-0 inset-x-0 h-1 bg-white/40 rounded-t-xl" />
+                    const totalWeeklyVisits = items.reduce((sum, item) => sum + item.val, 0);
+                    const avgTraffic = (totalWeeklyVisits / items.length).toFixed(1);
+
+                    // Dinamik haftalık trend hesabı (Haftanın 2. yarısı vs 1. yarısı ortalaması)
+                    const firstHalfAvg = items.slice(0, 3).reduce((sum, i) => sum + i.val, 0) / 3;
+                    const secondHalfAvg = items.slice(3, 7).reduce((sum, i) => sum + i.val, 0) / 4;
+                    const trendPctVal = (((secondHalfAvg - firstHalfAvg) / (firstHalfAvg || 1)) * 100).toFixed(1);
+                    const trendDisplay = `${trendPctVal >= 0 ? '+' : ''}%${trendPctVal}`;
+
+                    return (
+                      <>
+                        {/* SÜTUNLAR */}
+                        <div className="relative z-10 h-60 flex items-end justify-between gap-2.5 md:gap-4 px-2 pt-6 pb-2">
+                          {items.map((item, idx) => {
+                            const heightPct = Math.max(18, Math.round((item.val / maxVal) * 100));
+                            return (
+                              <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group cursor-pointer">
+                                {/* GÖRÜNÜR DEĞER BADGE */}
+                                <div className={`px-2 py-0.5 rounded-lg border text-[11px] font-mono font-extrabold transition-all duration-200 shadow-md ${item.isToday
+                                  ? 'bg-gradient-to-r from-amber-500/30 to-yellow-500/20 text-amber-300 border-amber-400/50 shadow-[0_0_12px_rgba(245,158,11,0.35)]'
+                                  : item.isPeak
+                                    ? 'bg-gradient-to-r from-emerald-500/30 to-teal-500/20 text-emerald-300 border-emerald-400/50 shadow-[0_0_12px_rgba(16,185,129,0.35)]'
+                                    : 'bg-[#1a1d36] text-gray-200 border-white/15 group-hover:border-cyan-400/60 group-hover:text-cyan-300 group-hover:bg-cyan-500/20 group-hover:shadow-[0_0_12px_rgba(6,182,212,0.3)]'
+                                  }`}>
+                                  {item.val}
+                                </div>
+
+                                {/* SÜTUN ÇUBUĞU */}
+                                <div className="w-full bg-white/[0.04] rounded-2xl overflow-hidden flex items-end p-1 border border-white/10 h-full group-hover:border-cyan-500/40 transition-all duration-200">
+                                  <div
+                                    className={`w-full bg-gradient-to-t ${item.color} rounded-xl transition-all duration-300 group-hover:brightness-125 group-hover:shadow-[0_0_20px_rgba(6,182,212,0.6)] relative overflow-hidden`}
+                                    style={{ height: `${heightPct}%` }}
+                                  >
+                                    {/* Sütun Üstü Parlama Çizgisi */}
+                                    <div className="absolute top-0 inset-x-0 h-1 bg-white/40 rounded-t-xl" />
+                                  </div>
+                                </div>
+
+                                {/* GÜN ETİKETİ */}
+                                <span className={`text-xs font-mono transition-colors duration-200 ${item.isToday
+                                  ? 'text-amber-400 font-extrabold'
+                                  : item.isPeak
+                                    ? 'text-emerald-400 font-extrabold'
+                                    : 'text-gray-400 font-semibold group-hover:text-cyan-300'
+                                  }`}>
+                                  {item.day}
+                                </span>
                               </div>
-                            </div>
+                            );
+                          })}
+                        </div>
 
-                            {/* GÜN ETİKETİ */}
-                            <span className={`text-xs font-mono transition-colors duration-200 ${item.isToday
-                              ? 'text-amber-400 font-extrabold'
-                              : item.isPeak
-                                ? 'text-emerald-400 font-extrabold'
-                                : 'text-gray-400 font-semibold group-hover:text-cyan-300'
-                              }`}>
-                              {item.day}
+                        {/* GRAFİK ALT KPI ÖZET KARTLARI */}
+                        <div className="relative z-10 grid grid-cols-3 gap-2.5 pt-2 border-t border-white/10 text-xs mt-4">
+                          <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-white/15 transition-all flex flex-col items-center justify-center text-center group/kpi">
+                            <span className="text-[10px] text-gray-400 uppercase font-semibold flex items-center gap-1 group-hover/kpi:text-white transition-colors">
+                              <TrendingUp className="w-3 h-3 text-cyan-400" /> Ort. Trafik
+                            </span>
+                            <span className="font-mono font-extrabold text-white text-xs sm:text-sm mt-1">
+                              {avgTraffic} <span className="text-[10px] text-gray-400 font-normal">/ Gün</span>
                             </span>
                           </div>
-                        );
-                      });
-                    })()}
-                  </div>
-                </div>
 
-                {/* GRAFİK ALT KPI ÖZET KARTLARI */}
-                <div className="relative z-10 grid grid-cols-3 gap-2.5 pt-2 border-t border-white/10 text-xs">
-                  <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-white/15 transition-all flex flex-col items-center justify-center text-center group/kpi">
-                    <span className="text-[10px] text-gray-400 uppercase font-semibold flex items-center gap-1 group-hover/kpi:text-white transition-colors">
-                      <TrendingUp className="w-3 h-3 text-cyan-400" /> Ort. Trafik
-                    </span>
-                    <span className="font-mono font-extrabold text-white text-xs sm:text-sm mt-1">
-                      27.1 <span className="text-[10px] text-gray-400 font-normal">/ Gün</span>
-                    </span>
-                  </div>
+                          <div className="p-3 rounded-2xl bg-emerald-500/[0.06] border border-emerald-500/20 hover:border-emerald-500/40 transition-all flex flex-col items-center justify-center text-center group/kpi shadow-[0_0_15px_rgba(16,185,129,0.08)]">
+                            <span className="text-[10px] text-emerald-400/90 uppercase font-semibold flex items-center gap-1 group-hover/kpi:text-emerald-300 transition-colors">
+                              <Calendar className="w-3 h-3 text-emerald-400" /> Zirve Gün
+                            </span>
+                            <span className="font-mono font-extrabold text-emerald-300 text-xs sm:text-sm mt-1">
+                              {peakItem.day} <span className="text-[10px] text-emerald-400/80 font-bold">({peakItem.val})</span>
+                            </span>
+                          </div>
 
-                  <div className="p-3 rounded-2xl bg-emerald-500/[0.06] border border-emerald-500/20 hover:border-emerald-500/40 transition-all flex flex-col items-center justify-center text-center group/kpi shadow-[0_0_15px_rgba(16,185,129,0.08)]">
-                    <span className="text-[10px] text-emerald-400/90 uppercase font-semibold flex items-center gap-1 group-hover/kpi:text-emerald-300 transition-colors">
-                      <Calendar className="w-3 h-3 text-emerald-400" /> Zirve Gün
-                    </span>
-                    <span className="font-mono font-extrabold text-emerald-300 text-xs sm:text-sm mt-1">
-                      Cmt <span className="text-[10px] text-emerald-400/80 font-bold">(39)</span>
-                    </span>
-                  </div>
-
-                  <div className="p-3 rounded-2xl bg-cyan-500/[0.06] border border-cyan-500/20 hover:border-cyan-500/40 transition-all flex flex-col items-center justify-center text-center group/kpi shadow-[0_0_15px_rgba(6,182,212,0.08)]">
-                    <span className="text-[10px] text-cyan-400/90 uppercase font-semibold flex items-center gap-1 group-hover/kpi:text-cyan-300 transition-colors">
-                      <TrendingUp className="w-3 h-3 text-cyan-400" /> Haftalık Artış
-                    </span>
-                    <span className="font-mono font-extrabold text-cyan-300 text-xs sm:text-sm mt-1">
-                      +%14.2
-                    </span>
-                  </div>
+                          <div className="p-3 rounded-2xl bg-cyan-500/[0.06] border border-cyan-500/20 hover:border-cyan-500/40 transition-all flex flex-col items-center justify-center text-center group/kpi shadow-[0_0_15px_rgba(6,182,212,0.08)]">
+                            <span className="text-[10px] text-cyan-400/90 uppercase font-semibold flex items-center gap-1 group-hover/kpi:text-cyan-300 transition-colors">
+                              <TrendingUp className="w-3 h-3 text-cyan-400" /> Haftalık Artış
+                            </span>
+                            <span className="font-mono font-extrabold text-cyan-300 text-xs sm:text-sm mt-1">
+                              {trendDisplay}
+                            </span>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -4257,262 +4288,332 @@ function App() {
 
                 {/* SVG SPARKLINE / WAVE GRAFİĞİ BÖLGESİ */}
                 {(() => {
-                  const trafficData = [
-                    { time: '03:00', pct: 33, cx: 25, cy: 85, desc: '%33 Gece Sakinliği' },
-                    { time: '06:00', pct: 45, cx: 90, cy: 72, desc: '%45 Sabah Başlangıcı' },
-                    { time: '09:00', pct: 75, cx: 155, cy: 34, desc: '%75 Sabah Zirvesi', isPeak: true },
-                    { time: '12:00', pct: 52, cx: 220, cy: 62, desc: '%52 Öğle Dengesi' },
-                    { time: '15:00', pct: 40, cx: 285, cy: 76, desc: '%40 Stabil Akış' },
-                    { time: '18:00', pct: 68, cx: 350, cy: 42, desc: '%68 Akşam Yükselişi' },
-                    { time: '20:00', pct: 95, cx: 415, cy: 12, desc: '%95 ANA ZİRVE', isMainPeak: true },
-                    { time: '00:00', pct: 50, cx: 480, cy: 64, desc: '%50 Gece Dengesi' },
+                  const staticPositions = [
+                    { cx: 25, cy: 85 },
+                    { cx: 90, cy: 72 },
+                    { cx: 155, cy: 34 },
+                    { cx: 220, cy: 62 },
+                    { cx: 285, cy: 76 },
+                    { cx: 350, cy: 42 },
+                    { cx: 415, cy: 12 },
+                    { cx: 480, cy: 64 },
                   ];
+
+                  const trafficDataRaw = (adminStats && adminStats.hourlyTraffic && adminStats.hourlyTraffic.length === 8)
+                    ? adminStats.hourlyTraffic.map((item, idx) => {
+                        const calcCy = Math.max(12, Math.min(105, Math.round(110 - (item.pct / 100) * 98)));
+                        return {
+                          time: item.time,
+                          pct: item.pct,
+                          cx: staticPositions[idx].cx,
+                          cy: calcCy,
+                          desc: item.desc
+                        };
+                      })
+                    : [
+                        { time: '03:00', pct: 33, cx: 25, cy: 85, desc: '%33 Gece Sakinliği' },
+                        { time: '06:00', pct: 45, cx: 90, cy: 72, desc: '%45 Sabah Başlangıcı' },
+                        { time: '09:00', pct: 75, cx: 155, cy: 34, desc: '%75 Sabah Zirvesi' },
+                        { time: '12:00', pct: 52, cx: 220, cy: 62, desc: '%52 Öğle Dengesi' },
+                        { time: '15:00', pct: 40, cx: 285, cy: 76, desc: '%40 Stabil Akış' },
+                        { time: '18:00', pct: 68, cx: 350, cy: 42, desc: '%68 Akşam Yükselişi' },
+                        { time: '20:00', pct: 95, cx: 415, cy: 12, desc: '%95 ANA ZİRVE' },
+                        { time: '00:00', pct: 50, cx: 480, cy: 64, desc: '%50 Gece Dengesi' },
+                      ];
+
+                  const minPct = Math.min(...trafficDataRaw.map(t => t.pct));
+                  const maxPct = Math.max(...trafficDataRaw.map(t => t.pct));
+
+                  const mainPeak = trafficDataRaw.reduce((prev, curr) => (curr.pct > prev.pct ? curr : prev), trafficDataRaw[0]);
+                  // Distinct subPeak (second highest point at a different time)
+                  const remaining = trafficDataRaw.filter(t => t.time !== mainPeak.time);
+                  const subPeak = remaining.length > 0 
+                    ? remaining.reduce((prev, curr) => (curr.pct > prev.pct ? curr : prev), remaining[0])
+                    : mainPeak;
+
+                  const trafficData = trafficDataRaw.map(pt => ({
+                    ...pt,
+                    isMainPeak: pt.time === mainPeak.time,
+                    isPeak: pt.time === subPeak.time
+                  }));
+
+                  const totalDensity = trafficData.reduce((sum, pt) => sum + pt.pct, 0);
+                  const avgDensity = (totalDensity / trafficData.length).toFixed(1);
 
                   const activePoint = hoveredTrafficIdx !== null ? trafficData[hoveredTrafficIdx] : null;
 
+                  // Dinamik SVG yumuşak dalga eğrisi oluşturucu
+                  const generateCurve = (points) => {
+                    if (!points || points.length === 0) return "";
+                    let d = `M 0,${points[0].cy}`;
+                    for (let i = 0; i < points.length; i++) {
+                      const curr = points[i];
+                      const prev = points[i - 1] || { cx: 0, cy: curr.cy };
+                      const cp1x = prev.cx + (curr.cx - prev.cx) * 0.45;
+                      const cp1y = prev.cy;
+                      const cp2x = prev.cx + (curr.cx - prev.cx) * 0.55;
+                      const cp2y = curr.cy;
+                      d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${curr.cx},${curr.cy}`;
+                    }
+                    const last = points[points.length - 1];
+                    d += ` C ${last.cx + 10},${last.cy} 495,${last.cy} 500,${last.cy}`;
+                    return d;
+                  };
+
+                  const curvePath = generateCurve(trafficData);
+                  const areaPath = `${curvePath} L 500,125 L 0,125 Z`;
+
                   return (
-                    <div className="relative z-10 pt-2 space-y-4">
-                      {/* DİNAMİK CANLI BİLGİ BADGE / HOVER TOOLTIP MERKEZİ */}
-                      <div className="min-h-[26px] flex items-center justify-between px-1">
-                        <span className="text-[11px] font-mono font-medium text-gray-400 flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-                          {activePoint ? (
-                            <span className="text-cyan-300 font-bold">
-                              Seçili: {activePoint.time} &bull; {activePoint.desc}
+                    <>
+                      <div className="relative z-10 pt-2 space-y-4">
+                        {/* DİNAMİK CANLI BİLGİ BADGE / HOVER TOOLTIP MERKEZİ */}
+                        <div className="min-h-[26px] flex items-center justify-between px-1">
+                          <span className="text-[11px] font-mono font-medium text-gray-400 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                            {activePoint ? (
+                              <span className="text-cyan-300 font-bold">
+                                Seçili: {activePoint.time} &bull; {activePoint.desc}
+                              </span>
+                            ) : (
+                              'Detay için noktaların üzerine gelin'
+                            )}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">
+                              Min: %{minPct}
                             </span>
-                          ) : (
-                            'Detay için noktaların üzerine gelin'
-                          )}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">
-                            Min: %33
-                          </span>
-                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300">
-                            Max: %95
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* SVG HASSAS GRAFİK TUVALİ */}
-                      <div className="relative pt-4 pb-2">
-                        {/* AKILLI ZİRVE ROZETLERİ (SABİT KONUM ALANLARI) */}
-                        <div className="absolute top-0 left-[31%] -translate-x-1/2 z-20 pointer-events-none">
-                          <span className="bg-emerald-950/80 backdrop-blur-md border border-emerald-500/50 text-emerald-300 text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-lg shadow-[0_4px_12px_rgba(16,185,129,0.3)] flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                            %75
-                          </span>
+                            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300">
+                              Max: %{maxPct}
+                            </span>
+                          </div>
                         </div>
 
-                        <div className="absolute -top-1 left-[83%] -translate-x-1/2 z-20 pointer-events-none">
-                          <span className="bg-gradient-to-r from-emerald-600/90 via-teal-600/90 to-cyan-600/90 backdrop-blur-md border border-emerald-300/60 text-white text-[10px] font-mono font-black px-2.5 py-0.5 rounded-lg shadow-[0_0_15px_rgba(16,185,129,0.5)] flex items-center gap-1 tracking-wider uppercase">
-                            <span className="w-1.5 h-1.5 rounded-full bg-white" />
-                            %95 ZİRVE
-                          </span>
-                        </div>
+                        {/* SVG HASSAS GRAFİK TUVALİ */}
+                        <div className="relative pt-4 pb-2">
+                          {/* AKILLI ZİRVE ROZETLERİ (DİNAMİK KONUM) */}
+                          <div 
+                            className="absolute top-0 -translate-x-1/2 z-20 pointer-events-none transition-all duration-300"
+                            style={{ left: `${(subPeak.cx / 500) * 100}%` }}
+                          >
+                            <span className="bg-emerald-950/80 backdrop-blur-md border border-emerald-500/50 text-emerald-300 text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-lg shadow-[0_4px_12px_rgba(16,185,129,0.3)] flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                              %{subPeak.pct}
+                            </span>
+                          </div>
 
-                        <svg className="w-full h-40 overflow-visible" viewBox="0 0 500 130">
-                          <defs>
-                            {/* Çoklu Renk Dalga Dolgu Gradyanı */}
-                            <linearGradient id="multiColorAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#10b981" stopOpacity="0.4" />
-                              <stop offset="40%" stopColor="#06b6d4" stopOpacity="0.2" />
-                              <stop offset="85%" stopColor="#8b5cf6" stopOpacity="0.05" />
-                              <stop offset="100%" stopColor="#000000" stopOpacity="0.0" />
-                            </linearGradient>
+                          <div 
+                            className="absolute -top-1 -translate-x-1/2 z-20 pointer-events-none transition-all duration-300"
+                            style={{ left: `${(mainPeak.cx / 500) * 100}%` }}
+                          >
+                            <span className="bg-gradient-to-r from-emerald-600/90 via-teal-600/90 to-cyan-600/90 backdrop-blur-md border border-emerald-300/60 text-white text-[10px] font-mono font-black px-2.5 py-0.5 rounded-lg shadow-[0_0_15px_rgba(16,185,129,0.5)] flex items-center gap-1 tracking-wider uppercase">
+                              <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                              %{mainPeak.pct} ZİRVE
+                            </span>
+                          </div>
 
-                            {/* Çizgi Parlaklık Gradyanı */}
-                            <linearGradient id="trafficLineGrad" x1="0" y1="0" x2="1" y2="0">
-                              <stop offset="0%" stopColor="#10b981" />
-                              <stop offset="30%" stopColor="#34d399" />
-                              <stop offset="60%" stopColor="#06b6d4" />
-                              <stop offset="85%" stopColor="#38bdf8" />
-                              <stop offset="100%" stopColor="#a855f7" />
-                            </linearGradient>
+                          <svg className="w-full h-40 overflow-visible" viewBox="0 0 500 130">
+                            <defs>
+                              {/* Çoklu Renk Dalga Dolgu Gradyanı */}
+                              <linearGradient id="multiColorAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#10b981" stopOpacity="0.4" />
+                                <stop offset="40%" stopColor="#06b6d4" stopOpacity="0.2" />
+                                <stop offset="85%" stopColor="#8b5cf6" stopOpacity="0.05" />
+                                <stop offset="100%" stopColor="#000000" stopOpacity="0.0" />
+                              </linearGradient>
 
-                            {/* Yumuşak Neon Glow Filtresi */}
-                            <filter id="neonGlowFilter" x="-20%" y="-30%" width="140%" height="160%">
-                              <feGaussianBlur stdDeviation="4" result="blur" />
-                              <feComponentTransfer in="blur" result="glow">
-                                <feFuncA type="linear" slope="1.5" />
-                              </feComponentTransfer>
-                              <feMerge>
-                                <feMergeNode in="glow" />
-                                <feMergeNode in="SourceGraphic" />
-                              </feMerge>
-                            </filter>
-                          </defs>
+                              {/* Çizgi Parlaklık Gradyanı */}
+                              <linearGradient id="trafficLineGrad" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stopColor="#10b981" />
+                                <stop offset="30%" stopColor="#34d399" />
+                                <stop offset="60%" stopColor="#06b6d4" />
+                                <stop offset="85%" stopColor="#38bdf8" />
+                                <stop offset="100%" stopColor="#a855f7" />
+                              </linearGradient>
 
-                          {/* Arka Plan Izgara Çizgileri */}
-                          <line x1="0" y1="20" x2="500" y2="20" stroke="rgba(255,255,255,0.05)" strokeDasharray="4 4" />
-                          <line x1="0" y1="60" x2="500" y2="60" stroke="rgba(255,255,255,0.05)" strokeDasharray="4 4" />
-                          <line x1="0" y1="100" x2="500" y2="100" stroke="rgba(255,255,255,0.05)" strokeDasharray="4 4" />
+                              {/* Yumuşak Neon Glow Filtresi */}
+                              <filter id="neonGlowFilter" x="-20%" y="-30%" width="140%" height="160%">
+                                <feGaussianBlur stdDeviation="4" result="blur" />
+                                <feComponentTransfer in="blur" result="glow">
+                                  <feFuncA type="linear" slope="1.5" />
+                                </feComponentTransfer>
+                                <feMerge>
+                                  <feMergeNode in="glow" />
+                                  <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                              </filter>
+                            </defs>
 
-                          {/* Dikey Kesikli İndikatör Çizgileri */}
-                          {trafficData.map((pt, idx) => {
-                            const isHovered = hoveredTrafficIdx === idx;
-                            return (
-                              <line
-                                key={`line-${idx}`}
-                                x1={pt.cx}
-                                y1={pt.cy}
-                                x2={pt.cx}
-                                y2={120}
-                                stroke={isHovered ? '#34d399' : 'rgba(255,255,255,0.08)'}
-                                strokeWidth={isHovered ? '1.5' : '1'}
-                                strokeDasharray={isHovered ? 'none' : '3 3'}
-                                className="transition-all duration-300"
-                              />
-                            );
-                          })}
+                            {/* Arka Plan Izgara Çizgileri */}
+                            <line x1="0" y1="20" x2="500" y2="20" stroke="rgba(255,255,255,0.05)" strokeDasharray="4 4" />
+                            <line x1="0" y1="60" x2="500" y2="60" stroke="rgba(255,255,255,0.05)" strokeDasharray="4 4" />
+                            <line x1="0" y1="100" x2="500" y2="100" stroke="rgba(255,255,255,0.05)" strokeDasharray="4 4" />
 
-                          {/* Dalga Dolgusu (Area Fill) */}
-                          <path
-                            d="M 0,85 C 10,83 15,82 25,85 C 50,78 65,74 90,72 C 115,66 135,32 155,34 C 175,32 200,58 220,62 C 240,66 265,78 285,76 C 310,72 330,44 350,42 C 375,35 395,14 415,12 C 435,10 465,58 480,64 C 490,66 495,67 500,68 L 500,125 L 0,125 Z"
-                            fill="url(#multiColorAreaGrad)"
-                          />
-
-                          {/* Arka Plan Yumuşak Glow Stroke Layer */}
-                          <path
-                            d="M 0,85 C 10,83 15,82 25,85 C 50,78 65,74 90,72 C 115,66 135,32 155,34 C 175,32 200,58 220,62 C 240,66 265,78 285,76 C 310,72 330,44 350,42 C 375,35 395,14 415,12 C 435,10 465,58 480,64 C 490,66 495,67 500,68"
-                            fill="none"
-                            stroke="url(#trafficLineGrad)"
-                            strokeWidth="7"
-                            strokeLinecap="round"
-                            opacity="0.35"
-                            filter="blur(5px)"
-                          />
-
-                          {/* Keskin Ana Dalga Çizgisi */}
-                          <path
-                            d="M 0,85 C 10,83 15,82 25,85 C 50,78 65,74 90,72 C 115,66 135,32 155,34 C 175,32 200,58 220,62 C 240,66 265,78 285,76 C 310,72 330,44 350,42 C 375,35 395,14 415,12 C 435,10 465,58 480,64 C 490,66 495,67 500,68"
-                            fill="none"
-                            stroke="url(#trafficLineGrad)"
-                            strokeWidth="3.5"
-                            strokeLinecap="round"
-                            filter="url(#neonGlowFilter)"
-                          />
-
-                          {/* İnteraktif Veri Noktaları (Circles) */}
-                          {trafficData.map((pt, idx) => {
-                            const isHovered = hoveredTrafficIdx === idx;
-                            return (
-                              <g
-                                key={`node-${idx}`}
-                                onMouseEnter={() => setHoveredTrafficIdx(idx)}
-                                onMouseLeave={() => setHoveredTrafficIdx(null)}
-                                className="cursor-pointer group/node"
-                              >
-                                {/* Şeffaf Geniş Hitbox */}
-                                <circle cx={pt.cx} cy={pt.cy} r="14" fill="transparent" />
-
-                                {/* Ana Zirve Dış Daire Animasyonu */}
-                                {pt.isMainPeak && (
-                                  <circle
-                                    cx={pt.cx}
-                                    cy={pt.cy}
-                                    r="14"
-                                    fill="none"
-                                    stroke="#38bdf8"
-                                    strokeWidth="1.5"
-                                    opacity="0.8"
-                                  />
-                                )}
-
-                                {/* Zirve 1 Dış Daire */}
-                                {pt.isPeak && (
-                                  <circle
-                                    cx={pt.cx}
-                                    cy={pt.cy}
-                                    r="10"
-                                    fill="none"
-                                    stroke="#34d399"
-                                    strokeWidth="1.5"
-                                    opacity="0.6"
-                                  />
-                                )}
-
-                                {/* Hover / Aktif Dış Halka */}
-                                <circle
-                                  cx={pt.cx}
-                                  cy={pt.cy}
-                                  r={isHovered ? (pt.isMainPeak ? '12' : '10') : pt.isMainPeak ? '9' : '7'}
-                                  fill="none"
-                                  stroke={isHovered ? '#6ee7b7' : pt.isMainPeak ? '#38bdf8' : '#34d399'}
-                                  strokeWidth={isHovered ? '2.5' : '1.5'}
+                            {/* Dikey Kesikli İndikatör Çizgileri */}
+                            {trafficData.map((pt, idx) => {
+                              const isHovered = hoveredTrafficIdx === idx;
+                              return (
+                                <line
+                                  key={`line-${idx}`}
+                                  x1={pt.cx}
+                                  y1={pt.cy}
+                                  x2={pt.cx}
+                                  y2={120}
+                                  stroke={isHovered ? '#34d399' : 'rgba(255,255,255,0.08)'}
+                                  strokeWidth={isHovered ? '1.5' : '1'}
+                                  strokeDasharray={isHovered ? 'none' : '3 3'}
                                   className="transition-all duration-300"
                                 />
+                              );
+                            })}
 
-                                {/* İç Çekirdek Nokta */}
-                                <circle
-                                  cx={pt.cx}
-                                  cy={pt.cy}
-                                  r={isHovered ? '5.5' : pt.isMainPeak ? '5' : '4'}
-                                  fill={isHovered ? '#ffffff' : pt.isMainPeak ? '#38bdf8' : '#34d399'}
-                                  className="transition-all duration-300 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]"
-                                />
-                              </g>
+                            {/* Dalga Dolgusu (Dinamik Area Fill) */}
+                            <path
+                              d={areaPath}
+                              fill="url(#multiColorAreaGrad)"
+                            />
+
+                            {/* Arka Plan Yumuşak Glow Stroke Layer */}
+                            <path
+                              d={curvePath}
+                              fill="none"
+                              stroke="url(#trafficLineGrad)"
+                              strokeWidth="7"
+                              strokeLinecap="round"
+                              opacity="0.35"
+                              filter="blur(5px)"
+                            />
+
+                            {/* Keskin Ana Dalga Çizgisi (Dinamik Curve) */}
+                            <path
+                              d={curvePath}
+                              fill="none"
+                              stroke="url(#trafficLineGrad)"
+                              strokeWidth="3.5"
+                              strokeLinecap="round"
+                              filter="url(#neonGlowFilter)"
+                            />
+
+                            {/* İnteraktif Veri Noktaları (Circles) */}
+                            {trafficData.map((pt, idx) => {
+                              const isHovered = hoveredTrafficIdx === idx;
+                              return (
+                                <g
+                                  key={`node-${idx}`}
+                                  onMouseEnter={() => setHoveredTrafficIdx(idx)}
+                                  onMouseLeave={() => setHoveredTrafficIdx(null)}
+                                  className="cursor-pointer group/node"
+                                >
+                                  {/* Şeffaf Geniş Hitbox */}
+                                  <circle cx={pt.cx} cy={pt.cy} r="14" fill="transparent" />
+
+                                  {/* Ana Zirve Dış Daire Animasyonu */}
+                                  {pt.isMainPeak && (
+                                    <circle
+                                      cx={pt.cx}
+                                      cy={pt.cy}
+                                      r="14"
+                                      fill="none"
+                                      stroke="#38bdf8"
+                                      strokeWidth="1.5"
+                                      opacity="0.8"
+                                    />
+                                  )}
+
+                                  {/* Zirve 1 Dış Daire */}
+                                  {pt.isPeak && (
+                                    <circle
+                                      cx={pt.cx}
+                                      cy={pt.cy}
+                                      r="10"
+                                      fill="none"
+                                      stroke="#34d399"
+                                      strokeWidth="1.5"
+                                      opacity="0.6"
+                                    />
+                                  )}
+
+                                  {/* Hover / Aktif Dış Halka */}
+                                  <circle
+                                    cx={pt.cx}
+                                    cy={pt.cy}
+                                    r={isHovered ? (pt.isMainPeak ? '12' : '10') : pt.isMainPeak ? '9' : '7'}
+                                    fill="none"
+                                    stroke={isHovered ? '#6ee7b7' : pt.isMainPeak ? '#38bdf8' : '#34d399'}
+                                    strokeWidth={isHovered ? '2.5' : '1.5'}
+                                    className="transition-all duration-300"
+                                  />
+
+                                  {/* İç Çekirdek Nokta */}
+                                  <circle
+                                    cx={pt.cx}
+                                    cy={pt.cy}
+                                    r={isHovered ? '5.5' : pt.isMainPeak ? '5' : '4'}
+                                    fill={isHovered ? '#ffffff' : pt.isMainPeak ? '#38bdf8' : '#34d399'}
+                                    className="transition-all duration-300 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]"
+                                  />
+                                </g>
+                              );
+                            })}
+                          </svg>
+                        </div>
+
+                        {/* ZAMAN ETİKETLERİ X-AKSİ (İNTERAKTİF PİLL STİLİ) */}
+                        <div className="grid grid-cols-8 gap-1 pt-2 border-t border-white/10 text-center">
+                          {trafficData.map((pt, idx) => {
+                            const isHovered = hoveredTrafficIdx === idx;
+                            return (
+                              <button
+                                key={`lbl-${idx}`}
+                                onMouseEnter={() => setHoveredTrafficIdx(idx)}
+                                onMouseLeave={() => setHoveredTrafficIdx(null)}
+                                className={`py-1 rounded-xl text-[10px] sm:text-xs font-mono transition-all duration-200 cursor-pointer ${isHovered
+                                    ? 'bg-emerald-500/25 text-emerald-200 font-bold border border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+                                    : pt.isMainPeak
+                                      ? 'bg-cyan-500/15 text-cyan-300 font-extrabold border border-cyan-500/30'
+                                      : pt.isPeak
+                                        ? 'bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20'
+                                        : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
+                                  }`}
+                              >
+                                {pt.time}
+                              </button>
                             );
                           })}
-                        </svg>
+                        </div>
                       </div>
 
-                      {/* ZAMAN ETİKETLERİ X-AKSİ (İNTERAKTİF PİLL STİLİ) */}
-                      <div className="grid grid-cols-8 gap-1 pt-2 border-t border-white/10 text-center">
-                        {trafficData.map((pt, idx) => {
-                          const isHovered = hoveredTrafficIdx === idx;
-                          return (
-                            <button
-                              key={`lbl-${idx}`}
-                              onMouseEnter={() => setHoveredTrafficIdx(idx)}
-                              onMouseLeave={() => setHoveredTrafficIdx(null)}
-                              className={`py-1 rounded-xl text-[10px] sm:text-xs font-mono transition-all duration-200 cursor-pointer ${isHovered
-                                  ? 'bg-emerald-500/25 text-emerald-200 font-bold border border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
-                                  : pt.isMainPeak
-                                    ? 'bg-cyan-500/15 text-cyan-300 font-extrabold border border-cyan-500/30'
-                                    : pt.isPeak
-                                      ? 'bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20'
-                                      : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
-                                }`}
-                            >
-                              {pt.time}
-                            </button>
-                          );
-                        })}
+                      {/* GRAFİK ALT KPI ÖZET KARTLARI */}
+                      <div className="relative z-10 grid grid-cols-3 gap-2.5 pt-2 border-t border-white/10 text-xs">
+                        <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-white/15 transition-all flex flex-col items-center justify-center text-center group/kpi">
+                          <span className="text-[10px] text-gray-400 uppercase font-semibold flex items-center gap-1 group-hover/kpi:text-white transition-colors">
+                            <Activity className="w-3 h-3 text-emerald-400" /> Ort. Yoğunluk
+                          </span>
+                          <span className="font-mono font-extrabold text-white text-xs sm:text-sm mt-1">
+                            %{avgDensity} <span className="text-[10px] text-gray-400 font-normal">/ Saat</span>
+                          </span>
+                        </div>
+
+                        <div className="p-3 rounded-2xl bg-emerald-500/[0.06] border border-emerald-500/20 hover:border-emerald-500/40 transition-all flex flex-col items-center justify-center text-center group/kpi shadow-[0_0_15px_rgba(16,185,129,0.08)]">
+                          <span className="text-[10px] text-emerald-400/90 uppercase font-semibold flex items-center gap-1 group-hover/kpi:text-emerald-300 transition-colors">
+                            <TrendingUp className="w-3 h-3 text-emerald-400" /> Zirve Saat
+                          </span>
+                          <span className="font-mono font-extrabold text-emerald-300 text-xs sm:text-sm mt-1">
+                            {mainPeak.time} <span className="text-[10px] text-emerald-400/80 font-bold">(%{mainPeak.pct})</span>
+                          </span>
+                        </div>
+
+                        <div className="p-3 rounded-2xl bg-cyan-500/[0.06] border border-cyan-500/20 hover:border-cyan-500/40 transition-all flex flex-col items-center justify-center text-center group/kpi shadow-[0_0_15px_rgba(6,182,212,0.08)]">
+                          <span className="text-[10px] text-cyan-400/90 uppercase font-semibold flex items-center gap-1 group-hover/kpi:text-cyan-300 transition-colors">
+                            <Gauge className="w-3 h-3 text-cyan-400" /> Sunucu Hızı
+                          </span>
+                          <span className="font-mono font-extrabold text-cyan-300 text-xs sm:text-sm mt-1">
+                            12 ms <span className="text-[10px] text-cyan-400/80 font-bold">(Hızlı)</span>
+                          </span>
+                        </div>
                       </div>
-                    </div>
+                    </>
                   );
                 })()}
-
-                {/* GRAFİK ALT KPI ÖZET KARTLARI */}
-                <div className="relative z-10 grid grid-cols-3 gap-2.5 pt-2 border-t border-white/10 text-xs">
-                  <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-white/15 transition-all flex flex-col items-center justify-center text-center group/kpi">
-                    <span className="text-[10px] text-gray-400 uppercase font-semibold flex items-center gap-1 group-hover/kpi:text-white transition-colors">
-                      <Activity className="w-3 h-3 text-emerald-400" /> Ort. Yoğunluk
-                    </span>
-                    <span className="font-mono font-extrabold text-white text-xs sm:text-sm mt-1">
-                      %48.5 <span className="text-[10px] text-gray-400 font-normal">/ Saat</span>
-                    </span>
-                  </div>
-
-                  <div className="p-3 rounded-2xl bg-emerald-500/[0.06] border border-emerald-500/20 hover:border-emerald-500/40 transition-all flex flex-col items-center justify-center text-center group/kpi shadow-[0_0_15px_rgba(16,185,129,0.08)]">
-                    <span className="text-[10px] text-emerald-400/90 uppercase font-semibold flex items-center gap-1 group-hover/kpi:text-emerald-300 transition-colors">
-                      <TrendingUp className="w-3 h-3 text-emerald-400" /> Zirve Saat
-                    </span>
-                    <span className="font-mono font-extrabold text-emerald-300 text-xs sm:text-sm mt-1">
-                      20:00 <span className="text-[10px] text-emerald-400/80 font-bold">(%95)</span>
-                    </span>
-                  </div>
-
-                  <div className="p-3 rounded-2xl bg-cyan-500/[0.06] border border-cyan-500/20 hover:border-cyan-500/40 transition-all flex flex-col items-center justify-center text-center group/kpi shadow-[0_0_15px_rgba(6,182,212,0.08)]">
-                    <span className="text-[10px] text-cyan-400/90 uppercase font-semibold flex items-center gap-1 group-hover/kpi:text-cyan-300 transition-colors">
-                      <Gauge className="w-3 h-3 text-cyan-400" /> Sunucu Hızı
-                    </span>
-                    <span className="font-mono font-extrabold text-cyan-300 text-xs sm:text-sm mt-1">
-                      12 ms <span className="text-[10px] text-cyan-400/80 font-bold">(Hızlı)</span>
-                    </span>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -4541,7 +4642,7 @@ function App() {
                 </div>
                 <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5 flex items-center justify-between gap-1 min-w-0">
                   <span className="text-gray-400 text-[11px] font-medium truncate">Rapor Saati</span>
-                  <span className="font-mono text-emerald-400 font-bold text-xs flex-shrink-0">09:00 & 20:00</span>
+                  <span className="font-mono text-emerald-400 font-bold text-xs flex-shrink-0">09:00 &amp; 20:00</span>
                 </div>
                 <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5 flex items-center justify-between gap-1 min-w-0">
                   <span className="text-gray-400 text-[11px] font-medium truncate">Güvenlik</span>
