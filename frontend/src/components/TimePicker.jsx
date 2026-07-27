@@ -131,9 +131,9 @@ export default function TimePicker({
           </span>
 
           {currentPeriod.label && (
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap hidden sm:inline-block transition-colors ${
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap hidden sm:inline-block transition-colors ${
               disabled
-                ? 'bg-white/5 text-gray-500 border-white/5'
+                ? 'bg-white/5 text-gray-400 border-white/5'
                 : currentPeriod.color
             }`}>
               {currentPeriod.label}
@@ -144,10 +144,10 @@ export default function TimePicker({
         <ChevronDown
           className={`w-4 h-4 transition-all flex-shrink-0 ${
             disabled
-              ? 'text-gray-600'
+              ? 'text-gray-500'
               : isOpen
               ? 'rotate-180 text-purple-400'
-              : 'text-gray-400'
+              : 'text-gray-300'
           }`}
         />
       </button>
@@ -167,11 +167,11 @@ export default function TimePicker({
         >
           {/* Header */}
           <div className="px-3.5 py-2 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
-            <span className="text-[11px] font-medium text-gray-400 flex items-center gap-1.5">
+            <span className="text-xs font-medium text-gray-300 flex items-center gap-1.5">
               <Sparkles className="w-3 h-3 text-purple-400" />
               Bildirim Saati Seçin
             </span>
-            <span className="text-[10px] font-bold text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-md border border-purple-500/30">
+            <span className="text-xs font-bold text-purple-200 bg-purple-500/20 px-2 py-0.5 rounded-md border border-purple-500/30">
               TSİ (UTC+3)
             </span>
           </div>
@@ -198,8 +198,8 @@ export default function TimePicker({
                 >
                   <div className="flex items-center gap-2">
                     <span className="tracking-wide">{t}</span>
-                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
-                      isSelected ? 'bg-white/20 text-white' : 'text-gray-400'
+                    <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
+                      isSelected ? 'bg-white/20 text-white' : 'text-gray-300'
                     }`}>
                       {period.label}
                     </span>

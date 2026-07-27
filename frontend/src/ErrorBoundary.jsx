@@ -27,6 +27,13 @@ class ErrorBoundary extends React.Component {
             <p className="text-xs text-gray-400 leading-relaxed">
               Sayfa yüklenirken bir görüntüleme hatası oluştu. Sayfayı yenileyerek tekrar deneyebilirsiniz.
             </p>
+            {this.state.error && (
+              <pre className="text-left text-[11px] font-mono bg-black/60 p-3 rounded-xl text-rose-300 border border-rose-500/30 overflow-x-auto max-h-48 whitespace-pre-wrap">
+                {this.state.error.toString()}
+                {'\n'}
+                {this.state.error.stack}
+              </pre>
+            )}
             <button
               onClick={() => window.location.reload()}
               className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2 glow-btn cursor-pointer"

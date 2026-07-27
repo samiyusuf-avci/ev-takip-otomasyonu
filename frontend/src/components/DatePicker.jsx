@@ -344,28 +344,28 @@ export default function DatePicker({
             <button
               type="button"
               onClick={() => applyShortcut('today')}
-              className="px-2 py-0.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/20 rounded-md text-[11px] font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1"
+              className="px-2 py-0.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-200 border border-purple-500/20 rounded-md text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1"
             >
               <Sparkles className="w-3 h-3" /> Bugün
             </button>
             <button
               type="button"
               onClick={() => applyShortcut('+1w')}
-              className="px-2 py-0.5 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 rounded-md text-[11px] font-semibold whitespace-nowrap transition-all cursor-pointer"
+              className="px-2 py-0.5 bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 rounded-md text-xs font-semibold whitespace-nowrap transition-all cursor-pointer"
             >
               +1 Hafta
             </button>
             <button
               type="button"
               onClick={() => applyShortcut('+1m')}
-              className="px-2 py-0.5 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 rounded-md text-[11px] font-semibold whitespace-nowrap transition-all cursor-pointer"
+              className="px-2 py-0.5 bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 rounded-md text-xs font-semibold whitespace-nowrap transition-all cursor-pointer"
             >
               +1 Ay
             </button>
             <button
               type="button"
               onClick={() => applyShortcut('+1y')}
-              className="px-2 py-0.5 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 rounded-md text-[11px] font-semibold whitespace-nowrap transition-all cursor-pointer"
+              className="px-2 py-0.5 bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 rounded-md text-xs font-semibold whitespace-nowrap transition-all cursor-pointer"
             >
               +1 Yıl
             </button>
@@ -374,7 +374,7 @@ export default function DatePicker({
           {/* Haftanın Günleri İsimleri */}
           <div className="grid grid-cols-7 gap-1 text-center mb-1">
             {TURKISH_WEEKDAYS.map((wd) => (
-              <span key={wd} className="text-[10px] font-bold text-gray-400 py-0.5">
+              <span key={wd} className="text-xs font-bold text-gray-300 py-0.5">
                 {wd}
               </span>
             ))}

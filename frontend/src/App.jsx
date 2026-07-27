@@ -3,7 +3,7 @@ import API from './api';
 import DatePicker from './components/DatePicker';
 import TimePicker from './components/TimePicker';
 import LandingPage from './components/LandingPage';
-import logoImg from './assets/logo.png';
+import logoImg from './assets/logo.webp';
 import {
   LayoutDashboard,
   BarChart2,
@@ -1542,11 +1542,15 @@ function App() {
               <img
                 src={logoImg}
                 alt="Akıllı Yaşam Logosu"
+                fetchpriority="high"
+                loading="eager"
+                width="80"
+                height="80"
                 className="relative w-20 h-20 rounded-2xl object-cover border border-purple-400/40 shadow-[0_0_30px_rgba(168,85,247,0.5)] transform transition duration-500 hover:scale-105"
               />
             </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">Akıllı Yaşam Asistanı</h1>
-            <p className="text-xs text-purple-400/80 font-medium mt-1">
+            <h2 className="text-2xl font-bold text-white tracking-tight">Akıllı Yaşam Asistanı</h2>
+            <p className="text-xs text-purple-300 font-medium mt-1">
               {authMode === 'login' ? 'Hesabınıza giriş yapın' : 'Yeni bir hesap oluşturun'}
             </p>
           </div>
@@ -1654,11 +1658,15 @@ function App() {
           <img
             src={logoImg}
             alt="Akıllı Yaşam Logo"
+            fetchpriority="high"
+            loading="eager"
+            width="40"
+            height="40"
             className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-purple-500/40 shadow-[0_0_14px_rgba(168,85,247,0.45)] flex-shrink-0"
           />
           <div className="min-w-0">
-            <h1 className="text-sm sm:text-base font-bold text-white leading-tight truncate whitespace-nowrap">Akıllı Yaşam</h1>
-            <p className="text-[10px] text-purple-400/80 font-medium truncate whitespace-nowrap">Ev Takip Otomasyonu</p>
+            <span className="text-sm sm:text-base font-bold text-white leading-tight truncate whitespace-nowrap block">Akıllı Yaşam</span>
+            <p className="text-xs text-purple-300 font-medium truncate whitespace-nowrap">Ev Takip Otomasyonu</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0 relative z-50">
@@ -1701,7 +1709,7 @@ function App() {
                 <h4 className="text-xs font-bold text-white">Sistem Bildirim Testi 🔔</h4>
               </div>
 
-              <p className="text-[10px] text-gray-400 leading-relaxed">
+              <p className="text-xs text-gray-300 leading-relaxed">
                 {user?.role === 'admin'
                   ? "Sistemdeki kullanıcı, ziyaretçi ve şikayet istatistiklerini Telegram'a admin özeti olarak gönderir."
                   : "Yaklaşan tüm görevleri ve son tarihleri tarayarak Telegram'a anlık durum raporu gönderir."
@@ -1738,7 +1746,7 @@ function App() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-white truncate leading-none">{user.isim}</p>
-                  <p className="text-[10px] text-gray-400 truncate mt-1">{user.eposta}</p>
+                  <p className="text-xs text-gray-300 truncate mt-1">{user.eposta}</p>
                 </div>
               </div>
 
@@ -1773,12 +1781,16 @@ function App() {
               <img
                 src={logoImg}
                 alt="Akıllı Yaşam Logo"
+                fetchpriority="high"
+                loading="eager"
+                width="44"
+                height="44"
                 className="relative w-11 h-11 rounded-xl object-cover border border-purple-400/40 shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-transform hover:scale-105"
               />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white tracking-tight leading-tight">Akıllı Yaşam</h1>
-              <p className="text-xs text-purple-400/80 font-medium">Ev Takip Otomasyonu</p>
+              <span className="text-lg font-bold text-white tracking-tight leading-tight block">Akıllı Yaşam</span>
+              <p className="text-xs text-purple-300 font-medium">Ev Takip Otomasyonu</p>
             </div>
           </div>
 
@@ -1897,9 +1909,9 @@ function App() {
                   <span className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
                   Akıllı Yaşam Otomasyonu
                 </div>
-                <h2 className="text-xl md:text-3xl font-extrabold text-white tracking-tight">
+                <h1 className="text-xl md:text-3xl font-extrabold text-white tracking-tight">
                   Hoş Geldiniz, {user?.isim || 'Kullanıcı'} 👋
-                </h2>
+                </h1>
                 <p className="text-gray-300/80 text-xs md:text-sm mt-0.5 max-w-xl">
                   Evinizin tüm gıda, fatura, garanti ve rutin takiplerini tek bir akıllı panel üzerinden kolayca yönetin.
                 </p>
