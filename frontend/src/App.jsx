@@ -185,6 +185,17 @@ function App() {
   const [adminSikayetFilter, setAdminSikayetFilter] = useState('tum');
   const [openSikayetDropdownId, setOpenSikayetDropdownId] = useState(null);
 
+  useEffect(() => {
+    if (openSikayetDropdownId === null) return;
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.sikayet-dropdown-container')) {
+        setOpenSikayetDropdownId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openSikayetDropdownId]);
+
   const fetchAdminSikayetler = useCallback(async () => {
     setAdminSikayetlerLoading(true);
     try {
@@ -2030,8 +2041,8 @@ function App() {
                   <button
                     onClick={() => setDashboardNotifTab('yaklasanlar')}
                     className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer border ${dashboardNotifTab === 'yaklasanlar'
-                        ? 'bg-purple-600 text-white border-purple-400/40 shadow-[0_2px_10px_rgba(147,51,234,0.35)]'
-                        : 'bg-transparent border-transparent text-gray-400 hover:text-white hover:bg-white/5'
+                      ? 'bg-purple-600 text-white border-purple-400/40 shadow-[0_2px_10px_rgba(147,51,234,0.35)]'
+                      : 'bg-transparent border-transparent text-gray-400 hover:text-white hover:bg-white/5'
                       }`}
                   >
                     <span>⏰ Yaklaşanlar</span>
@@ -2044,8 +2055,8 @@ function App() {
                   <button
                     onClick={() => setDashboardNotifTab('gecenler')}
                     className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer border ${dashboardNotifTab === 'gecenler'
-                        ? 'bg-rose-600 text-white border-rose-400/40 shadow-[0_2px_10px_rgba(225,29,72,0.35)]'
-                        : 'bg-transparent border-transparent text-gray-400 hover:text-white hover:bg-white/5'
+                      ? 'bg-rose-600 text-white border-rose-400/40 shadow-[0_2px_10px_rgba(225,29,72,0.35)]'
+                      : 'bg-transparent border-transparent text-gray-400 hover:text-white hover:bg-white/5'
                       }`}
                   >
                     <span>⚠️ Süresi Geçenler</span>
@@ -2083,10 +2094,10 @@ function App() {
                         <div
                           key={notif.id}
                           className={`p-3.5 rounded-xl border backdrop-blur-md transition-all flex flex-col justify-between gap-3 relative overflow-hidden group hover:border-white/20 ${notif.isOverdue
-                              ? 'bg-rose-500/[0.06] border-rose-500/30'
-                              : notif.isToday
-                                ? 'bg-amber-500/[0.06] border-amber-500/30'
-                                : 'bg-white/[0.03] border-white/10'
+                            ? 'bg-rose-500/[0.06] border-rose-500/30'
+                            : notif.isToday
+                              ? 'bg-amber-500/[0.06] border-amber-500/30'
+                              : 'bg-white/[0.03] border-white/10'
                             }`}
                         >
                           {/* Top Header */}
@@ -2149,8 +2160,8 @@ function App() {
                           {isTelegramConfigured ? 'Anlık Telegram Hatırlatıcısı Aktif' : 'Telegram Botunu Yapılandırın'}
                         </h3>
                         <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full border whitespace-nowrap flex-shrink-0 ${isTelegramConfigured
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                            : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                          : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                           }`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${isTelegramConfigured ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
                           {isTelegramConfigured ? 'Bot Bağlı' : 'Yapılandırılmadı'}
@@ -2214,8 +2225,8 @@ function App() {
                     key={tab.id}
                     onClick={() => setGidaFiltre(tab.id)}
                     className={`flex-1 md:flex-initial px-2.5 py-2 xs:px-3 md:px-4 md:py-2 rounded-xl text-[11px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer select-none border ${isActive
-                        ? 'bg-purple-600 text-white border-purple-400/30 shadow-[0_2px_14px_rgba(147,51,234,0.45)] font-bold scale-[1.01]'
-                        : 'bg-white/[0.05] border-white/10 text-gray-300 hover:bg-purple-500/20 hover:border-purple-500/30 hover:text-purple-200'
+                      ? 'bg-purple-600 text-white border-purple-400/30 shadow-[0_2px_14px_rgba(147,51,234,0.45)] font-bold scale-[1.01]'
+                      : 'bg-white/[0.05] border-white/10 text-gray-300 hover:bg-purple-500/20 hover:border-purple-500/30 hover:text-purple-200'
                       }`}
                   >
                     <span className="hidden md:inline">{tab.label}</span>
@@ -2373,8 +2384,8 @@ function App() {
                     key={tab.id}
                     onClick={() => setFaturaFiltre(tab.id)}
                     className={`flex-1 md:flex-initial px-2.5 py-2 xs:px-3 md:px-4 md:py-2 rounded-xl text-[11px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer select-none border ${isActive
-                        ? 'bg-purple-600 text-white border-purple-400/30 shadow-[0_2px_14px_rgba(147,51,234,0.45)] font-bold scale-[1.01]'
-                        : 'bg-white/[0.05] border-white/10 text-gray-300 hover:bg-purple-500/20 hover:border-purple-500/30 hover:text-purple-200'
+                      ? 'bg-purple-600 text-white border-purple-400/30 shadow-[0_2px_14px_rgba(147,51,234,0.45)] font-bold scale-[1.01]'
+                      : 'bg-white/[0.05] border-white/10 text-gray-300 hover:bg-purple-500/20 hover:border-purple-500/30 hover:text-purple-200'
                       }`}
                   >
                     <span className="hidden md:inline">{tab.label}</span>
@@ -2505,8 +2516,8 @@ function App() {
                     key={tab.id}
                     onClick={() => setGarantiFiltre(tab.id)}
                     className={`flex-1 md:flex-initial px-2.5 py-2 xs:px-3 md:px-4 md:py-2 rounded-xl text-[11px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer select-none border ${isActive
-                        ? 'bg-purple-600 text-white border-purple-400/30 shadow-[0_2px_14px_rgba(147,51,234,0.45)] font-bold scale-[1.01]'
-                        : 'bg-white/[0.05] border-white/10 text-gray-300 hover:bg-purple-500/20 hover:border-purple-500/30 hover:text-purple-200'
+                      ? 'bg-purple-600 text-white border-purple-400/30 shadow-[0_2px_14px_rgba(147,51,234,0.45)] font-bold scale-[1.01]'
+                      : 'bg-white/[0.05] border-white/10 text-gray-300 hover:bg-purple-500/20 hover:border-purple-500/30 hover:text-purple-200'
                       }`}
                   >
                     <span className="hidden md:inline">{tab.label}</span>
@@ -2627,8 +2638,8 @@ function App() {
               <button
                 onClick={() => setSeciliRutinKlasor('hepsi')}
                 className={`px-2.5 py-2 sm:px-4 sm:py-2 rounded-xl text-[11px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer flex-shrink-0 select-none border ${seciliRutinKlasor === 'hepsi'
-                    ? 'bg-purple-600 text-white border-purple-400/30 shadow-[0_2px_14px_rgba(147,51,234,0.45)] font-bold scale-[1.01]'
-                    : 'bg-white/[0.05] border-white/10 text-gray-300 hover:bg-purple-500/20 hover:border-purple-500/30 hover:text-purple-200'
+                  ? 'bg-purple-600 text-white border-purple-400/30 shadow-[0_2px_14px_rgba(147,51,234,0.45)] font-bold scale-[1.01]'
+                  : 'bg-white/[0.05] border-white/10 text-gray-300 hover:bg-purple-500/20 hover:border-purple-500/30 hover:text-purple-200'
                   }`}
               >
                 <span>Hepsi</span>
@@ -2648,8 +2659,8 @@ function App() {
                     key={klasor.id}
                     onClick={() => setSeciliRutinKlasor(klasor.id.toString())}
                     className={`px-2.5 py-2 sm:px-4 sm:py-2 rounded-xl text-[11px] xs:text-xs md:text-sm font-semibold whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 cursor-pointer flex-shrink-0 select-none border ${isSelected
-                        ? 'bg-purple-600 text-white border-purple-400/30 shadow-[0_2px_14px_rgba(147,51,234,0.45)] font-bold scale-[1.01]'
-                        : 'bg-white/[0.05] border-white/10 text-gray-300 hover:bg-purple-500/20 hover:border-purple-500/30 hover:text-purple-200'
+                      ? 'bg-purple-600 text-white border-purple-400/30 shadow-[0_2px_14px_rgba(147,51,234,0.45)] font-bold scale-[1.01]'
+                      : 'bg-white/[0.05] border-white/10 text-gray-300 hover:bg-purple-500/20 hover:border-purple-500/30 hover:text-purple-200'
                       }`}
                   >
                     <span>{klasor.klasor_adi}</span>
@@ -2842,16 +2853,14 @@ function App() {
                 {/* Tümü */}
                 <button
                   onClick={() => setAdminSikayetFilter('tum')}
-                  className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 text-left cursor-pointer group ${
-                    adminSikayetFilter === 'tum'
+                  className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 text-left cursor-pointer group ${adminSikayetFilter === 'tum'
                       ? 'bg-purple-600/20 border-purple-500/50 text-white shadow-lg shadow-purple-500/10 ring-1 ring-purple-500/40'
                       : 'bg-white/[0.02] border-white/5 text-gray-400 hover:bg-white/[0.05] hover:border-white/10 hover:text-gray-200'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className={`p-2 rounded-lg border transition-colors ${
-                      adminSikayetFilter === 'tum' ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-white/5 text-gray-400 border-white/10 group-hover:text-purple-400'
-                    }`}>
+                    <div className={`p-2 rounded-lg border transition-colors ${adminSikayetFilter === 'tum' ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' : 'bg-white/5 text-gray-400 border-white/10 group-hover:text-purple-400'
+                      }`}>
                       <MessageSquare className="w-4 h-4" />
                     </div>
                     <div className="truncate">
@@ -2859,9 +2868,8 @@ function App() {
                       <p className="text-[11px] text-gray-400 group-hover:text-gray-300">Tüm Kayıtlar</p>
                     </div>
                   </div>
-                  <span className={`text-lg font-extrabold px-2.5 py-0.5 rounded-lg ${
-                    adminSikayetFilter === 'tum' ? 'bg-purple-500/30 text-purple-200' : 'bg-white/5 text-gray-300'
-                  }`}>
+                  <span className={`text-lg font-extrabold px-2.5 py-0.5 rounded-lg ${adminSikayetFilter === 'tum' ? 'bg-purple-500/30 text-purple-200' : 'bg-white/5 text-gray-300'
+                    }`}>
                     {adminSikayetStats.toplam}
                   </span>
                 </button>
@@ -2869,16 +2877,14 @@ function App() {
                 {/* Bekleyenler */}
                 <button
                   onClick={() => setAdminSikayetFilter('bekliyor')}
-                  className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 text-left cursor-pointer group ${
-                    adminSikayetFilter === 'bekliyor'
+                  className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 text-left cursor-pointer group ${adminSikayetFilter === 'bekliyor'
                       ? 'bg-amber-500/20 border-amber-500/50 text-white shadow-lg shadow-amber-500/10 ring-1 ring-amber-500/40'
                       : 'bg-white/[0.02] border-white/5 text-gray-400 hover:bg-white/[0.05] hover:border-white/10 hover:text-gray-200'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className={`p-2 rounded-lg border transition-colors ${
-                      adminSikayetFilter === 'bekliyor' ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-white/5 text-gray-400 border-white/10 group-hover:text-amber-400'
-                    }`}>
+                    <div className={`p-2 rounded-lg border transition-colors ${adminSikayetFilter === 'bekliyor' ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-white/5 text-gray-400 border-white/10 group-hover:text-amber-400'
+                      }`}>
                       <Inbox className="w-4 h-4" />
                     </div>
                     <div className="truncate">
@@ -2886,9 +2892,8 @@ function App() {
                       <p className="text-[11px] text-amber-400/80">İncelenmesi Gereken</p>
                     </div>
                   </div>
-                  <span className={`text-lg font-extrabold px-2.5 py-0.5 rounded-lg ${
-                    adminSikayetFilter === 'bekliyor' ? 'bg-amber-500/30 text-amber-200' : 'bg-white/5 text-amber-400'
-                  }`}>
+                  <span className={`text-lg font-extrabold px-2.5 py-0.5 rounded-lg ${adminSikayetFilter === 'bekliyor' ? 'bg-amber-500/30 text-amber-200' : 'bg-white/5 text-amber-400'
+                    }`}>
                     {adminSikayetStats.bekliyor}
                   </span>
                 </button>
@@ -2896,16 +2901,14 @@ function App() {
                 {/* İncelenenler */}
                 <button
                   onClick={() => setAdminSikayetFilter('incelendi')}
-                  className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 text-left cursor-pointer group ${
-                    adminSikayetFilter === 'incelendi'
+                  className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 text-left cursor-pointer group ${adminSikayetFilter === 'incelendi'
                       ? 'bg-sky-500/20 border-sky-500/50 text-white shadow-lg shadow-sky-500/10 ring-1 ring-sky-500/40'
                       : 'bg-white/[0.02] border-white/5 text-gray-400 hover:bg-white/[0.05] hover:border-white/10 hover:text-gray-200'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className={`p-2 rounded-lg border transition-colors ${
-                      adminSikayetFilter === 'incelendi' ? 'bg-sky-500/20 text-sky-300 border-sky-500/30' : 'bg-white/5 text-gray-400 border-white/10 group-hover:text-sky-400'
-                    }`}>
+                    <div className={`p-2 rounded-lg border transition-colors ${adminSikayetFilter === 'incelendi' ? 'bg-sky-500/20 text-sky-300 border-sky-500/30' : 'bg-white/5 text-gray-400 border-white/10 group-hover:text-sky-400'
+                      }`}>
                       <Clock className="w-4 h-4" />
                     </div>
                     <div className="truncate">
@@ -2913,9 +2916,8 @@ function App() {
                       <p className="text-[11px] text-sky-400/80">İşlemdeki Bildirimler</p>
                     </div>
                   </div>
-                  <span className={`text-lg font-extrabold px-2.5 py-0.5 rounded-lg ${
-                    adminSikayetFilter === 'incelendi' ? 'bg-sky-500/30 text-sky-200' : 'bg-white/5 text-sky-400'
-                  }`}>
+                  <span className={`text-lg font-extrabold px-2.5 py-0.5 rounded-lg ${adminSikayetFilter === 'incelendi' ? 'bg-sky-500/30 text-sky-200' : 'bg-white/5 text-sky-400'
+                    }`}>
                     {adminSikayetStats.incelendi}
                   </span>
                 </button>
@@ -2923,16 +2925,14 @@ function App() {
                 {/* Çözülenler */}
                 <button
                   onClick={() => setAdminSikayetFilter('cozuldu')}
-                  className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 text-left cursor-pointer group ${
-                    adminSikayetFilter === 'cozuldu'
+                  className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 text-left cursor-pointer group ${adminSikayetFilter === 'cozuldu'
                       ? 'bg-emerald-500/20 border-emerald-500/50 text-white shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-500/40'
                       : 'bg-white/[0.02] border-white/5 text-gray-400 hover:bg-white/[0.05] hover:border-white/10 hover:text-gray-200'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className={`p-2 rounded-lg border transition-colors ${
-                      adminSikayetFilter === 'cozuldu' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-white/5 text-gray-400 border-white/10 group-hover:text-emerald-400'
-                    }`}>
+                    <div className={`p-2 rounded-lg border transition-colors ${adminSikayetFilter === 'cozuldu' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-white/5 text-gray-400 border-white/10 group-hover:text-emerald-400'
+                      }`}>
                       <CheckCircle className="w-4 h-4" />
                     </div>
                     <div className="truncate">
@@ -2940,9 +2940,8 @@ function App() {
                       <p className="text-[11px] text-emerald-400/80">Tamamlananlar</p>
                     </div>
                   </div>
-                  <span className={`text-lg font-extrabold px-2.5 py-0.5 rounded-lg ${
-                    adminSikayetFilter === 'cozuldu' ? 'bg-emerald-500/30 text-emerald-200' : 'bg-white/5 text-emerald-400'
-                  }`}>
+                  <span className={`text-lg font-extrabold px-2.5 py-0.5 rounded-lg ${adminSikayetFilter === 'cozuldu' ? 'bg-emerald-500/30 text-emerald-200' : 'bg-white/5 text-emerald-400'
+                    }`}>
                     {adminSikayetStats.cozuldu}
                   </span>
                 </button>
@@ -2979,7 +2978,7 @@ function App() {
             </div>
 
             {/* TABLO CONTAINER */}
-            <div className="glass-panel rounded-3xl border border-white/10 overflow-hidden shadow-2xl space-y-4">
+            <div className="glass-panel rounded-3xl border border-white/10 overflow-visible shadow-2xl space-y-4">
               <div className="p-5 md:p-6 border-b border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-base md:text-lg font-bold text-white flex items-center gap-2">
@@ -2995,7 +2994,7 @@ function App() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto pb-36 min-h-[340px]">
                 <table className="w-full text-left text-sm text-gray-300">
                   <thead className="bg-white/5 text-gray-400 text-xs uppercase tracking-wider border-b border-white/5">
                     <tr>
@@ -3033,15 +3032,15 @@ function App() {
                           s.durum === 'cozuldu'
                             ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                             : s.durum === 'incelendi'
-                            ? 'bg-sky-500/10 text-sky-400 border-sky-500/20'
-                            : 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+                              ? 'bg-sky-500/10 text-sky-400 border-sky-500/20'
+                              : 'bg-amber-500/10 text-amber-400 border-amber-500/20';
 
                         const statusText =
                           s.durum === 'cozuldu'
                             ? 'Çözüldü'
                             : s.durum === 'incelendi'
-                            ? 'İncelendi'
-                            : 'Bekliyor';
+                              ? 'İncelendi'
+                              : 'Bekliyor';
                         return (
                           <tr key={`sikayet-tab-${s.id}`} className="hover:bg-white/[0.02] transition-colors">
                             <td className="px-6 py-4 font-mono text-xs text-gray-400">#{s.id}</td>
@@ -3054,111 +3053,101 @@ function App() {
                               <div className="text-xs text-gray-300 leading-relaxed whitespace-pre-wrap">{s.mesaj}</div>
                             </td>
                             <td className="px-6 py-4">
-                               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${statusBadge}`}>
-                                 {statusText}
-                               </span>
-                             </td>
-                             <td className="px-6 py-4 text-xs text-gray-400 whitespace-nowrap">
-                               {s.olusturma_tarihi ? formatDate(s.olusturma_tarihi) : '-'}
-                             </td>
-                             <td className="px-6 py-4 text-right whitespace-nowrap">
-                               <div className="flex items-center justify-end gap-2">
-                                 <div className="relative inline-block text-left">
-                                   <button
-                                     type="button"
-                                     onClick={() => setOpenSikayetDropdownId(openSikayetDropdownId === s.id ? null : s.id)}
-                                     className={`px-3 py-1.5 rounded-xl text-xs font-bold border inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-sm ${
-                                       s.durum === 'bekliyor'
-                                         ? 'bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25 ring-1 ring-amber-500/20'
-                                         : s.durum === 'incelendi'
-                                         ? 'bg-sky-500/15 text-sky-300 border-sky-500/30 hover:bg-sky-500/25 ring-1 ring-sky-500/20'
-                                         : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25 ring-1 ring-emerald-500/20'
-                                     }`}
-                                   >
-                                     <span>
-                                       {s.durum === 'bekliyor' && 'Bekliyor'}
-                                       {s.durum === 'incelendi' && 'İncelendi'}
-                                       {s.durum === 'cozuldu' && 'Çözüldü'}
-                                     </span>
-                                     <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${openSikayetDropdownId === s.id ? 'rotate-180' : ''}`} />
-                                   </button>
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${statusBadge}`}>
+                                {statusText}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-xs text-gray-400 whitespace-nowrap">
+                              {s.olusturma_tarihi ? formatDate(s.olusturma_tarihi) : '-'}
+                            </td>
+                            <td className="px-6 py-4 text-right whitespace-nowrap">
+                              <div className="flex items-center justify-end gap-2">
+                                <div className="relative inline-block text-left sikayet-dropdown-container">
+                                  <button
+                                    type="button"
+                                    onClick={() => setOpenSikayetDropdownId(openSikayetDropdownId === s.id ? null : s.id)}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-sm ${s.durum === 'bekliyor'
+                                        ? 'bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25 ring-1 ring-amber-500/20'
+                                        : s.durum === 'incelendi'
+                                          ? 'bg-sky-500/15 text-sky-300 border-sky-500/30 hover:bg-sky-500/25 ring-1 ring-sky-500/20'
+                                          : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25 ring-1 ring-emerald-500/20'
+                                      }`}
+                                  >
+                                    <span>
+                                      {s.durum === 'bekliyor' && 'Bekliyor'}
+                                      {s.durum === 'incelendi' && 'İncelendi'}
+                                      {s.durum === 'cozuldu' && 'Çözüldü'}
+                                    </span>
+                                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${openSikayetDropdownId === s.id ? 'rotate-180' : ''}`} />
+                                  </button>
 
-                                   {openSikayetDropdownId === s.id && (
-                                     <>
-                                       <div
-                                         className="fixed inset-0 z-40 bg-transparent"
-                                         onClick={() => setOpenSikayetDropdownId(null)}
-                                       />
-                                       <div className="absolute right-0 mt-1 z-50 w-36 bg-[#161828] border border-white/15 rounded-xl shadow-2xl p-1 animate-scale-in space-y-0.5">
-                                         <button
-                                           type="button"
-                                           onClick={() => {
-                                             handleUpdateSikayetDurum(s.id, 'bekliyor');
-                                             setOpenSikayetDropdownId(null);
-                                           }}
-                                           className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer text-left ${
-                                             s.durum === 'bekliyor'
-                                               ? 'bg-amber-500/20 text-amber-300'
-                                               : 'text-gray-300 hover:bg-amber-500/10 hover:text-amber-300'
-                                           }`}
-                                         >
-                                           <div className="flex items-center gap-2">
-                                             <span className="w-2 h-2 rounded-full bg-amber-400" />
-                                             Bekliyor
-                                           </div>
-                                           {s.durum === 'bekliyor' && <Check className="w-3.5 h-3.5 text-amber-300" />}
-                                         </button>
-
-                                         <button
-                                           type="button"
-                                           onClick={() => {
-                                             handleUpdateSikayetDurum(s.id, 'incelendi');
-                                             setOpenSikayetDropdownId(null);
-                                           }}
-                                           className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer text-left ${
-                                             s.durum === 'incelendi'
-                                               ? 'bg-sky-500/20 text-sky-300'
-                                               : 'text-gray-300 hover:bg-sky-500/10 hover:text-sky-300'
-                                           }`}
-                                         >
-                                           <div className="flex items-center gap-2">
-                                             <span className="w-2 h-2 rounded-full bg-sky-400" />
-                                             İncelendi
-                                           </div>
-                                           {s.durum === 'incelendi' && <Check className="w-3.5 h-3.5 text-sky-300" />}
-                                         </button>
-
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              handleUpdateSikayetDurum(s.id, 'cozuldu');
-                                              setOpenSikayetDropdownId(null);
-                                            }}
-                                            className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer text-left ${
-                                              s.durum === 'cozuldu'
-                                                ? 'bg-emerald-500/20 text-emerald-300'
-                                                : 'bg-white/5 text-gray-300 hover:bg-emerald-500/10 hover:text-emerald-300'
-                                            }`}
-                                          >
-                                            <div className="flex items-center gap-2">
-                                              <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                                              Çözüldü
-                                            </div>
-                                            {s.durum === 'cozuldu' && <Check className="w-3.5 h-3.5 text-emerald-300" />}
-                                          </button>
+                                  {openSikayetDropdownId === s.id && (
+                                    <div className="absolute right-0 top-full mt-1 z-50 w-36 bg-[#161828] border border-white/15 rounded-xl shadow-2xl p-1 animate-scale-in space-y-0.5 origin-top-right">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          handleUpdateSikayetDurum(s.id, 'bekliyor');
+                                          setOpenSikayetDropdownId(null);
+                                        }}
+                                        className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer text-left ${s.durum === 'bekliyor'
+                                            ? 'bg-amber-500/20 text-amber-300'
+                                            : 'text-gray-300 hover:bg-amber-500/10 hover:text-amber-300'
+                                          }`}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <span className="w-2 h-2 rounded-full bg-amber-400" />
+                                          Bekliyor
                                         </div>
-                                      </>
-                                    )}
-                                 </div>
+                                        {s.durum === 'bekliyor' && <Check className="w-3.5 h-3.5 text-amber-300" />}
+                                      </button>
 
-                                 <button
-                                   onClick={() => handleDeleteSikayet(s.id)}
-                                   className="px-3.5 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-xl text-xs font-semibold transition-all cursor-pointer"
-                                 >
-                                   Sil
-                                 </button>
-                               </div>
-                             </td>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          handleUpdateSikayetDurum(s.id, 'incelendi');
+                                          setOpenSikayetDropdownId(null);
+                                        }}
+                                        className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer text-left ${s.durum === 'incelendi'
+                                            ? 'bg-sky-500/20 text-sky-300'
+                                            : 'text-gray-300 hover:bg-sky-500/10 hover:text-sky-300'
+                                          }`}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <span className="w-2 h-2 rounded-full bg-sky-400" />
+                                          İncelendi
+                                        </div>
+                                        {s.durum === 'incelendi' && <Check className="w-3.5 h-3.5 text-sky-300" />}
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          handleUpdateSikayetDurum(s.id, 'cozuldu');
+                                          setOpenSikayetDropdownId(null);
+                                        }}
+                                        className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer text-left ${s.durum === 'cozuldu'
+                                            ? 'bg-emerald-500/20 text-emerald-300'
+                                            : 'bg-white/5 text-gray-300 hover:bg-emerald-500/10 hover:text-emerald-300'
+                                          }`}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                                          Çözüldü
+                                        </div>
+                                        {s.durum === 'cozuldu' && <Check className="w-3.5 h-3.5 text-emerald-300" />}
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <button
+                                  onClick={() => handleDeleteSikayet(s.id)}
+                                  className="px-3.5 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+                                >
+                                  Sil
+                                </button>
+                              </div>
+                            </td>
                           </tr>
                         );
                       });
@@ -3192,8 +3181,8 @@ function App() {
                     </h3>
                     {Boolean(ayarlar.telegram_token || ayarlar.telegram_chat_id) && (
                       <span className={`text-[10px] md:text-xs font-semibold px-2.5 py-1 rounded-full border flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 ${isEditingTelegram
-                          ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
-                          : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
+                        ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+                        : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
                         }`}>
                         {isEditingTelegram ? (
                           <>
@@ -3227,8 +3216,8 @@ function App() {
                         value={ayarlar.telegram_token}
                         onChange={(e) => setAyarlar({ ...ayarlar, telegram_token: e.target.value })}
                         className={`w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all ${!isEditingTelegram
-                            ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none'
-                            : 'bg-white/5 border-white/10 focus:border-purple-500'
+                          ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none'
+                          : 'bg-white/5 border-white/10 focus:border-purple-500'
                           }`}
                       />
                       <p className="text-[10px] text-gray-500 mt-0.5">@BotFather üzerinden aldığınız token.</p>
@@ -3250,8 +3239,8 @@ function App() {
                         value={ayarlar.telegram_chat_id}
                         onChange={(e) => setAyarlar({ ...ayarlar, telegram_chat_id: e.target.value })}
                         className={`w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all ${!isEditingTelegram
-                            ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none'
-                            : 'bg-white/5 border-white/10 focus:border-purple-500'
+                          ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none'
+                          : 'bg-white/5 border-white/10 focus:border-purple-500'
                           }`}
                       />
                       <p className="text-[10px] text-gray-500 mt-0.5">Kişisel veya grup sohbet kimliğiniz (Chat ID).</p>
@@ -3406,8 +3395,8 @@ function App() {
                         value={profileForm.isim}
                         onChange={(e) => setProfileForm({ ...profileForm, isim: e.target.value })}
                         className={`w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all ${!isEditingProfile
-                            ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none'
-                            : 'bg-white/5 border-white/10 focus:border-purple-500'
+                          ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none'
+                          : 'bg-white/5 border-white/10 focus:border-purple-500'
                           }`}
                       />
                     </div>
@@ -3421,8 +3410,8 @@ function App() {
                         value={profileForm.eposta}
                         onChange={(e) => setProfileForm({ ...profileForm, eposta: e.target.value })}
                         className={`w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all ${!isEditingProfile
-                            ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none'
-                            : 'bg-white/5 border-white/10 focus:border-purple-500'
+                          ? 'bg-white/[0.02] border-white/5 text-gray-400 cursor-not-allowed opacity-75 select-none'
+                          : 'bg-white/5 border-white/10 focus:border-purple-500'
                           }`}
                       />
                     </div>
@@ -3847,8 +3836,8 @@ function App() {
                           <td className="px-6 py-4 text-gray-300">{u.eposta}</td>
                           <td className="px-6 py-4">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${u.role === 'admin'
-                                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
-                                : 'bg-gray-800 text-gray-400 border border-gray-700'
+                              ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                              : 'bg-gray-800 text-gray-400 border border-gray-700'
                               }`}>
                               {u.role || 'user'}
                             </span>
@@ -4168,10 +4157,10 @@ function App() {
                           <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group cursor-pointer">
                             {/* GÖRÜNÜR DEĞER BADGE */}
                             <div className={`px-2 py-0.5 rounded-lg border text-[11px] font-mono font-extrabold transition-all duration-200 shadow-md ${item.isToday
-                                ? 'bg-gradient-to-r from-amber-500/30 to-yellow-500/20 text-amber-300 border-amber-400/50 shadow-[0_0_12px_rgba(245,158,11,0.35)]'
-                                : item.isPeak
-                                  ? 'bg-gradient-to-r from-emerald-500/30 to-teal-500/20 text-emerald-300 border-emerald-400/50 shadow-[0_0_12px_rgba(16,185,129,0.35)]'
-                                  : 'bg-[#1a1d36] text-gray-200 border-white/15 group-hover:border-cyan-400/60 group-hover:text-cyan-300 group-hover:bg-cyan-500/20 group-hover:shadow-[0_0_12px_rgba(6,182,212,0.3)]'
+                              ? 'bg-gradient-to-r from-amber-500/30 to-yellow-500/20 text-amber-300 border-amber-400/50 shadow-[0_0_12px_rgba(245,158,11,0.35)]'
+                              : item.isPeak
+                                ? 'bg-gradient-to-r from-emerald-500/30 to-teal-500/20 text-emerald-300 border-emerald-400/50 shadow-[0_0_12px_rgba(16,185,129,0.35)]'
+                                : 'bg-[#1a1d36] text-gray-200 border-white/15 group-hover:border-cyan-400/60 group-hover:text-cyan-300 group-hover:bg-cyan-500/20 group-hover:shadow-[0_0_12px_rgba(6,182,212,0.3)]'
                               }`}>
                               {item.val}
                             </div>
@@ -4189,10 +4178,10 @@ function App() {
 
                             {/* GÜN ETİKETİ */}
                             <span className={`text-xs font-mono transition-colors duration-200 ${item.isToday
-                                ? 'text-amber-400 font-extrabold'
-                                : item.isPeak
-                                  ? 'text-emerald-400 font-extrabold'
-                                  : 'text-gray-400 font-semibold group-hover:text-cyan-300'
+                              ? 'text-amber-400 font-extrabold'
+                              : item.isPeak
+                                ? 'text-emerald-400 font-extrabold'
+                                : 'text-gray-400 font-semibold group-hover:text-cyan-300'
                               }`}>
                               {item.day}
                             </span>
@@ -4474,15 +4463,14 @@ function App() {
                               key={`lbl-${idx}`}
                               onMouseEnter={() => setHoveredTrafficIdx(idx)}
                               onMouseLeave={() => setHoveredTrafficIdx(null)}
-                              className={`py-1 rounded-xl text-[10px] sm:text-xs font-mono transition-all duration-200 cursor-pointer ${
-                                isHovered
+                              className={`py-1 rounded-xl text-[10px] sm:text-xs font-mono transition-all duration-200 cursor-pointer ${isHovered
                                   ? 'bg-emerald-500/25 text-emerald-200 font-bold border border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
                                   : pt.isMainPeak
-                                  ? 'bg-cyan-500/15 text-cyan-300 font-extrabold border border-cyan-500/30'
-                                  : pt.isPeak
-                                  ? 'bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20'
-                                  : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
-                              }`}
+                                    ? 'bg-cyan-500/15 text-cyan-300 font-extrabold border border-cyan-500/30'
+                                    : pt.isPeak
+                                      ? 'bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20'
+                                      : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
+                                }`}
                             >
                               {pt.time}
                             </button>
@@ -5108,8 +5096,8 @@ function App() {
                 id={`mobile-nav-${item.id}`}
                 onClick={() => changePage(item.id)}
                 className={`relative flex flex-col items-center justify-center gap-0.5 flex-1 py-2 px-0.5 rounded-xl transition-all duration-200 cursor-pointer ${isActive
-                    ? 'text-purple-400'
-                    : 'text-gray-500 hover:text-gray-300'
+                  ? 'text-purple-400'
+                  : 'text-gray-500 hover:text-gray-300'
                   }`}
               >
                 {/* Aktif göstergesi - üst çizgi */}
