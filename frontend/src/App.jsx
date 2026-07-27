@@ -159,8 +159,8 @@ function App() {
           adminCount: res.data.admin_count,
           userCount: res.data.user_count,
           activeUsers: res.data.active_users || res.data.total_users,
-          siteVisits: res.data.site_visits || 148,
-          dailyVisits: res.data.daily_visits || 28,
+          siteVisits: res.data.site_visits ?? 0,
+          dailyVisits: res.data.daily_visits ?? 0,
           totalGida: res.data.total_gida || 0,
           totalFatura: res.data.total_fatura || 0,
           totalGaranti: res.data.total_garanti || 0,
@@ -3745,31 +3745,31 @@ function App() {
 
               <div className="glass-panel p-5 rounded-2xl border border-white/10 flex flex-col justify-between">
                 <div className="flex items-center justify-between text-gray-400 mb-2">
-                  <span className="text-xs font-bold uppercase tracking-wider">Site Ziyaretleri</span>
+                  <span className="text-xs font-bold uppercase tracking-wider">Tekil Ziyaretçiler</span>
                   <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                     <Eye className="w-5 h-5" />
                   </div>
                 </div>
                 <div>
                   <h3 className="text-2xl md:text-3xl font-extrabold text-white">
-                    {adminStats ? adminStats.siteVisits : 148}
+                    {adminStats ? adminStats.siteVisits : 0}
                   </h3>
-                  <p className="text-[11px] text-indigo-400/80 mt-1 font-medium">Toplam Sayfa Trafiği</p>
+                  <p className="text-[11px] text-indigo-400/80 mt-1 font-medium">Toplam Farklı Kişi (IP)</p>
                 </div>
               </div>
 
               <div className="glass-panel p-5 rounded-2xl border border-white/10 flex flex-col justify-between">
                 <div className="flex items-center justify-between text-gray-400 mb-2">
-                  <span className="text-xs font-bold uppercase tracking-wider">Günlük Ziyaretçiler</span>
+                  <span className="text-xs font-bold uppercase tracking-wider">Günlük Tekil Kişi</span>
                   <div className="p-2 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20">
                     <TrendingUp className="w-5 h-5" />
                   </div>
                 </div>
                 <div>
                   <h3 className="text-2xl md:text-3xl font-extrabold text-white">
-                    {adminStats ? adminStats.dailyVisits : 28}
+                    {adminStats ? adminStats.dailyVisits : 0}
                   </h3>
-                  <p className="text-[11px] text-sky-400/80 mt-1 font-medium">Son 24 Saat İçinde Ziyaret Edenler</p>
+                  <p className="text-[11px] text-sky-400/80 mt-1 font-medium">Bugün Giriş Yapan Farklı Kişiler</p>
                 </div>
               </div>
             </div>
@@ -3803,12 +3803,13 @@ function App() {
                       <th className="px-6 py-4 font-semibold">Rol</th>
                       <th className="px-6 py-4 font-semibold">Telegram Chat Status</th>
                       <th className="px-6 py-4 font-semibold">Kayıt Tarihi</th>
+                      <th className="px-6 py-4 font-semibold">Son Aktiflik</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
                     {adminUsersLoading ? (
                       <tr>
-                        <td colSpan="6" className="px-6 py-10 text-center text-gray-400 font-medium">Sistem verileri yükleniyor...</td>
+                        <td colSpan="7" className="px-6 py-10 text-center text-gray-400 font-medium">Sistem verileri yükleniyor...</td>
                       </tr>
                     ) : (() => {
                       const filtered = adminUsers.filter((u) =>
@@ -3819,7 +3820,7 @@ function App() {
                       if (filtered.length === 0) {
                         return (
                           <tr>
-                            <td colSpan="6" className="px-6 py-10 text-center text-gray-500 font-medium">Arama kriterlerine uygun kullanıcı bulunamadı.</td>
+                            <td colSpan="7" className="px-6 py-10 text-center text-gray-500 font-medium">Arama kriterlerine uygun kullanıcı bulunamadı.</td>
                           </tr>
                         );
                       }
@@ -3854,6 +3855,15 @@ function App() {
                           </td>
                           <td className="px-6 py-4 text-xs text-gray-400">
                             {u.olusturma_tarihi ? formatDate(u.olusturma_tarihi) : '-'}
+                          </td>
+                          <td className="px-6 py-4 text-xs">
+                            {u.son_aktif_tarihi ? (
+                              <span className="text-emerald-400 font-medium">{formatDate(u.son_aktif_tarihi)}</span>
+                            ) : u.olusturma_tarihi ? (
+                              <span className="text-gray-400">{formatDate(u.olusturma_tarihi)}</span>
+                            ) : (
+                              '-'
+                            )}
                           </td>
                         </tr>
                       ));

@@ -65,12 +65,14 @@ func (h *AppHandler) Register(c *fiber.Ctx) error {
 	}
 
 	// Kullanıcıyı kaydet
+	now := time.Now()
 	newUser := Kullanici{
 		Isim:            req.Isim,
 		Eposta:          epostaLower,
 		Sifre:           string(hashedPassword),
 		Role:            "user",
-		OlusturmaTarihi: time.Now(),
+		OlusturmaTarihi: now,
+		SonAktifTarih:   &now,
 	}
 
 	if err := h.DB.Create(&newUser).Error; err != nil {
@@ -109,11 +111,6 @@ type LoginReq struct {
 func (h *AppHandler) Login(c *fiber.Ctx) error {
 	var req LoginReq
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Lütfen e-posta ve şifre girin."})
-	}
-
-	if req.Eposta == "" || req.Sifre == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "Lütfen e-posta ve şifre girin."})
 	}
 
 	epostaLower := strings.ToLower(req.Eposta)
@@ -130,6 +127,9 @@ func (h *AppHandler) Login(c *fiber.Ctx) error {
 	if user.Role == "" {
 		user.Role = "user"
 	}
+
+	now := time.Now()
+	h.DB.Model(&user).Update("son_aktif_tarihi", now)
 
 	claims := jwt.MapClaims{
 		"id":     user.ID,
@@ -158,8 +158,11 @@ func (h *AppHandler) Login(c *fiber.Ctx) error {
 func (h *AppHandler) Me(c *fiber.Ctx) error {
 	userID := c.Locals("userID").(uint)
 
+	now := time.Now()
+	h.DB.Model(&Kullanici{}).Where("id = ?", userID).Update("son_aktif_tarihi", now)
+
 	var user Kullanici
-	if err := h.DB.Select("id, isim, eposta, role, telegram_chat_id").Where("id = ?", userID).First(&user).Error; err != nil {
+	if err := h.DB.Select("id, isim, eposta, role, telegram_chat_id, olusturma_tarihi, son_aktif_tarihi").Where("id = ?", userID).First(&user).Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Kullanıcı bulunamadı."})
 	}
 
@@ -172,45 +175,30 @@ func (h *AppHandler) GetAdminUsers(c *fiber.Ctx) error {
 	roleVal, _ := c.Locals("userRole").(string)
 
 	if roleVal == "admin" {
-		if err := h.DB.Select("id, isim, eposta, role, telegram_chat_id, olusturma_tarihi").Find(&users).Error; err != nil {
+		if err := h.DB.Select("id, isim, eposta, role, telegram_chat_id, olusturma_tarihi, son_aktif_tarihi").Find(&users).Error; err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Kullanıcılar getirilirken hata oluştu."})
 		}
 	}
 
-	var adminCount, userCount, totalGida, totalFatura, totalGaranti, totalRutin int64
+	var adminCount, userCount, activeUsers, totalGida, totalFatura, totalGaranti, totalRutin int64
 	h.DB.Model(&Kullanici{}).Where("role = ?", "admin").Count(&adminCount)
 	h.DB.Model(&Kullanici{}).Where("role != ? OR role IS NULL OR role = ''", "admin").Count(&userCount)
+
+	twentyFourHoursAgo := time.Now().Add(-24 * time.Hour)
+	h.DB.Model(&Kullanici{}).Where("son_aktif_tarihi >= ? OR (son_aktif_tarihi IS NULL AND olusturma_tarihi >= ?)", twentyFourHoursAgo, twentyFourHoursAgo).Count(&activeUsers)
+
 	h.DB.Model(&Gida{}).Count(&totalGida)
 	h.DB.Model(&Fatura{}).Count(&totalFatura)
 	h.DB.Model(&Garanti{}).Count(&totalGaranti)
 	h.DB.Model(&Rutin{}).Count(&totalRutin)
 
-	var visitSetting Ayarlar
-	siteVisits := int64(148)
-	if err := h.DB.Where("anahtar = ?", "site_visits").First(&visitSetting).Error; err == nil && visitSetting.Deger != "" {
-		if val, err := strconv.ParseInt(visitSetting.Deger, 10, 64); err == nil {
-			siteVisits = val
-		}
-	} else {
-		h.DB.Create(&Ayarlar{Anahtar: "site_visits", Deger: "148"})
-	}
+	// Unique visitor counts calculated from IP logs in ziyaretci_loglari
+	var siteVisits, dailyVisits int64
+	h.DB.Model(&ZiyaretciLog{}).Select("COUNT(DISTINCT ip)").Scan(&siteVisits)
 
-	todayZero := getTodayZeroTime()
 	todayStr := time.Now().Format("2006-01-02")
-
-	var dailyVisitsSetting, dailyDateSetting Ayarlar
-	dailyVisits := int64(0)
-	h.DB.Where("anahtar = ?", "daily_visit_date").First(&dailyDateSetting)
-	if dailyDateSetting.Deger != todayStr {
-		h.DB.Where("anahtar = ?", "daily_visit_date").Assign(Ayarlar{Deger: todayStr}).FirstOrCreate(&dailyDateSetting)
-		h.DB.Where("anahtar = ?", "daily_visits").Assign(Ayarlar{Deger: "0"}).FirstOrCreate(&dailyVisitsSetting)
-	} else {
-		if err := h.DB.Where("anahtar = ?", "daily_visits").First(&dailyVisitsSetting).Error; err == nil && dailyVisitsSetting.Deger != "" {
-			if val, err := strconv.ParseInt(dailyVisitsSetting.Deger, 10, 64); err == nil {
-				dailyVisits = val
-			}
-		}
-	}
+	todayZero := getTodayZeroTime()
+	h.DB.Model(&ZiyaretciLog{}).Where("DATE(tarih) = ? OR strftime('%Y-%m-%d', tarih) = ? OR tarih >= ?", todayStr, todayStr, todayZero).Select("COUNT(DISTINCT ip)").Scan(&dailyVisits)
 
 	var dailyUsers, dailyComplaints int64
 	h.DB.Model(&Kullanici{}).Where("olusturma_tarihi >= ?", todayZero).Count(&dailyUsers)
@@ -221,7 +209,7 @@ func (h *AppHandler) GetAdminUsers(c *fiber.Ctx) error {
 		"total_users":      adminCount + userCount,
 		"admin_count":      adminCount,
 		"user_count":       userCount,
-		"active_users":     adminCount + userCount,
+		"active_users":     activeUsers,
 		"site_visits":      siteVisits,
 		"daily_visits":     dailyVisits,
 		"daily_users":      dailyUsers,

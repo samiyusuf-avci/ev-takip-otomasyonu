@@ -10,8 +10,9 @@ type Kullanici struct {
 	Eposta          string    `json:"eposta" gorm:"unique;not null;column:eposta"`
 	Sifre           string    `json:"-" gorm:"not null;column:sifre"`
 	Role            string    `json:"role" gorm:"default:user;column:role"`
-	TelegramChatID  string    `json:"telegram_chat_id" gorm:"column:telegram_chat_id"`
-	OlusturmaTarihi time.Time `json:"olusturma_tarihi" gorm:"default:CURRENT_TIMESTAMP;column:olusturma_tarihi"`
+	TelegramChatID  string     `json:"telegram_chat_id" gorm:"column:telegram_chat_id"`
+	OlusturmaTarihi time.Time  `json:"olusturma_tarihi" gorm:"default:CURRENT_TIMESTAMP;column:olusturma_tarihi"`
+	SonAktifTarih   *time.Time `json:"son_aktif_tarihi" gorm:"column:son_aktif_tarihi"`
 }
 
 func (Kullanici) TableName() string {
@@ -113,5 +114,15 @@ type Sikayet struct {
 
 func (Sikayet) TableName() string {
 	return "sikayetler"
+}
+
+type ZiyaretciLog struct {
+	ID    uint      `json:"id" gorm:"primaryKey;autoIncrement;column:id"`
+	IP    string    `json:"ip" gorm:"not null;column:ip;index"`
+	Tarih time.Time `json:"tarih" gorm:"default:CURRENT_TIMESTAMP;column:tarih"`
+}
+
+func (ZiyaretciLog) TableName() string {
+	return "ziyaretci_loglari"
 }
 

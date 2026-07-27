@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -101,36 +100,35 @@ func main() {
 	// CORS Ayarları
 	app.Use(SetupCORS())
 
-	// Ziyaretçi Sayacı Middleware
+	// Ziyaretçi Sayacı Middleware (IP Bazlı Tekil Ziyaretçi Loglama)
 	app.Use(func(c *fiber.Ctx) error {
 		path := c.Path()
 		if !strings.HasPrefix(path, "/assets") && !strings.HasSuffix(path, ".ico") && !strings.HasSuffix(path, ".png") && !strings.HasSuffix(path, ".jpg") {
-			go func() {
-				todayStr := time.Now().Format("2006-01-02")
-				var dateSetting, dailySetting, siteSetting Ayarlar
-				db.Where("anahtar = ?", "daily_visit_date").First(&dateSetting)
+			clientIP := c.Get("X-Forwarded-For")
+			if clientIP == "" {
+				clientIP = c.Get("X-Real-IP")
+			}
+			if clientIP == "" {
+				clientIP = c.IP()
+			}
+			if strings.Contains(clientIP, ",") {
+				clientIP = strings.TrimSpace(strings.Split(clientIP, ",")[0])
+			}
+			if clientIP == "" || clientIP == "::1" || strings.HasPrefix(clientIP, "127.") {
+				clientIP = "127.0.0.1"
+			}
 
-				if dateSetting.Deger != todayStr {
-					db.Where("anahtar = ?", "daily_visit_date").Assign(Ayarlar{Deger: todayStr}).FirstOrCreate(&dateSetting)
-					db.Where("anahtar = ?", "daily_visits").Assign(Ayarlar{Deger: "1"}).FirstOrCreate(&dailySetting)
-				} else {
-					if err := db.Where("anahtar = ?", "daily_visits").First(&dailySetting).Error; err == nil && dailySetting.Deger != "" {
-						if count, err := strconv.ParseInt(dailySetting.Deger, 10, 64); err == nil {
-							db.Model(&Ayarlar{}).Where("anahtar = ?", "daily_visits").Update("deger", strconv.FormatInt(count+1, 10))
-						}
-					} else {
-						db.Create(&Ayarlar{Anahtar: "daily_visits", Deger: "1"})
-					}
+			go func(ip string) {
+				now := time.Now()
+				todayStr := now.Format("2006-01-02")
+				var exist ZiyaretciLog
+				if err := db.Where("ip = ? AND (DATE(tarih) = ? OR strftime('%Y-%m-%d', tarih) = ?)", ip, todayStr, todayStr).First(&exist).Error; err != nil {
+					db.Create(&ZiyaretciLog{
+						IP:    ip,
+						Tarih: now,
+					})
 				}
-
-				if err := db.Where("anahtar = ?", "site_visits").First(&siteSetting).Error; err == nil && siteSetting.Deger != "" {
-					if count, err := strconv.ParseInt(siteSetting.Deger, 10, 64); err == nil {
-						db.Model(&Ayarlar{}).Where("anahtar = ?", "site_visits").Update("deger", strconv.FormatInt(count+1, 10))
-					}
-				} else {
-					db.Create(&Ayarlar{Anahtar: "site_visits", Deger: "149"})
-				}
-			}()
+			}(clientIP)
 		}
 		return c.Next()
 	})
@@ -250,8 +248,9 @@ func seedAdminUser(db *gorm.DB) error {
 
 // initDatabase raw SQL ile tabloları güvenli bir şekilde oluşturur
 func initDatabase(db *gorm.DB) error {
-	// Tabloya role sütununu güvenli ekleme migration'ı
+	// Tabloya role ve son_aktif_tarihi sütunlarını güvenli ekleme migration'ı
 	db.Exec("ALTER TABLE kullanicilar ADD COLUMN role TEXT DEFAULT 'user';")
+	db.Exec("ALTER TABLE kullanicilar ADD COLUMN son_aktif_tarihi DATETIME;")
 
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS kullanicilar (
@@ -261,7 +260,8 @@ func initDatabase(db *gorm.DB) error {
 			sifre TEXT NOT NULL,
 			role TEXT DEFAULT 'user',
 			telegram_chat_id TEXT,
-			olusturma_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP
+			olusturma_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP,
+			son_aktif_tarihi DATETIME
 		);`,
 		`CREATE TABLE IF NOT EXISTS gidalar (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -326,6 +326,11 @@ func initDatabase(db *gorm.DB) error {
 			durum TEXT DEFAULT 'bekliyor',
 			olusturma_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP,
 			FOREIGN KEY (kullanici_id) REFERENCES kullanicilar(id) ON DELETE CASCADE
+		);`,
+		`CREATE TABLE IF NOT EXISTS ziyaretci_loglari (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			ip TEXT NOT NULL,
+			tarih DATETIME DEFAULT CURRENT_TIMESTAMP
 		);`,
 	}
 
