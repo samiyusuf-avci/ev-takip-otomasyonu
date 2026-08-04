@@ -40,8 +40,18 @@ func getDaysRemaining(targetDateStr string) (int, error) {
 	return days, nil
 }
 
-// Calculate next routine date by adding months to the last done date
-func getNextRoutineDate(lastDoneStr string, periodMonths int) (time.Time, error) {
+var dayNameToNum = map[string]int{
+	"Pazartesi": 1,
+	"Salı":      2,
+	"Çarşamba":  3,
+	"Perşembe":  4,
+	"Cuma":      5,
+	"Cumartesi": 6,
+	"Pazar":     0,
+}
+
+// Calculate next routine date by adding months, weeks or days to the last done date
+func getNextRoutineDate(lastDoneStr string, period int, unit string, seciliGunler string) (time.Time, error) {
 	t, err := parseDateStr(lastDoneStr)
 	if err != nil {
 		return time.Time{}, err
@@ -50,7 +60,55 @@ func getNextRoutineDate(lastDoneStr string, periodMonths int) (time.Time, error)
 	if t.After(today) {
 		return t, nil
 	}
-	return t.AddDate(0, periodMonths, 0), nil
+	if period <= 0 {
+		period = 1
+	}
+
+	if unit == "gun" {
+		return t.AddDate(0, 0, period), nil
+	}
+
+	if unit == "hafta" {
+		var targetDays []int
+		if strings.TrimSpace(seciliGunler) != "" {
+			parts := strings.Split(seciliGunler, ",")
+			for _, p := range parts {
+				p = strings.TrimSpace(p)
+				if num, ok := dayNameToNum[p]; ok {
+					targetDays = append(targetDays, num)
+				}
+			}
+		}
+
+		if len(targetDays) == 0 {
+			return t.AddDate(0, 0, period*7), nil
+		}
+
+		weekCount := 0
+		curr := t
+		for i := 1; i <= 730; i++ {
+			curr = curr.AddDate(0, 0, 1)
+			if curr.Weekday() == time.Monday {
+				weekCount++
+			}
+			weekdayNum := int(curr.Weekday())
+			matched := false
+			for _, td := range targetDays {
+				if td == weekdayNum {
+					matched = true
+					break
+				}
+			}
+			if matched {
+				if weekCount == 0 || weekCount%period == 0 {
+					return curr, nil
+				}
+			}
+		}
+		return t.AddDate(0, 0, period*7), nil
+	}
+
+	return t.AddDate(0, period, 0), nil
 }
 
 // Helper to send telegram message to default settings chat id
@@ -290,10 +348,10 @@ func checkAndNotifyUsers(db *gorm.DB, users []Kullanici) (bool, int, int, error)
 
 		// 4. RUTİNLER KONTROLÜ
 		var rutinler []RutinWithKlasor
-		if err := db.Table("rutinler r").
-			Select("r.*, k.klasor_adi").
-			Joins("LEFT JOIN rutin_klasorleri k ON r.klasor_id = k.id").
-			Where("r.kullanici_id = ?", user.ID).
+		if err := db.Model(&Rutin{}).
+			Select("rutinler.*, k.klasor_adi").
+			Joins("LEFT JOIN rutin_klasorleri k ON rutinler.klasor_id = k.id").
+			Where("rutinler.kullanici_id = ?", user.ID).
 			Scan(&rutinler).Error; err == nil {
 			var rutinAlerts []string
 			for _, rutin := range rutinler {
@@ -303,7 +361,11 @@ func checkAndNotifyUsers(db *gorm.DB, users []Kullanici) (bool, int, int, error)
 				}
 
 				if rutin.SonYapilmaTarihi != nil && *rutin.SonYapilmaTarihi != "" {
-					nextDate, err := getNextRoutineDate(*rutin.SonYapilmaTarihi, rutin.PeriyotAy)
+					seciliGunler := ""
+					if rutin.SeciliGunler != nil {
+						seciliGunler = *rutin.SeciliGunler
+					}
+					nextDate, err := getNextRoutineDate(*rutin.SonYapilmaTarihi, rutin.PeriyotAy, rutin.PeriyotBirim, seciliGunler)
 					if err == nil {
 						today := getTodayZeroTime()
 						diffDays := int(math.Round(nextDate.Sub(today).Hours() / 24.0))
@@ -501,10 +563,10 @@ func checkAndNotifyForUser(db *gorm.DB, userID uint) (bool, bool, int, error) {
 
 	// 4. RUTİNLER KONTROLÜ
 	var rutinler []RutinWithKlasor
-	if err := db.Table("rutinler r").
-		Select("r.*, k.klasor_adi").
-		Joins("LEFT JOIN rutin_klasorleri k ON r.klasor_id = k.id").
-		Where("r.kullanici_id = ?", user.ID).
+	if err := db.Model(&Rutin{}).
+		Select("rutinler.*, k.klasor_adi").
+		Joins("LEFT JOIN rutin_klasorleri k ON rutinler.klasor_id = k.id").
+		Where("rutinler.kullanici_id = ?", user.ID).
 		Scan(&rutinler).Error; err == nil {
 		var rutinAlerts []string
 		for _, rutin := range rutinler {
@@ -514,7 +576,11 @@ func checkAndNotifyForUser(db *gorm.DB, userID uint) (bool, bool, int, error) {
 			}
 
 			if rutin.SonYapilmaTarihi != nil && *rutin.SonYapilmaTarihi != "" {
-				nextDate, err := getNextRoutineDate(*rutin.SonYapilmaTarihi, rutin.PeriyotAy)
+				seciliGunler := ""
+				if rutin.SeciliGunler != nil {
+					seciliGunler = *rutin.SeciliGunler
+				}
+				nextDate, err := getNextRoutineDate(*rutin.SonYapilmaTarihi, rutin.PeriyotAy, rutin.PeriyotBirim, seciliGunler)
 				if err == nil {
 					today := getTodayZeroTime()
 					diffDays := int(math.Round(nextDate.Sub(today).Hours() / 24.0))

@@ -26,7 +26,7 @@ type Gida struct {
 	UrunAdi           string `json:"urun_adi" gorm:"not null;column:urun_adi"`
 	Kategori          string `json:"kategori" gorm:"column:kategori"`
 	SKT               string `json:"skt" gorm:"not null;column:skt"` // YYYY-MM-DD
-	HatirlatmaGunKala int    `json:"hatirlatma_gun_kala" gorm:"default:3;column:hatirlatma_gun_kala"`
+	HatirlatmaGunKala int    `json:"hatirlatma_gun_kala" gorm:"default:0;column:hatirlatma_gun_kala"`
 	Durum             string `json:"durum" gorm:"default:bekliyor;column:durum"` // 'tuketildi', 'atildi', 'bekliyor'
 }
 
@@ -40,7 +40,7 @@ type Fatura struct {
 	FaturaAdi         string   `json:"fatura_adi" gorm:"not null;column:fatura_adi"`
 	Tutar             *float64 `json:"tutar" gorm:"column:tutar"`
 	SonOdemeTarihi    string   `json:"son_odeme_tarihi" gorm:"not null;column:son_odeme_tarihi"` // YYYY-MM-DD
-	HatirlatmaGunKala int      `json:"hatirlatma_gun_kala" gorm:"default:5;column:hatirlatma_gun_kala"`
+	HatirlatmaGunKala int      `json:"hatirlatma_gun_kala" gorm:"default:0;column:hatirlatma_gun_kala"`
 	Durum             string   `json:"durum" gorm:"default:odenmedi;column:durum"` // 'odendi', 'odenmedi'
 }
 
@@ -54,7 +54,7 @@ type Garanti struct {
 	CihazAdi          string `json:"cihaz_adi" gorm:"not null;column:cihaz_adi"`
 	MarkaModel        string `json:"marka_model" gorm:"column:marka_model"`
 	GarantiBitis      string `json:"garanti_bitis" gorm:"not null;column:garanti_bitis"` // YYYY-MM-DD
-	HatirlatmaGunKala int    `json:"hatirlatma_gun_kala" gorm:"default:30;column:hatirlatma_gun_kala"`
+	HatirlatmaGunKala int    `json:"hatirlatma_gun_kala" gorm:"default:0;column:hatirlatma_gun_kala"`
 	Notlar            string `json:"notlar" gorm:"column:notlar"`
 }
 
@@ -78,7 +78,9 @@ type Rutin struct {
 	KullaniciID       uint    `json:"kullanici_id" gorm:"column:kullanici_id"`
 	GorevAdi          string  `json:"gorev_adi" gorm:"not null;column:gorev_adi"`
 	PeriyotAy         int     `json:"periyot_ay" gorm:"not null;column:periyot_ay"`
-	HatirlatmaGunKala int     `json:"hatirlatma_gun_kala" gorm:"default:15;column:hatirlatma_gun_kala"`
+	PeriyotBirim      string  `json:"periyot_birim" gorm:"default:'ay';column:periyot_birim"`
+	SeciliGunler      *string `json:"secili_gunler" gorm:"column:secili_gunler"`
+	HatirlatmaGunKala int     `json:"hatirlatma_gun_kala" gorm:"default:0;column:hatirlatma_gun_kala"`
 	HedefKM           *int    `json:"hedef_km" gorm:"column:hedef_km"`
 	MevcutKM          *int    `json:"mevcut_km" gorm:"column:mevcut_km"`
 	SonYapilmaTarihi  *string `json:"son_yapilma_tarihi" gorm:"column:son_yapilma_tarihi"` // YYYY-MM-DD

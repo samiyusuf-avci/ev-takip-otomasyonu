@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import API from './api';
 import DatePicker from './components/DatePicker';
 import TimePicker from './components/TimePicker';
+import CustomSelect from './components/CustomSelect';
 import LandingPage from './components/LandingPage';
 import logoImg from './assets/logo.webp';
 import {
@@ -104,6 +105,87 @@ const isTodayOrYesterday = (dateStr) => {
   return targetDate.getTime() === today.getTime() || targetDate.getTime() === yesterday.getTime();
 };
 
+const dayNameToIndex = {
+  'Pazartesi': 1,
+  'Salı': 2,
+  'Çarşamba': 3,
+  'Perşembe': 4,
+  'Cuma': 5,
+  'Cumartesi': 6,
+  'Pazar': 0
+};
+
+const calcNextRoutineDate = (lastDoneDate, period = 1, unit = 'ay', seciliGunler = '') => {
+  if (!lastDoneDate) return null;
+  const safeStr = typeof lastDoneDate === 'string' ? lastDoneDate.replace(' ', 'T') : lastDoneDate;
+  const base = new Date(safeStr);
+  if (isNaN(base.getTime())) return null;
+
+  const p = parseInt(period, 10) > 0 ? parseInt(period, 10) : 1;
+
+  if (unit === 'gun') {
+    const d = new Date(base);
+    d.setDate(d.getDate() + p);
+    return d;
+  }
+
+  if (unit === 'hafta') {
+    const selectedList = typeof seciliGunler === 'string' && seciliGunler.trim()
+      ? seciliGunler.split(',').map(s => s.trim()).filter(Boolean)
+      : [];
+
+    if (selectedList.length === 0) {
+      const d = new Date(base);
+      d.setDate(d.getDate() + p * 7);
+      return d;
+    }
+
+    const targetDayNums = selectedList.map(name => dayNameToIndex[name]).filter(n => n !== undefined);
+    if (targetDayNums.length === 0) {
+      const d = new Date(base);
+      d.setDate(d.getDate() + p * 7);
+      return d;
+    }
+
+    let weekCount = 0;
+    const curr = new Date(base);
+    for (let i = 1; i <= 730; i++) {
+      curr.setDate(curr.getDate() + 1);
+      if (curr.getDay() === 1) {
+        weekCount++;
+      }
+      if (targetDayNums.includes(curr.getDay())) {
+        if (weekCount === 0 || weekCount % p === 0) {
+          return new Date(curr);
+        }
+      }
+    }
+    const fallback = new Date(base);
+    fallback.setDate(fallback.getDate() + p * 7);
+    return fallback;
+  }
+
+  const d = new Date(base);
+  d.setMonth(d.getMonth() + p);
+  return d;
+};
+
+const formatPeriyotText = (rutin) => {
+  if (!rutin) return '';
+  const period = rutin.periyot_ay || 1;
+  if (rutin.periyot_birim === 'gun') {
+    return `${period} Günde Bir`;
+  }
+  if (rutin.periyot_birim === 'hafta') {
+    const weekText = period === 1 ? 'Her Hafta' : `${period} Haftada Bir`;
+    if (rutin.secili_gunler && rutin.secili_gunler.trim()) {
+      return `${weekText} (${rutin.secili_gunler.split(',').join(', ')})`;
+    }
+    return weekText;
+  }
+  return `${period} Ayda Bir`;
+};
+
 const getStatusColor = (days, limit, durum) => {
   if (durum === 'tuketildi' || durum === 'odendi') return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
   if (durum === 'atildi') return 'text-orange-400 bg-orange-500/10 border-orange-500/20';
@@ -111,6 +193,63 @@ const getStatusColor = (days, limit, durum) => {
   if (days < 0) return 'text-rose-400 bg-rose-500/10 border-rose-500/20 animate-pulse';
   if (days <= limit) return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
   return 'text-sky-400 bg-sky-500/10 border-sky-500/20';
+};
+
+const getRutinMaxWarningDays = (rutinForm) => {
+  if (!rutinForm) return 15;
+  const unit = rutinForm.periyot_birim || 'ay';
+  const isWeeklyWithDays = (unit === 'hafta') && Boolean(rutinForm.secili_gunler && rutinForm.secili_gunler.trim());
+  const periodNum = isWeeklyWithDays ? 1 : (parseInt(rutinForm.periyot_ay, 10) > 0 ? parseInt(rutinForm.periyot_ay, 10) : 1);
+
+  if (unit === 'gun') {
+    return Math.max(0, Math.floor(periodNum / 2));
+  }
+
+  if (unit === 'ay') {
+    return Math.max(0, Math.floor((periodNum * 30) / 2));
+  }
+
+  // unit === 'hafta'
+  const selectedList = typeof rutinForm.secili_gunler === 'string' && rutinForm.secili_gunler.trim()
+    ? rutinForm.secili_gunler.split(',').map(s => s.trim()).filter(Boolean)
+    : [];
+
+  if (selectedList.length === 0) {
+    const periodDays = periodNum * 7;
+    return Math.max(0, Math.floor(periodDays / 2));
+  }
+
+  const rawDayNums = Array.from(new Set(selectedList.map(name => dayNameToIndex[name]).filter(n => n !== undefined)));
+
+  if (rawDayNums.length === 0) {
+    const periodDays = periodNum * 7;
+    return Math.max(0, Math.floor(periodDays / 2));
+  }
+
+  // Map Sunday (0) to 7 for week ordering (Pazartesi=1 ... Pazar=7)
+  const normalizedDays = Array.from(new Set(rawDayNums.map(n => n === 0 ? 7 : n))).sort((a, b) => a - b);
+
+  if (normalizedDays.length === 1) {
+    const minGap = periodNum * 7;
+    return Math.max(0, Math.floor(minGap / 2));
+  }
+
+  let minGap = 999;
+  for (let i = 0; i < normalizedDays.length - 1; i++) {
+    const gap = normalizedDays[i + 1] - normalizedDays[i];
+    if (gap < minGap) minGap = gap;
+  }
+  const wrapGap = (7 - normalizedDays[normalizedDays.length - 1]) + normalizedDays[0] + (periodNum - 1) * 7;
+  if (wrapGap < minGap) minGap = wrapGap;
+
+  return Math.max(0, Math.floor(minGap / 2));
+};
+
+const getDateMaxWarningDays = (dateStr) => {
+  if (!dateStr) return null;
+  const diff = getDaysDiff(dateStr);
+  if (diff === null || diff <= 0) return 0;
+  return Math.max(0, Math.floor(diff / 2));
 };
 
 function App() {
@@ -545,8 +684,7 @@ function App() {
             if (compareDate > today) {
               nextDate = compareDate;
             } else {
-              nextDate = new Date(inputDate);
-              nextDate.setMonth(nextDate.getMonth() + (rutin.periyot_ay || 1));
+              nextDate = calcNextRoutineDate(rutin.son_yapilma_tarihi, rutin.periyot_ay, rutin.periyot_birim, rutin.secili_gunler);
             }
             nextDate.setHours(0, 0, 0, 0);
             const diffDays = Math.ceil((nextDate - today) / (1000 * 60 * 60 * 24));
@@ -605,15 +743,15 @@ function App() {
 
   // Form Modalları ve State'leri
   const [showGidaModal, setShowGidaModal] = useState(false);
-  const [gidaForm, setGidaForm] = useState({ urun_adi: '', kategori: '', skt: '', hatirlatma_gun_kala: 3, durum: 'bekliyor' });
+  const [gidaForm, setGidaForm] = useState({ urun_adi: '', kategori: '', skt: '', hatirlatma_gun_kala: 0, durum: 'bekliyor' });
   const [editingGida, setEditingGida] = useState(null);
 
   const [showFaturaModal, setShowFaturaModal] = useState(false);
-  const [faturaForm, setFaturaForm] = useState({ fatura_adi: '', tutar: '', son_odeme_tarihi: '', hatirlatma_gun_kala: 5, durum: 'odenmedi' });
+  const [faturaForm, setFaturaForm] = useState({ fatura_adi: '', tutar: '', son_odeme_tarihi: '', hatirlatma_gun_kala: 0, durum: 'odenmedi' });
   const [editingFatura, setEditingFatura] = useState(null);
 
   const [showGarantiModal, setShowGarantiModal] = useState(false);
-  const [garantiForm, setGarantiForm] = useState({ cihaz_adi: '', marka_model: '', garanti_bitis: '', hatirlatma_gun_kala: 30, notlar: '' });
+  const [garantiForm, setGarantiForm] = useState({ cihaz_adi: '', marka_model: '', garanti_bitis: '', hatirlatma_gun_kala: 0, notlar: '' });
   const [editingGaranti, setEditingGaranti] = useState(null);
 
   const [showKlasorYonetimModal, setShowKlasorYonetimModal] = useState(false);
@@ -622,7 +760,7 @@ function App() {
   const [editingKlasor, setEditingKlasor] = useState(null);
 
   const [showRutinModal, setShowRutinModal] = useState(false);
-  const [rutinForm, setRutinForm] = useState({ klasor_id: '', gorev_adi: '', periyot_ay: '', hatirlatma_gun_kala: 15, son_yapilma_tarihi: '' });
+  const [rutinForm, setRutinForm] = useState({ klasor_id: '', gorev_adi: '', periyot_ay: '', periyot_birim: 'ay', secili_gunler: '', hatirlatma_gun_kala: 0, son_yapilma_tarihi: '' });
   const [editingRutin, setEditingRutin] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState({ show: false, title: '', message: '', onConfirm: null });
 
@@ -1098,6 +1236,16 @@ function App() {
       showToast('Lütfen Son Kullanma Tarihi seçin.', 'error');
       return;
     }
+    const maxDays = getDateMaxWarningDays(gidaForm.skt);
+    const hatirlatmaNum = parseInt(gidaForm.hatirlatma_gun_kala, 10) || 0;
+    if (hatirlatmaNum < 0) {
+      showToast('Hatırlatma gün sayısı 0 veya daha büyük bir sayı olmalıdır.', 'error');
+      return;
+    }
+    if (maxDays !== null && hatirlatmaNum > maxDays) {
+      showToast(`Hatırlatma gün sayısı sürenin yarısından (en fazla ${maxDays} gün) fazla olamaz.`, 'error');
+      return;
+    }
     try {
       if (editingGida) {
         await API.put(`/gidalar/${editingGida.id}`, gidaForm);
@@ -1108,7 +1256,7 @@ function App() {
       }
       setShowGidaModal(false);
       setEditingGida(null);
-      setGidaForm({ urun_adi: '', kategori: '', skt: '', hatirlatma_gun_kala: 3, durum: 'bekliyor' });
+      setGidaForm({ urun_adi: '', kategori: '', skt: '', hatirlatma_gun_kala: 0, durum: 'bekliyor' });
       fetchData();
     } catch (err) {
       showToast('Gıda kaydedilirken hata oluştu.', 'error');
@@ -1170,6 +1318,16 @@ function App() {
       showToast('Lütfen Son Ödeme Tarihi seçin.', 'error');
       return;
     }
+    const maxDays = getDateMaxWarningDays(faturaForm.son_odeme_tarihi);
+    const hatirlatmaNum = parseInt(faturaForm.hatirlatma_gun_kala, 10) || 0;
+    if (hatirlatmaNum < 0) {
+      showToast('Hatırlatma gün sayısı 0 veya daha büyük bir sayı olmalıdır.', 'error');
+      return;
+    }
+    if (maxDays !== null && hatirlatmaNum > maxDays) {
+      showToast(`Hatırlatma gün sayısı sürenin yarısından (en fazla ${maxDays} gün) fazla olamaz.`, 'error');
+      return;
+    }
     try {
       if (editingFatura) {
         await API.put(`/faturalar/${editingFatura.id}`, faturaForm);
@@ -1180,7 +1338,7 @@ function App() {
       }
       setShowFaturaModal(false);
       setEditingFatura(null);
-      setFaturaForm({ fatura_adi: '', tutar: '', son_odeme_tarihi: '', hatirlatma_gun_kala: 5, durum: 'odenmedi' });
+      setFaturaForm({ fatura_adi: '', tutar: '', son_odeme_tarihi: '', hatirlatma_gun_kala: 0, durum: 'odenmedi' });
       fetchData();
     } catch (err) {
       showToast('Fatura kaydedilirken hata oluştu.', 'error');
@@ -1238,6 +1396,16 @@ function App() {
       showToast('Lütfen Garanti Bitiş Tarihi seçin.', 'error');
       return;
     }
+    const maxDays = getDateMaxWarningDays(garantiForm.garanti_bitis);
+    const hatirlatmaNum = parseInt(garantiForm.hatirlatma_gun_kala, 10) || 0;
+    if (hatirlatmaNum < 0) {
+      showToast('Hatırlatma gün sayısı 0 veya daha büyük bir sayı olmalıdır.', 'error');
+      return;
+    }
+    if (maxDays !== null && hatirlatmaNum > maxDays) {
+      showToast(`Hatırlatma gün sayısı sürenin yarısından (en fazla ${maxDays} gün) fazla olamaz.`, 'error');
+      return;
+    }
     try {
       if (editingGaranti) {
         await API.put(`/garantiler/${editingGaranti.id}`, garantiForm);
@@ -1248,7 +1416,7 @@ function App() {
       }
       setShowGarantiModal(false);
       setEditingGaranti(null);
-      setGarantiForm({ cihaz_adi: '', marka_model: '', garanti_bitis: '', hatirlatma_gun_kala: 30, notlar: '' });
+      setGarantiForm({ cihaz_adi: '', marka_model: '', garanti_bitis: '', hatirlatma_gun_kala: 0, notlar: '' });
       fetchData();
     } catch (err) {
       showToast('Garanti kaydedilirken hata oluştu.', 'error');
@@ -1340,7 +1508,8 @@ function App() {
       showToast('Lütfen Görev Adı alanını doldurun.', 'error');
       return;
     }
-    if (!rutinForm.periyot_ay) {
+    const isWeeklyWithDays = (rutinForm.periyot_birim === 'hafta') && Boolean(rutinForm.secili_gunler && rutinForm.secili_gunler.trim());
+    if (!rutinForm.periyot_ay && !isWeeklyWithDays) {
       showToast('Lütfen Tekrar Periyodu seçin.', 'error');
       return;
     }
@@ -1348,11 +1517,22 @@ function App() {
       showToast('Lütfen Son Yapılma Tarihi seçin.', 'error');
       return;
     }
+    const maxDays = getRutinMaxWarningDays(rutinForm);
+    const hatirlatmaNum = parseInt(rutinForm.hatirlatma_gun_kala, 10) || 0;
+    if (hatirlatmaNum < 0) {
+      showToast('Hatırlatma gün sayısı 0 veya daha büyük bir sayı olmalıdır.', 'error');
+      return;
+    }
+    if (hatirlatmaNum > maxDays) {
+      showToast(`Hatırlatma gün sayısı periyot süresinin yarısından (en fazla ${maxDays} gün) fazla olamaz.`, 'error');
+      return;
+    }
     try {
       const data = {
         ...rutinForm,
         klasor_id: rutinForm.klasor_id ? parseInt(rutinForm.klasor_id, 10) : null,
-        periyot_ay: parseInt(rutinForm.periyot_ay, 10),
+        periyot_ay: isWeeklyWithDays ? 1 : (parseInt(rutinForm.periyot_ay, 10) || 1),
+        periyot_birim: rutinForm.periyot_birim || 'ay',
         hatirlatma_gun_kala: parseInt(rutinForm.hatirlatma_gun_kala, 10),
         hedef_km: null,
         mevcut_km: null
@@ -1367,7 +1547,7 @@ function App() {
       }
       setShowRutinModal(false);
       setEditingRutin(null);
-      setRutinForm({ klasor_id: '', gorev_adi: '', periyot_ay: '', hatirlatma_gun_kala: 15, son_yapilma_tarihi: '' });
+      setRutinForm({ klasor_id: '', gorev_adi: '', periyot_ay: '', periyot_birim: 'ay', secili_gunler: '', hatirlatma_gun_kala: 0, son_yapilma_tarihi: '' });
       fetchData();
     } catch (err) {
       showToast('Rutin görev kaydedilirken hata oluştu.', 'error');
@@ -1380,6 +1560,8 @@ function App() {
       klasor_id: rutin.klasor_id || '',
       gorev_adi: rutin.gorev_adi,
       periyot_ay: rutin.periyot_ay,
+      periyot_birim: rutin.periyot_birim || 'ay',
+      secili_gunler: rutin.secili_gunler || '',
       hatirlatma_gun_kala: rutin.hatirlatma_gun_kala,
       son_yapilma_tarihi: formatInputDate(rutin.son_yapilma_tarihi)
     });
@@ -2242,7 +2424,7 @@ function App() {
                 <p className="text-gray-400 mt-0.5 text-xs md:text-base hidden md:block">Gıdaların son tüketim tarihlerini kaydedin ve bozulmadan önce bildirim alın.</p>
               </div>
               <button
-                onClick={() => { setEditingGida(null); setGidaForm({ urun_adi: '', kategori: '', skt: '', hatirlatma_gun_kala: 3, durum: 'bekliyor' }); setShowGidaModal(true); }}
+                onClick={() => { setEditingGida(null); setGidaForm({ urun_adi: '', kategori: '', skt: '', hatirlatma_gun_kala: 0, durum: 'bekliyor' }); setShowGidaModal(true); }}
                 className="flex items-center gap-1.5 py-2 px-3 md:py-3 md:px-5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-sm transition-all duration-200 glow-btn shadow-[0_4px_20px_rgba(168,85,247,0.25)] cursor-pointer flex-shrink-0"
               >
                 <Plus className="w-4 h-4" />
@@ -2402,7 +2584,7 @@ function App() {
                 <p className="text-gray-400 mt-0.5 text-xs md:text-base hidden md:block">Faturaların son ödeme tarihlerini yönetin.</p>
               </div>
               <button
-                onClick={() => { setEditingFatura(null); setFaturaForm({ fatura_adi: '', tutar: '', son_odeme_tarihi: '', hatirlatma_gun_kala: 5, durum: 'odenmedi' }); setShowFaturaModal(true); }}
+                onClick={() => { setEditingFatura(null); setFaturaForm({ fatura_adi: '', tutar: '', son_odeme_tarihi: '', hatirlatma_gun_kala: 0, durum: 'odenmedi' }); setShowFaturaModal(true); }}
                 className="flex items-center gap-1.5 py-2 px-3 md:py-3 md:px-5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-sm transition-all duration-200 glow-btn shadow-[0_4px_20px_rgba(168,85,247,0.25)] cursor-pointer flex-shrink-0"
               >
                 <Plus className="w-4 h-4" />
@@ -2534,7 +2716,7 @@ function App() {
                 <p className="text-gray-400 mt-0.5 text-xs md:text-base hidden md:block">Cihazlarınızın garanti sürelerini kaydedin, bitmeden önce uyarı alın.</p>
               </div>
               <button
-                onClick={() => { setEditingGaranti(null); setGarantiForm({ cihaz_adi: '', marka_model: '', garanti_bitis: '', hatirlatma_gun_kala: 30, notlar: '' }); setShowGarantiModal(true); }}
+                onClick={() => { setEditingGaranti(null); setGarantiForm({ cihaz_adi: '', marka_model: '', garanti_bitis: '', hatirlatma_gun_kala: 0, notlar: '' }); setShowGarantiModal(true); }}
                 className="flex items-center gap-1.5 py-2 px-3 md:py-3 md:px-5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-sm transition-all duration-200 glow-btn shadow-[0_4px_20px_rgba(168,85,247,0.25)] cursor-pointer flex-shrink-0"
               >
                 <Plus className="w-4 h-4" />
@@ -2663,7 +2845,7 @@ function App() {
                   <span className="hidden md:inline">Klasör Yönetimi</span>
                 </button>
                 <button
-                  onClick={() => { setEditingRutin(null); setRutinForm({ klasor_id: seciliRutinKlasor === 'hepsi' ? '' : seciliRutinKlasor, gorev_adi: '', periyot_ay: '', hatirlatma_gun_kala: 15, son_yapilma_tarihi: '' }); setShowRutinModal(true); }}
+                  onClick={() => { setEditingRutin(null); setRutinForm({ klasor_id: seciliRutinKlasor === 'hepsi' ? '' : seciliRutinKlasor, gorev_adi: '', periyot_ay: '', periyot_birim: 'ay', secili_gunler: '', hatirlatma_gun_kala: 0, son_yapilma_tarihi: '' }); setShowRutinModal(true); }}
                   className="flex items-center gap-1.5 py-2 px-3 md:py-3 md:px-5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl text-sm transition-all duration-200 glow-btn shadow-[0_4px_20px_rgba(168,85,247,0.25)] cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
@@ -2732,8 +2914,7 @@ function App() {
                       days = getDaysDiff(nextDate);
                     } else {
                       displayLastDone = formatDate(rutin.son_yapilma_tarihi);
-                      const calcNext = new Date(inputDate);
-                      calcNext.setMonth(calcNext.getMonth() + periyot);
+                      const calcNext = calcNextRoutineDate(rutin.son_yapilma_tarihi, periyot, rutin.periyot_birim, rutin.secili_gunler);
                       if (!isNaN(calcNext.getTime())) {
                         try {
                           nextDate = calcNext.toISOString().split('T')[0];
@@ -2788,7 +2969,7 @@ function App() {
                         </div>
                         <h3 className="text-sm font-bold text-white truncate">{rutin.gorev_adi}</h3>
                         <p className="text-[10px] text-gray-500 mt-0.5">
-                          {rutin.periyot_ay} Ayda Bir
+                          {formatPeriyotText(rutin)}
                           {nextDate && days !== null && <span className="ml-1">• {days < 0 ? `${Math.abs(days)}g gecikti` : `${days}g kaldı`}</span>}
                         </p>
                       </div>
@@ -2825,7 +3006,7 @@ function App() {
                         </div>
                         <h3 className="text-lg font-bold text-white mb-2">{rutin.gorev_adi}</h3>
                         <div className="space-y-1.5 text-sm text-gray-400">
-                          <div className="flex justify-between"><span>Periyot:</span><span className="font-semibold text-gray-300">{rutin.periyot_ay} Ayda Bir</span></div>
+                          <div className="flex justify-between"><span>Periyot:</span><span className="font-semibold text-gray-300">{formatPeriyotText(rutin)}</span></div>
                           <div className="flex justify-between"><span>Son Yapılma:</span><span className="font-semibold text-gray-300">{displayLastDone}</span></div>
                           {nextDate && (
                             <div className="flex justify-between text-xs text-purple-300 font-medium">
@@ -4828,29 +5009,39 @@ function App() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-400 mb-1">Kaç Gün Kala Hatırlatılsın? *</label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  value={gidaForm.hatirlatma_gun_kala}
-                  onChange={(e) => setGidaForm({ ...gidaForm, hatirlatma_gun_kala: parseInt(e.target.value, 10) })}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-3.5 text-white outline-none focus:border-purple-500 text-sm transition-all"
-                />
+                {(() => {
+                  const maxDays = getDateMaxWarningDays(gidaForm.skt);
+                  return (
+                    <>
+                      <label className="block text-xs font-semibold text-gray-400 mb-1">
+                        Kaç Gün Kala Hatırlatılsın? *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min="0"
+                        max={maxDays !== null ? maxDays : undefined}
+                        value={gidaForm.hatirlatma_gun_kala}
+                        onChange={(e) => setGidaForm({ ...gidaForm, hatirlatma_gun_kala: e.target.value === '' ? '' : parseInt(e.target.value, 10) })}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-3.5 text-white outline-none focus:border-purple-500 text-sm transition-all"
+                      />
+                    </>
+                  );
+                })()}
               </div>
 
               {editingGida && (
                 <div>
                   <label className="block text-xs font-semibold text-gray-400 mb-1">Durum</label>
-                  <select
+                  <CustomSelect
                     value={gidaForm.durum}
                     onChange={(e) => setGidaForm({ ...gidaForm, durum: e.target.value })}
-                    className="w-full bg-[#1e202d] border border-white/10 rounded-xl py-2.5 px-3.5 text-white outline-none focus:border-purple-500 text-sm transition-all"
-                  >
-                    <option value="bekliyor">Bekliyor (Tüketilmedi)</option>
-                    <option value="tuketildi">Tüketildi</option>
-                    <option value="atildi">Atıldı / Bozuldu</option>
-                  </select>
+                    options={[
+                      { value: 'bekliyor', label: 'Bekliyor (Tüketilmedi)' },
+                      { value: 'tuketildi', label: 'Tüketildi' },
+                      { value: 'atildi', label: 'Atıldı / Bozuldu' }
+                    ]}
+                  />
                 </div>
               )}
 
@@ -4925,28 +5116,38 @@ function App() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-400 mb-1">Kaç Gün Kala Hatırlatılsın? *</label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  value={faturaForm.hatirlatma_gun_kala}
-                  onChange={(e) => setFaturaForm({ ...faturaForm, hatirlatma_gun_kala: parseInt(e.target.value, 10) })}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-3.5 text-white outline-none focus:border-purple-500 text-sm transition-all"
-                />
+                {(() => {
+                  const maxDays = getDateMaxWarningDays(faturaForm.son_odeme_tarihi);
+                  return (
+                    <>
+                      <label className="block text-xs font-semibold text-gray-400 mb-1">
+                        Kaç Gün Kala Hatırlatılsın? *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min="0"
+                        max={maxDays !== null ? maxDays : undefined}
+                        value={faturaForm.hatirlatma_gun_kala}
+                        onChange={(e) => setFaturaForm({ ...faturaForm, hatirlatma_gun_kala: e.target.value === '' ? '' : parseInt(e.target.value, 10) })}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-3.5 text-white outline-none focus:border-purple-500 text-sm transition-all"
+                      />
+                    </>
+                  );
+                })()}
               </div>
 
               {editingFatura && (
                 <div>
                   <label className="block text-xs font-semibold text-gray-400 mb-1">Ödeme Durumu</label>
-                  <select
+                  <CustomSelect
                     value={faturaForm.durum}
                     onChange={(e) => setFaturaForm({ ...faturaForm, durum: e.target.value })}
-                    className="w-full bg-[#1e202d] border border-white/10 rounded-xl py-2.5 px-3.5 text-white outline-none focus:border-purple-500 text-sm transition-all"
-                  >
-                    <option value="odenmedi">Ödenmedi</option>
-                    <option value="odendi">Ödendi</option>
-                  </select>
+                    options={[
+                      { value: 'odenmedi', label: 'Ödenmedi' },
+                      { value: 'odendi', label: 'Ödendi' }
+                    ]}
+                  />
                 </div>
               )}
 
@@ -5020,15 +5221,25 @@ function App() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-400 mb-1">Kaç Gün Kala Hatırlatılsın? *</label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  value={garantiForm.hatirlatma_gun_kala}
-                  onChange={(e) => setGarantiForm({ ...garantiForm, hatirlatma_gun_kala: parseInt(e.target.value, 10) })}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-3.5 text-white outline-none focus:border-purple-500 text-sm transition-all"
-                />
+                {(() => {
+                  const maxDays = getDateMaxWarningDays(garantiForm.garanti_bitis);
+                  return (
+                    <>
+                      <label className="block text-xs font-semibold text-gray-400 mb-1">
+                        Kaç Gün Kala Hatırlatılsın? *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min="0"
+                        max={maxDays !== null ? maxDays : undefined}
+                        value={garantiForm.hatirlatma_gun_kala}
+                        onChange={(e) => setGarantiForm({ ...garantiForm, hatirlatma_gun_kala: e.target.value === '' ? '' : parseInt(e.target.value, 10) })}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-3.5 text-white outline-none focus:border-purple-500 text-sm transition-all"
+                      />
+                    </>
+                  );
+                })()}
               </div>
 
               <div>
@@ -5210,16 +5421,19 @@ function App() {
             <form noValidate onSubmit={handleSaveRutin} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-400 mb-1">Bağlı Olduğu Klasör</label>
-                <select
+                <CustomSelect
                   value={rutinForm.klasor_id}
                   onChange={(e) => setRutinForm({ ...rutinForm, klasor_id: e.target.value })}
-                  className="w-full bg-[#1e202d] border border-white/10 rounded-xl py-2.5 px-3.5 text-white outline-none focus:border-purple-500 text-sm transition-all"
-                >
-                  <option value="">Klasör Seçin (İsteğe Bağlı)</option>
-                  {rutinKlasorleri.map((k) => (
-                    <option key={k.id} value={k.id}>{k.klasor_adi}</option>
-                  ))}
-                </select>
+                  placeholder="Klasör Seçin (İsteğe Bağlı)"
+                  options={[
+                    { value: '', label: 'Klasör Seçin (İsteğe Bağlı)' },
+                    ...rutinKlasorleri.map((k) => ({
+                      value: k.id,
+                      label: k.klasor_adi,
+                      icon: '📂'
+                    }))
+                  ]}
+                />
               </div>
 
               <div>
@@ -5236,30 +5450,109 @@ function App() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-400 mb-1">Periyot (Kaç Ayda Bir) *</label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    value={rutinForm.periyot_ay}
-                    onChange={(e) => setRutinForm({ ...rutinForm, periyot_ay: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-3.5 text-white outline-none focus:border-purple-500 text-sm transition-all"
-                    placeholder="örn: 12"
-                  />
+                  <label className="block text-xs font-semibold text-gray-400 mb-1">Periyot *</label>
+                  <div className="flex gap-2">
+                    <CustomSelect
+                      value={rutinForm.periyot_birim || 'ay'}
+                      onChange={(e) => setRutinForm({ ...rutinForm, periyot_birim: e.target.value })}
+                      className="w-1/2 min-w-0"
+                      options={[
+                        { value: 'gun', label: 'Gün' },
+                        { value: 'hafta', label: 'Hafta' },
+                        { value: 'ay', label: 'Ay' }
+                      ]}
+                    />
+                    {(() => {
+                      const isWeeklyWithDays = (rutinForm.periyot_birim === 'hafta') && Boolean(rutinForm.secili_gunler && rutinForm.secili_gunler.trim());
+                      return (
+                        <input
+                          type="number"
+                          required={!isWeeklyWithDays}
+                          disabled={isWeeklyWithDays}
+                          min="1"
+                          value={isWeeklyWithDays ? '' : rutinForm.periyot_ay}
+                          onChange={(e) => setRutinForm({ ...rutinForm, periyot_ay: e.target.value })}
+                          className={`w-1/2 min-w-0 bg-white/5 border border-white/10 rounded-xl py-2.5 px-3 outline-none focus:border-purple-500 text-sm transition-all ${
+                            isWeeklyWithDays ? 'opacity-30 cursor-not-allowed text-transparent bg-white/5 border-white/5 pointer-events-none select-none' : 'text-white'
+                          }`}
+                          placeholder={isWeeklyWithDays ? '' : (rutinForm.periyot_birim === 'hafta' ? '1' : rutinForm.periyot_birim === 'gun' ? 'örn: 7' : 'örn: 1')}
+                          title={isWeeklyWithDays ? 'Gün seçimi yapıldığı için periyot pasiftir.' : ''}
+                        />
+                      );
+                    })()}
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-400 mb-1">Kaç Gün Kala Uyarsın? *</label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    value={rutinForm.hatirlatma_gun_kala}
-                    onChange={(e) => setRutinForm({ ...rutinForm, hatirlatma_gun_kala: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-3.5 text-white outline-none focus:border-purple-500 text-sm transition-all"
-                    placeholder="örn: 15"
-                  />
+                  {(() => {
+                    const maxDays = getRutinMaxWarningDays(rutinForm);
+                    return (
+                      <>
+                        <label className="block text-xs font-semibold text-gray-400 mb-1">
+                          Kaç Gün Kala Uyarsın? *
+                        </label>
+                        <input
+                          type="number"
+                          required
+                          min="0"
+                          max={maxDays}
+                          value={rutinForm.hatirlatma_gun_kala}
+                          onChange={(e) => setRutinForm({ ...rutinForm, hatirlatma_gun_kala: e.target.value })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-3.5 text-white outline-none focus:border-purple-500 text-sm transition-all"
+                          placeholder="örn: 0"
+                        />
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
+
+              {rutinForm.periyot_birim === 'hafta' && (
+                <div className="mt-3">
+                  <label className="block text-xs font-semibold text-gray-400 mb-1.5">Tekrarlanacak Günler (Örn: Pazartesi, Çarşamba)</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { full: 'Pazartesi', short: 'Pzt' },
+                      { full: 'Salı', short: 'Sal' },
+                      { full: 'Çarşamba', short: 'Çar' },
+                      { full: 'Perşembe', short: 'Per' },
+                      { full: 'Cuma', short: 'Cum' },
+                      { full: 'Cumartesi', short: 'Cmt' },
+                      { full: 'Pazar', short: 'Pzr' }
+                    ].map((day) => {
+                      const selectedDays = (rutinForm.secili_gunler || '').split(',').map(s => s.trim()).filter(Boolean);
+                      const isSelected = selectedDays.includes(day.full);
+                      return (
+                        <button
+                          key={day.full}
+                          type="button"
+                          onClick={() => {
+                            let newDays;
+                            if (isSelected) {
+                              newDays = selectedDays.filter(d => d !== day.full);
+                            } else {
+                              const weekOrder = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
+                              const updated = [...selectedDays, day.full];
+                              newDays = weekOrder.filter(d => updated.includes(d));
+                            }
+                            setRutinForm({ ...rutinForm, secili_gunler: newDays.join(',') });
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${isSelected
+                              ? 'bg-purple-600/30 border-purple-500 text-purple-200 shadow-sm'
+                              : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
+                            }`}
+                        >
+                          {day.short}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {rutinForm.secili_gunler && (
+                    <p className="text-[11px] text-purple-300/80 mt-1.5">
+                      Seçilen Günler: <span className="font-medium text-purple-200">{rutinForm.secili_gunler.split(',').join(', ')}</span>
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-semibold text-gray-400 mb-1">Son Yapılma Tarihi (İlk başlangıç için)</label>
@@ -5286,6 +5579,8 @@ function App() {
                       String(rutinForm.klasor_id || '') === String(editingRutin.klasor_id || '') &&
                       rutinForm.gorev_adi === editingRutin.gorev_adi &&
                       Number(rutinForm.periyot_ay) === Number(editingRutin.periyot_ay) &&
+                      (rutinForm.periyot_birim || 'ay') === (editingRutin.periyot_birim || 'ay') &&
+                      (rutinForm.secili_gunler || '') === (editingRutin.secili_gunler || '') &&
                       Number(rutinForm.hatirlatma_gun_kala) === Number(editingRutin.hatirlatma_gun_kala) &&
                       rutinForm.son_yapilma_tarihi === formatInputDate(editingRutin.son_yapilma_tarihi)
                     )

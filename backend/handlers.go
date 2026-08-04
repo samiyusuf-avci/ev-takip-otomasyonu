@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -20,6 +21,90 @@ var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]
 type AppHandler struct {
 	DB        *gorm.DB
 	JWTSecret string
+}
+
+var dayNameToIdx = map[string]int{
+	"Pazartesi": 1,
+	"Salı":      2,
+	"Çarşamba":  3,
+	"Perşembe":  4,
+	"Cuma":      5,
+	"Cumartesi": 6,
+	"Pazar":     7,
+}
+
+func calcRutinMaxWarningDays(periyotAy int, periyotBirim string, seciliGunler string) int {
+	isWeeklyWithDays := periyotBirim == "hafta" && strings.TrimSpace(seciliGunler) != ""
+	if isWeeklyWithDays || periyotAy <= 0 {
+		periyotAy = 1
+	}
+
+	if periyotBirim == "gun" {
+		return periyotAy / 2
+	}
+
+	if periyotBirim == "ay" {
+		return (periyotAy * 30) / 2
+	}
+
+	// periyotBirim == "hafta"
+	var selectedList []string
+	if strings.TrimSpace(seciliGunler) != "" {
+		parts := strings.Split(seciliGunler, ",")
+		for _, p := range parts {
+			cleaned := strings.TrimSpace(p)
+			if cleaned != "" {
+				selectedList = append(selectedList, cleaned)
+			}
+		}
+	}
+
+	if len(selectedList) == 0 {
+		periodDays := periyotAy * 7
+		return periodDays / 2
+	}
+
+	dayMap := make(map[int]bool)
+	var dayNums []int
+	for _, name := range selectedList {
+		if idx, ok := dayNameToIdx[name]; ok {
+			if !dayMap[idx] {
+				dayMap[idx] = true
+				dayNums = append(dayNums, idx)
+			}
+		}
+	}
+
+	if len(dayNums) == 0 {
+		periodDays := periyotAy * 7
+		return periodDays / 2
+	}
+
+	sort.Ints(dayNums)
+
+	if len(dayNums) == 1 {
+		minGap := periyotAy * 7
+		return minGap / 2
+	}
+
+	minGap := 999
+	for i := 0; i < len(dayNums)-1; i++ {
+		gap := dayNums[i+1] - dayNums[i]
+		if gap < minGap {
+			minGap = gap
+		}
+	}
+
+	wrapGap := (7 - dayNums[len(dayNums)-1]) + dayNums[0] + (periyotAy-1)*7
+	if wrapGap < minGap {
+		minGap = wrapGap
+	}
+
+	maxDays := minGap / 2
+	if maxDays < 0 {
+		maxDays = 0
+	}
+	return maxDays
 }
 
 // -------------------------------------------------------------
@@ -557,7 +642,11 @@ func (h *AppHandler) GetDashboardSummary(c *fiber.Ctx) error {
 	for _, r := range rutinler {
 		alertTriggered := false
 		if r.SonYapilmaTarihi != nil && *r.SonYapilmaTarihi != "" {
-			nextDate, err := getNextRoutineDate(*r.SonYapilmaTarihi, r.PeriyotAy)
+			seciliGunler := ""
+			if r.SeciliGunler != nil {
+				seciliGunler = *r.SeciliGunler
+			}
+			nextDate, err := getNextRoutineDate(*r.SonYapilmaTarihi, r.PeriyotAy, r.PeriyotBirim, seciliGunler)
 			if err == nil {
 				today := getTodayZeroTime()
 				diffDays := int(math.Ceil(nextDate.Sub(today).Hours() / 24.0))
@@ -617,8 +706,8 @@ func (h *AppHandler) CreateGida(c *fiber.Ctx) error {
 	}
 
 	gida.KullaniciID = userID
-	if gida.HatirlatmaGunKala == 0 {
-		gida.HatirlatmaGunKala = 3
+	if gida.HatirlatmaGunKala < 0 {
+		return c.Status(400).JSON(fiber.Map{"error": "Hatırlatma gün sayısı 0 veya daha büyük olmalıdır."})
 	}
 	if gida.Durum == "" {
 		gida.Durum = "bekliyor"
@@ -708,9 +797,6 @@ func (h *AppHandler) CreateFatura(c *fiber.Ctx) error {
 	}
 
 	fatura.KullaniciID = userID
-	if fatura.HatirlatmaGunKala == 0 {
-		fatura.HatirlatmaGunKala = 5
-	}
 	if fatura.Durum == "" {
 		fatura.Durum = "odenmedi"
 	}
@@ -799,9 +885,6 @@ func (h *AppHandler) CreateGaranti(c *fiber.Ctx) error {
 	}
 
 	garanti.KullaniciID = userID
-	if garanti.HatirlatmaGunKala == 0 {
-		garanti.HatirlatmaGunKala = 30
-	}
 
 	if err := h.DB.Create(&garanti).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
@@ -952,11 +1035,11 @@ func (h *AppHandler) GetRutinler(c *fiber.Ctx) error {
 	userID := c.Locals("userID").(uint)
 
 	var rutinler []RutinWithKlasor
-	err := h.DB.Table("rutinler r").
-		Select("r.*, k.klasor_adi").
-		Joins("LEFT JOIN rutin_klasorleri k ON r.klasor_id = k.id").
-		Where("r.kullanici_id = ?", userID).
-		Order("r.son_yapilma_tarihi ASC").
+	err := h.DB.Model(&Rutin{}).
+		Select("rutinler.*, k.klasor_adi").
+		Joins("LEFT JOIN rutin_klasorleri k ON rutinler.klasor_id = k.id").
+		Where("rutinler.kullanici_id = ?", userID).
+		Order("rutinler.son_yapilma_tarihi ASC").
 		Scan(&rutinler).Error
 
 	if err != nil {
@@ -974,13 +1057,24 @@ func (h *AppHandler) CreateRutin(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Geçersiz veri biçimi."})
 	}
 
+	if rutin.PeriyotBirim == "" {
+		rutin.PeriyotBirim = "ay"
+	}
+
 	if rutin.GorevAdi == "" || rutin.PeriyotAy <= 0 {
-		return c.Status(400).JSON(fiber.Map{"error": "Görev adı ve Periyot (ay) gereklidir."})
+		return c.Status(400).JSON(fiber.Map{"error": "Görev adı ve Periyot gereklidir."})
 	}
 
 	rutin.KullaniciID = userID
-	if rutin.HatirlatmaGunKala == 0 {
-		rutin.HatirlatmaGunKala = 15
+
+	seciliGunler := ""
+	if rutin.SeciliGunler != nil {
+		seciliGunler = *rutin.SeciliGunler
+	}
+
+	maxDays := calcRutinMaxWarningDays(rutin.PeriyotAy, rutin.PeriyotBirim, seciliGunler)
+	if rutin.HatirlatmaGunKala < 0 || rutin.HatirlatmaGunKala > maxDays {
+		return c.Status(400).JSON(fiber.Map{"error": fmt.Sprintf("Hatırlatma gün sayısı periyot süresinin yarısından (en fazla %d gün) fazla olamaz.", maxDays)})
 	}
 
 	if err := h.DB.Create(&rutin).Error; err != nil {
@@ -1007,15 +1101,34 @@ func (h *AppHandler) UpdateRutin(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "Rutin görev bulunamadı."})
 	}
 
-	rutin.KlasorID = updateData.KlasorID
-	rutin.GorevAdi = updateData.GorevAdi
-	rutin.PeriyotAy = updateData.PeriyotAy
-	rutin.HatirlatmaGunKala = updateData.HatirlatmaGunKala
-	rutin.HedefKM = updateData.HedefKM
-	rutin.MevcutKM = updateData.MevcutKM
-	rutin.SonYapilmaTarihi = updateData.SonYapilmaTarihi
+	periyotBirim := updateData.PeriyotBirim
+	if periyotBirim == "" {
+		periyotBirim = "ay"
+	}
 
-	if err := h.DB.Save(&rutin).Error; err != nil {
+	seciliGunler := ""
+	if updateData.SeciliGunler != nil {
+		seciliGunler = *updateData.SeciliGunler
+	}
+
+	maxDays := calcRutinMaxWarningDays(updateData.PeriyotAy, periyotBirim, seciliGunler)
+	if updateData.HatirlatmaGunKala < 0 || updateData.HatirlatmaGunKala > maxDays {
+		return c.Status(400).JSON(fiber.Map{"error": fmt.Sprintf("Hatırlatma gün sayısı periyot süresinin yarısından (en fazla %d gün) fazla olamaz.", maxDays)})
+	}
+
+	updates := map[string]interface{}{
+		"klasor_id":           updateData.KlasorID,
+		"gorev_adi":           updateData.GorevAdi,
+		"periyot_ay":          updateData.PeriyotAy,
+		"periyot_birim":       periyotBirim,
+		"secili_gunler":       seciliGunler,
+		"hatirlatma_gun_kala": updateData.HatirlatmaGunKala,
+		"hedef_km":            updateData.HedefKM,
+		"mevcut_km":           updateData.MevcutKM,
+		"son_yapilma_tarihi":  updateData.SonYapilmaTarihi,
+	}
+
+	if err := h.DB.Model(&Rutin{}).Where("id = ? AND kullanici_id = ?", id, userID).Updates(updates).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 

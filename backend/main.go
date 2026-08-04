@@ -264,6 +264,10 @@ func initDatabase(db *gorm.DB) error {
 	db.Exec("ALTER TABLE kullanicilar ADD COLUMN role TEXT DEFAULT 'user';")
 	db.Exec("ALTER TABLE kullanicilar ADD COLUMN son_aktif_tarihi DATETIME;")
 	db.Exec("ALTER TABLE kullanicilar ADD COLUMN bildirim_saati TEXT DEFAULT '09:00';")
+	db.Exec("ALTER TABLE rutinler ADD COLUMN periyot_birim TEXT DEFAULT 'ay';")
+	db.Exec("ALTER TABLE rutinler ADD COLUMN secili_gunler TEXT DEFAULT '';")
+	db.Exec("UPDATE rutinler SET periyot_birim = 'ay' WHERE periyot_birim IS NULL OR periyot_birim = '';")
+	db.Exec("UPDATE rutinler SET secili_gunler = '' WHERE secili_gunler IS NULL;")
 
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS kullanicilar (
@@ -319,6 +323,8 @@ func initDatabase(db *gorm.DB) error {
 			kullanici_id INTEGER,
 			gorev_adi TEXT NOT NULL,
 			periyot_ay INTEGER NOT NULL,
+			periyot_birim TEXT DEFAULT 'ay',
+			secili_gunler TEXT DEFAULT '',
 			hatirlatma_gun_kala INTEGER DEFAULT 15,
 			hedef_km INTEGER,
 			mevcut_km INTEGER,
