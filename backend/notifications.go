@@ -169,14 +169,9 @@ func sendAdminSummaryReport(db *gorm.DB) (bool, error) {
 	return sentAny, nil
 }
 
-// checkAndNotify scans all reminders and sends Telegram notifications if needed
-func checkAndNotify(db *gorm.DB) (bool, int, int, error) {
-	fmt.Println("Hatırlatıcılar taranıyor...")
-
-	var users []Kullanici
-	if err := db.Find(&users).Error; err != nil {
-		return false, 0, 0, err
-	}
+// checkAndNotifyUsers scans reminders for the given users and sends Telegram notifications if needed
+func checkAndNotifyUsers(db *gorm.DB, users []Kullanici) (bool, int, int, error) {
+	fmt.Printf("%d kullanıcı için hatırlatıcılar taranıyor...\n", len(users))
 
 	// Eğer kullanıcıların telegram_chat_id'si boşsa ama ayarlar tablosunda varsa doldur
 	var chatIDSetting Ayarlar
@@ -207,6 +202,10 @@ func checkAndNotify(db *gorm.DB) (bool, int, int, error) {
 		userChatID := user.TelegramChatID
 		if userChatID == "" {
 			userChatID = defaultChatID
+		}
+
+		if userChatID == "" {
+			continue
 		}
 
 		var alerts []string
@@ -351,6 +350,35 @@ func checkAndNotify(db *gorm.DB) (bool, int, int, error) {
 
 	fmt.Printf("Bildirim özeti %d kullanıcıya gönderildi (%d toplam uyarı).\n", totalSent, totalAlertsCount)
 	return true, totalSent, totalAlertsCount, nil
+}
+
+// checkAndNotify scans all reminders for all users
+func checkAndNotify(db *gorm.DB) (bool, int, int, error) {
+	var users []Kullanici
+	if err := db.Find(&users).Error; err != nil {
+		return false, 0, 0, err
+	}
+	return checkAndNotifyUsers(db, users)
+}
+
+// checkAndNotifyForTime scans reminders for users whose bildirim_saati matches currentHM
+func checkAndNotifyForTime(db *gorm.DB, currentHM string) (bool, int, int, error) {
+	var users []Kullanici
+	if currentHM == "09:00" {
+		if err := db.Where("bildirim_saati = ? OR bildirim_saati IS NULL OR bildirim_saati = ''", currentHM).Find(&users).Error; err != nil {
+			return false, 0, 0, err
+		}
+	} else {
+		if err := db.Where("bildirim_saati = ?", currentHM).Find(&users).Error; err != nil {
+			return false, 0, 0, err
+		}
+	}
+
+	if len(users) == 0 {
+		return false, 0, 0, nil
+	}
+
+	return checkAndNotifyUsers(db, users)
 }
 
 // checkAndNotifyForUser scans reminders for a specific user and sends Telegram notification if needed

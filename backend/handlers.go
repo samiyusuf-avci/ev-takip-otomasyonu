@@ -1089,30 +1089,40 @@ func (h *AppHandler) GetAyarlar(c *fiber.Ctx) error {
 	userID := c.Locals("userID").(uint)
 
 	var user Kullanici
-	if err := h.DB.Select("telegram_chat_id").Where("id = ?", userID).First(&user).Error; err != nil {
+	if err := h.DB.Select("telegram_chat_id, bildirim_saati").Where("id = ?", userID).First(&user).Error; err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	var tokenRow, bildirimSaatiRow Ayarlar
+	var tokenRow, adminBildirimSaatiRow Ayarlar
 	h.DB.Where("anahtar = ?", "telegram_token").First(&tokenRow)
-	h.DB.Where("anahtar = ?", "bildirim_saati").First(&bildirimSaatiRow)
+	h.DB.Where("anahtar = ?", "admin_bildirim_saati").First(&adminBildirimSaatiRow)
+	if adminBildirimSaatiRow.Deger == "" {
+		h.DB.Where("anahtar = ?", "bildirim_saati").First(&adminBildirimSaatiRow)
+	}
 
-	bildirimSaati := bildirimSaatiRow.Deger
-	if bildirimSaati == "" {
-		bildirimSaati = "09:00"
+	userBildirimSaati := user.BildirimSaati
+	if userBildirimSaati == "" {
+		userBildirimSaati = "09:00"
+	}
+
+	adminBildirimSaati := adminBildirimSaatiRow.Deger
+	if adminBildirimSaati == "" {
+		adminBildirimSaati = "09:00"
 	}
 
 	return c.JSON(fiber.Map{
-		"telegram_token":    tokenRow.Deger,
-		"telegram_chat_id": user.TelegramChatID,
-		"bildirim_saati":   bildirimSaati,
+		"telegram_token":       tokenRow.Deger,
+		"telegram_chat_id":    user.TelegramChatID,
+		"bildirim_saati":      userBildirimSaati,
+		"admin_bildirim_saati": adminBildirimSaati,
 	})
 }
 
 type SaveAyarlarReq struct {
-	TelegramToken  string `json:"telegram_token"`
-	TelegramChatID string `json:"telegram_chat_id"`
-	BildirimSaati  string `json:"bildirim_saati"`
+	TelegramToken      string `json:"telegram_token"`
+	TelegramChatID     string `json:"telegram_chat_id"`
+	BildirimSaati      string `json:"bildirim_saati"`
+	AdminBildirimSaati string `json:"admin_bildirim_saati"`
 }
 
 func (h *AppHandler) SaveAyarlar(c *fiber.Ctx) error {
@@ -1131,27 +1141,25 @@ func (h *AppHandler) SaveAyarlar(c *fiber.Ctx) error {
 		}
 	}
 
-	// Sadece Admin rolü genel telegram_chat_id ayarını güncelleyebilir veya ilk kez tanımlanıyorsa
-	if roleVal == "admin" || req.TelegramChatID != "" {
-		var existingChatID Ayarlar
-		err := h.DB.Where("anahtar = ?", "telegram_chat_id").First(&existingChatID).Error
-		if roleVal == "admin" || err != nil || existingChatID.Deger == "" {
-			chatIDSetting := Ayarlar{Anahtar: "telegram_chat_id", Deger: req.TelegramChatID}
-			if err := h.DB.Save(&chatIDSetting).Error; err != nil {
-				return c.Status(500).JSON(fiber.Map{"error": err.Error()})
-			}
-		}
-	}
-
-	if req.BildirimSaati != "" {
-		bildirimSaatiSetting := Ayarlar{Anahtar: "bildirim_saati", Deger: req.BildirimSaati}
-		if err := h.DB.Save(&bildirimSaatiSetting).Error; err != nil {
+	// Sadece Admin rolü Yönetici Özet Rapor Saatini güncelleyebilir
+	if roleVal == "admin" && req.AdminBildirimSaati != "" {
+		adminTimeSetting := Ayarlar{Anahtar: "admin_bildirim_saati", Deger: req.AdminBildirimSaati}
+		if err := h.DB.Save(&adminTimeSetting).Error; err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 		}
 	}
 
-	if err := h.DB.Model(&Kullanici{}).Where("id = ?", userID).Update("telegram_chat_id", req.TelegramChatID).Error; err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	// Kullanıcıya özel Telegram Chat ID ve kişisel bildirim saatini güncelle
+	updates := map[string]interface{}{}
+	updates["telegram_chat_id"] = req.TelegramChatID
+	if req.BildirimSaati != "" {
+		updates["bildirim_saati"] = req.BildirimSaati
+	}
+
+	if len(updates) > 0 {
+		if err := h.DB.Model(&Kullanici{}).Where("id = ?", userID).Updates(updates).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		}
 	}
 
 	return c.JSON(fiber.Map{"message": "Ayarlar başarıyla kaydedildi."})

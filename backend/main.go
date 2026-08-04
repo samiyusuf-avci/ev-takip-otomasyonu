@@ -57,12 +57,15 @@ func main() {
 
 	// Varsayılan boş ayarları kontrol et/oluştur
 	db.FirstOrCreate(&Ayarlar{Anahtar: "telegram_token", Deger: ""})
+	db.FirstOrCreate(&Ayarlar{Anahtar: "telegram_token", Deger: ""})
 	db.FirstOrCreate(&Ayarlar{Anahtar: "telegram_chat_id", Deger: ""})
 	db.FirstOrCreate(&Ayarlar{Anahtar: "bildirim_saati", Deger: "09:00"})
+	db.FirstOrCreate(&Ayarlar{Anahtar: "admin_bildirim_saati", Deger: "09:00"})
 
 	// Cron Görevlerini Başlat (Zamanlanmış görevler)
 	cronScheduler := cron.New()
-	var lastNotifiedKey string
+	var lastUserNotifiedKey string
+	var lastAdminNotifiedKey string
 
 	_, err = cronScheduler.AddFunc("* * * * *", func() {
 		loc, err := time.LoadLocation("Europe/Istanbul")
@@ -73,17 +76,26 @@ func main() {
 		todayStr := now.Format("2006-01-02")
 		currentHM := now.Format("15:04")
 
-		var setting Ayarlar
-		bildirimSaati := "09:00"
-		if err := db.Where("anahtar = ?", "bildirim_saati").First(&setting).Error; err == nil && setting.Deger != "" {
-			bildirimSaati = setting.Deger
+		// 1. Kullanıcı Hatırlatıcı Kontrolü (O anki dakikada bildirim saati gelen kullanıcılara bildir)
+		userKey := todayStr + " " + currentHM
+		if lastUserNotifiedKey != userKey {
+			lastUserNotifiedKey = userKey
+			checkAndNotifyForTime(db, currentHM)
 		}
 
-		currentKey := todayStr + " " + bildirimSaati
-		if currentHM == bildirimSaati && lastNotifiedKey != currentKey {
-			lastNotifiedKey = currentKey
-			fmt.Printf("Zamanlanmış otomatik kontrol tetiklendi (Saat %s TSİ).\n", currentHM)
-			checkAndNotify(db)
+		// 2. Yönetici Günlük Özet Raporu Kontrolü
+		var adminSetting Ayarlar
+		adminSaati := "09:00"
+		if err := db.Where("anahtar = ?", "admin_bildirim_saati").First(&adminSetting).Error; err == nil && adminSetting.Deger != "" {
+			adminSaati = adminSetting.Deger
+		} else if err := db.Where("anahtar = ?", "bildirim_saati").First(&adminSetting).Error; err == nil && adminSetting.Deger != "" {
+			adminSaati = adminSetting.Deger
+		}
+
+		adminKey := todayStr + " admin " + adminSaati
+		if currentHM == adminSaati && lastAdminNotifiedKey != adminKey {
+			lastAdminNotifiedKey = adminKey
+			fmt.Printf("Yönetici günlük özet raporu tetiklendi (Saat %s TSİ).\n", currentHM)
 			sendAdminSummaryReport(db)
 		}
 	})
@@ -91,7 +103,7 @@ func main() {
 		fmt.Printf("Cron Job oluşturulurken hata: %v\n", err)
 	} else {
 		cronScheduler.Start()
-		fmt.Println("Cron Job zamanlayıcısı kuruldu (Dinamik saat kontrolü - TSİ).")
+		fmt.Println("Cron Job zamanlayıcısı kuruldu (Dinamik kullanıcı ve admin saat kontrolü - TSİ).")
 	}
 
 	// Fiber Uygulamasını Başlat
@@ -248,9 +260,10 @@ func seedAdminUser(db *gorm.DB) error {
 
 // initDatabase raw SQL ile tabloları güvenli bir şekilde oluşturur
 func initDatabase(db *gorm.DB) error {
-	// Tabloya role ve son_aktif_tarihi sütunlarını güvenli ekleme migration'ı
+	// Tabloya role, son_aktif_tarihi ve bildirim_saati sütunlarını güvenli ekleme migration'ı
 	db.Exec("ALTER TABLE kullanicilar ADD COLUMN role TEXT DEFAULT 'user';")
 	db.Exec("ALTER TABLE kullanicilar ADD COLUMN son_aktif_tarihi DATETIME;")
+	db.Exec("ALTER TABLE kullanicilar ADD COLUMN bildirim_saati TEXT DEFAULT '09:00';")
 
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS kullanicilar (
@@ -260,6 +273,7 @@ func initDatabase(db *gorm.DB) error {
 			sifre TEXT NOT NULL,
 			role TEXT DEFAULT 'user',
 			telegram_chat_id TEXT,
+			bildirim_saati TEXT DEFAULT '09:00',
 			olusturma_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP,
 			son_aktif_tarihi DATETIME
 		);`,

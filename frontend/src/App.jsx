@@ -44,7 +44,10 @@ import {
   ArrowLeft,
   MessageSquare,
   Inbox,
-  Check
+  Check,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown
 } from 'lucide-react';
 
 // -------------------------------------------------------------
@@ -83,6 +86,22 @@ const formatDate = (dateStr) => {
   const date = new Date(safeStr);
   if (isNaN(date.getTime())) return '-';
   return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+};
+
+const isTodayOrYesterday = (dateStr) => {
+  if (!dateStr) return false;
+  const safeStr = typeof dateStr === 'string' ? dateStr.replace(' ', 'T') : dateStr;
+  const date = new Date(safeStr);
+  if (isNaN(date.getTime())) return false;
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const targetDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+  return targetDate.getTime() === today.getTime() || targetDate.getTime() === yesterday.getTime();
 };
 
 const getStatusColor = (days, limit, durum) => {
@@ -124,8 +143,8 @@ function App() {
   const [garantiler, setGarantiler] = useState([]);
   const [rutinKlasorleri, setRutinKlasorleri] = useState([]);
   const [rutinler, setRutinler] = useState([]);
-  const [ayarlar, setAyarlar] = useState({ telegram_token: '', telegram_chat_id: '', bildirim_saati: '09:00' });
-  const [savedAyarlar, setSavedAyarlar] = useState({ telegram_token: '', telegram_chat_id: '', bildirim_saati: '09:00' });
+  const [ayarlar, setAyarlar] = useState({ telegram_token: '', telegram_chat_id: '', bildirim_saati: '09:00', admin_bildirim_saati: '09:00' });
+  const [savedAyarlar, setSavedAyarlar] = useState({ telegram_token: '', telegram_chat_id: '', bildirim_saati: '09:00', admin_bildirim_saati: '09:00' });
   const [isEditingTelegram, setIsEditingTelegram] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({ isim: '', eposta: '', mevcut_sifre: '', sifre: '' });
@@ -145,7 +164,18 @@ function App() {
   const [adminUsersLoading, setAdminUsersLoading] = useState(false);
   const [adminUsersError, setAdminUsersError] = useState('');
   const [adminSearchQuery, setAdminSearchQuery] = useState('');
+  const [adminSortField, setAdminSortField] = useState('olusturma_tarihi');
+  const [adminSortOrder, setAdminSortOrder] = useState('desc');
   const [hoveredTrafficIdx, setHoveredTrafficIdx] = useState(null);
+
+  const handleAdminSort = (field) => {
+    if (adminSortField === field) {
+      setAdminSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'));
+    } else {
+      setAdminSortField(field);
+      setAdminSortOrder('desc');
+    }
+  };
 
   const fetchAdminUsers = useCallback(async () => {
     setAdminUsersLoading(true);
@@ -945,7 +975,8 @@ function App() {
       const token = res.data.telegram_token || '';
       const chatId = res.data.telegram_chat_id || '';
       const bildirimSaati = res.data.bildirim_saati || '09:00';
-      const loadedAyarlar = { telegram_token: token, telegram_chat_id: chatId, bildirim_saati: bildirimSaati };
+      const adminBildirimSaati = res.data.admin_bildirim_saati || '09:00';
+      const loadedAyarlar = { telegram_token: token, telegram_chat_id: chatId, bildirim_saati: bildirimSaati, admin_bildirim_saati: adminBildirimSaati };
       setAyarlar(loadedAyarlar);
       setSavedAyarlar(loadedAyarlar);
       if (token || chatId) {
@@ -1007,7 +1038,8 @@ function App() {
         const token = res.data.telegram_token || '';
         const chatId = res.data.telegram_chat_id || '';
         const bildirimSaati = res.data.bildirim_saati || '09:00';
-        const loadedAyarlar = { telegram_token: token, telegram_chat_id: chatId, bildirim_saati: bildirimSaati };
+        const adminBildirimSaati = res.data.admin_bildirim_saati || '09:00';
+        const loadedAyarlar = { telegram_token: token, telegram_chat_id: chatId, bildirim_saati: bildirimSaati, admin_bildirim_saati: adminBildirimSaati };
         setAyarlar(loadedAyarlar);
         setSavedAyarlar(loadedAyarlar);
         if (token || chatId) {
@@ -2861,8 +2893,8 @@ function App() {
                 <button
                   onClick={() => setAdminSikayetFilter('tum')}
                   className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 text-left cursor-pointer group ${adminSikayetFilter === 'tum'
-                      ? 'bg-purple-600/20 border-purple-500/50 text-white shadow-lg shadow-purple-500/10 ring-1 ring-purple-500/40'
-                      : 'bg-white/[0.02] border-white/5 text-gray-400 hover:bg-white/[0.05] hover:border-white/10 hover:text-gray-200'
+                    ? 'bg-purple-600/20 border-purple-500/50 text-white shadow-lg shadow-purple-500/10 ring-1 ring-purple-500/40'
+                    : 'bg-white/[0.02] border-white/5 text-gray-400 hover:bg-white/[0.05] hover:border-white/10 hover:text-gray-200'
                     }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -2885,8 +2917,8 @@ function App() {
                 <button
                   onClick={() => setAdminSikayetFilter('bekliyor')}
                   className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 text-left cursor-pointer group ${adminSikayetFilter === 'bekliyor'
-                      ? 'bg-amber-500/20 border-amber-500/50 text-white shadow-lg shadow-amber-500/10 ring-1 ring-amber-500/40'
-                      : 'bg-white/[0.02] border-white/5 text-gray-400 hover:bg-white/[0.05] hover:border-white/10 hover:text-gray-200'
+                    ? 'bg-amber-500/20 border-amber-500/50 text-white shadow-lg shadow-amber-500/10 ring-1 ring-amber-500/40'
+                    : 'bg-white/[0.02] border-white/5 text-gray-400 hover:bg-white/[0.05] hover:border-white/10 hover:text-gray-200'
                     }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -2909,8 +2941,8 @@ function App() {
                 <button
                   onClick={() => setAdminSikayetFilter('incelendi')}
                   className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 text-left cursor-pointer group ${adminSikayetFilter === 'incelendi'
-                      ? 'bg-sky-500/20 border-sky-500/50 text-white shadow-lg shadow-sky-500/10 ring-1 ring-sky-500/40'
-                      : 'bg-white/[0.02] border-white/5 text-gray-400 hover:bg-white/[0.05] hover:border-white/10 hover:text-gray-200'
+                    ? 'bg-sky-500/20 border-sky-500/50 text-white shadow-lg shadow-sky-500/10 ring-1 ring-sky-500/40'
+                    : 'bg-white/[0.02] border-white/5 text-gray-400 hover:bg-white/[0.05] hover:border-white/10 hover:text-gray-200'
                     }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -2933,8 +2965,8 @@ function App() {
                 <button
                   onClick={() => setAdminSikayetFilter('cozuldu')}
                   className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 text-left cursor-pointer group ${adminSikayetFilter === 'cozuldu'
-                      ? 'bg-emerald-500/20 border-emerald-500/50 text-white shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-500/40'
-                      : 'bg-white/[0.02] border-white/5 text-gray-400 hover:bg-white/[0.05] hover:border-white/10 hover:text-gray-200'
+                    ? 'bg-emerald-500/20 border-emerald-500/50 text-white shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-500/40'
+                    : 'bg-white/[0.02] border-white/5 text-gray-400 hover:bg-white/[0.05] hover:border-white/10 hover:text-gray-200'
                     }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -3074,10 +3106,10 @@ function App() {
                                     type="button"
                                     onClick={() => setOpenSikayetDropdownId(openSikayetDropdownId === s.id ? null : s.id)}
                                     className={`px-3 py-1.5 rounded-xl text-xs font-bold border inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-sm ${s.durum === 'bekliyor'
-                                        ? 'bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25 ring-1 ring-amber-500/20'
-                                        : s.durum === 'incelendi'
-                                          ? 'bg-sky-500/15 text-sky-300 border-sky-500/30 hover:bg-sky-500/25 ring-1 ring-sky-500/20'
-                                          : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25 ring-1 ring-emerald-500/20'
+                                      ? 'bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25 ring-1 ring-amber-500/20'
+                                      : s.durum === 'incelendi'
+                                        ? 'bg-sky-500/15 text-sky-300 border-sky-500/30 hover:bg-sky-500/25 ring-1 ring-sky-500/20'
+                                        : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25 ring-1 ring-emerald-500/20'
                                       }`}
                                   >
                                     <span>
@@ -3097,8 +3129,8 @@ function App() {
                                           setOpenSikayetDropdownId(null);
                                         }}
                                         className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer text-left ${s.durum === 'bekliyor'
-                                            ? 'bg-amber-500/20 text-amber-300'
-                                            : 'text-gray-300 hover:bg-amber-500/10 hover:text-amber-300'
+                                          ? 'bg-amber-500/20 text-amber-300'
+                                          : 'text-gray-300 hover:bg-amber-500/10 hover:text-amber-300'
                                           }`}
                                       >
                                         <div className="flex items-center gap-2">
@@ -3115,8 +3147,8 @@ function App() {
                                           setOpenSikayetDropdownId(null);
                                         }}
                                         className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer text-left ${s.durum === 'incelendi'
-                                            ? 'bg-sky-500/20 text-sky-300'
-                                            : 'text-gray-300 hover:bg-sky-500/10 hover:text-sky-300'
+                                          ? 'bg-sky-500/20 text-sky-300'
+                                          : 'text-gray-300 hover:bg-sky-500/10 hover:text-sky-300'
                                           }`}
                                       >
                                         <div className="flex items-center gap-2">
@@ -3133,8 +3165,8 @@ function App() {
                                           setOpenSikayetDropdownId(null);
                                         }}
                                         className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer text-left ${s.durum === 'cozuldu'
-                                            ? 'bg-emerald-500/20 text-emerald-300'
-                                            : 'bg-white/5 text-gray-300 hover:bg-emerald-500/10 hover:text-emerald-300'
+                                          ? 'bg-emerald-500/20 text-emerald-300'
+                                          : 'bg-white/5 text-gray-300 hover:bg-emerald-500/10 hover:text-emerald-300'
                                           }`}
                                       >
                                         <div className="flex items-center gap-2">
@@ -3253,25 +3285,47 @@ function App() {
                       <p className="text-[10px] text-gray-500 mt-0.5">Kişisel veya grup sohbet kimliğiniz (Chat ID).</p>
                     </div>
 
-                    <div>
-                      <div className="flex justify-between items-center mb-1">
-                        <label className="block text-xs md:text-sm font-semibold text-gray-300 flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5 text-purple-400" />
-                          Otomatik Bildirim Saati (TSİ)
-                        </label>
-                        {!isEditingTelegram && (
-                          <span className="text-[10px] text-gray-500 flex items-center gap-1">
-                            <Lock className="w-3 h-3 text-purple-400" /> Kilitli
-                          </span>
-                        )}
+                    {user?.role === 'admin' ? (
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <label className="block text-xs md:text-sm font-semibold text-gray-300 flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-purple-400" />
+                            Yönetici Günlük Özet Rapor Saati (TSİ)
+                          </label>
+                          {!isEditingTelegram && (
+                            <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                              <Lock className="w-3 h-3 text-purple-400" /> Kilitli
+                            </span>
+                          )}
+                        </div>
+                        <TimePicker
+                          disabled={!isEditingTelegram}
+                          value={ayarlar.admin_bildirim_saati || '09:00'}
+                          onChange={(newTime) => setAyarlar({ ...ayarlar, admin_bildirim_saati: newTime })}
+                        />
+                        <p className="text-[10px] text-gray-500 mt-0.5">Sistem istatistikleri, yeni kayıtlar ve şikayet özetinin yöneticiye gönderileceği saat.</p>
                       </div>
-                      <TimePicker
-                        disabled={!isEditingTelegram}
-                        value={ayarlar.bildirim_saati || '09:00'}
-                        onChange={(newTime) => setAyarlar({ ...ayarlar, bildirim_saati: newTime })}
-                      />
-                      <p className="text-[10px] text-gray-500 mt-0.5">Her gün otomatik özet bildiriminin gönderileceği saat.</p>
-                    </div>
+                    ) : (
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <label className="block text-xs md:text-sm font-semibold text-gray-300 flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-purple-400" />
+                            Otomatik Bildirim Saati (TSİ)
+                          </label>
+                          {!isEditingTelegram && (
+                            <span className="text-[10px] text-gray-500 flex items-center gap-1">
+                              <Lock className="w-3 h-3 text-purple-400" /> Kilitli
+                            </span>
+                          )}
+                        </div>
+                        <TimePicker
+                          disabled={!isEditingTelegram}
+                          value={ayarlar.bildirim_saati || '09:00'}
+                          onChange={(newTime) => setAyarlar({ ...ayarlar, bildirim_saati: newTime })}
+                        />
+                        <p className="text-[10px] text-gray-500 mt-0.5">Her gün kişisel ev takibi özet bildiriminizin size gönderileceği saat.</p>
+                      </div>
+                    )}
 
                     <div className="flex flex-col sm:flex-row gap-2 pt-1">
                       {!isEditingTelegram ? (
@@ -3299,7 +3353,7 @@ function App() {
                       ) : (
                         <>
                           {(() => {
-                            const isTelegramChanged = ayarlar.telegram_token !== savedAyarlar.telegram_token || ayarlar.telegram_chat_id !== savedAyarlar.telegram_chat_id || ayarlar.bildirim_saati !== savedAyarlar.bildirim_saati;
+                            const isTelegramChanged = ayarlar.telegram_token !== savedAyarlar.telegram_token || ayarlar.telegram_chat_id !== savedAyarlar.telegram_chat_id || ayarlar.bildirim_saati !== savedAyarlar.bildirim_saati || ayarlar.admin_bildirim_saati !== savedAyarlar.admin_bildirim_saati;
                             return (
                               <button
                                 type="submit"
@@ -3555,104 +3609,106 @@ function App() {
                 </div>
               </div>
 
-              {/* SAĞ KOLON: Şikayet & Geri Bildirim */}
-              <div>
-                {/* Şikayet ve Geri Bildirim Bildirme Kartı */}
-                <div className="glass-panel p-4 md:p-6 rounded-2xl border-white/5">
-                  {/* Header: Telegram Bildirimleri ile birebir aynı yapıda */}
-                  <div className="flex items-center justify-between gap-2 mb-3 md:mb-4">
-                    <h3 className="text-sm md:text-lg font-bold text-white flex items-center gap-2 min-w-0">
-                      <MessageSquare className="w-4 h-4 md:w-5 md:h-5 text-purple-400 flex-shrink-0" />
-                      <span className="whitespace-nowrap">Şikayet & Geri Bildirim</span>
-                    </h3>
-                    <span className="text-[10px] md:text-xs font-semibold px-2.5 py-1 rounded-full border bg-amber-500/10 text-amber-300 border-amber-500/20 flex items-center gap-1.5 whitespace-nowrap flex-shrink-0">
-                      <Send className="w-3 h-3 text-amber-400" />
-                      Canlı Destek
-                    </span>
-                  </div>
-
-                  <form noValidate onSubmit={handleSendSikayet} className="space-y-3.5">
-                    <div>
-                      <div className="flex justify-between items-center mb-1">
-                        <label className="block text-xs md:text-sm font-semibold text-gray-300">Konu / Başlık *</label>
-                      </div>
-                      <input
-                        type="text"
-                        required
-                        placeholder="örn: Bildirim saati uyarısı, Sayfa açılış hatası vb."
-                        value={sikayetForm.baslik}
-                        onChange={(e) => setSikayetForm({ ...sikayetForm, baslik: e.target.value })}
-                        className="w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all bg-white/5 border-white/10 focus:border-purple-500"
-                      />
-                      <p className="text-[10px] text-gray-500 mt-0.5">Yöneticilere iletmek istediğiniz ana konuyu yazın.</p>
+              {/* SAĞ KOLON: Şikayet & Geri Bildirim (Sadece Admin Olmayan Normal Kullanıcılar Görebilir) */}
+              {user?.role !== 'admin' && (
+                <div>
+                  {/* Şikayet ve Geri Bildirim Bildirme Kartı */}
+                  <div className="glass-panel p-4 md:p-6 rounded-2xl border-white/5">
+                    {/* Header: Telegram Bildirimleri ile birebir aynı yapıda */}
+                    <div className="flex items-center justify-between gap-2 mb-3 md:mb-4">
+                      <h3 className="text-sm md:text-lg font-bold text-white flex items-center gap-2 min-w-0">
+                        <MessageSquare className="w-4 h-4 md:w-5 md:h-5 text-purple-400 flex-shrink-0" />
+                        <span className="whitespace-nowrap">Şikayet & Geri Bildirim</span>
+                      </h3>
+                      <span className="text-[10px] md:text-xs font-semibold px-2.5 py-1 rounded-full border bg-amber-500/10 text-amber-300 border-amber-500/20 flex items-center gap-1.5 whitespace-nowrap flex-shrink-0">
+                        <Send className="w-3 h-3 text-amber-400" />
+                        Canlı Destek
+                      </span>
                     </div>
 
-                    <div>
-                      <div className="flex justify-between items-center mb-1">
-                        <label className="block text-xs md:text-sm font-semibold text-gray-300">Detaylı Açıklama *</label>
+                    <form noValidate onSubmit={handleSendSikayet} className="space-y-3.5">
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <label className="block text-xs md:text-sm font-semibold text-gray-300">Konu / Başlık *</label>
+                        </div>
+                        <input
+                          type="text"
+                          required
+                          placeholder="örn: Bildirim saati uyarısı, Sayfa açılış hatası vb."
+                          value={sikayetForm.baslik}
+                          onChange={(e) => setSikayetForm({ ...sikayetForm, baslik: e.target.value })}
+                          className="w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all bg-white/5 border-white/10 focus:border-purple-500"
+                        />
+                        <p className="text-[10px] text-gray-500 mt-0.5">Yöneticilere iletmek istediğiniz ana konuyu yazın.</p>
                       </div>
-                      <textarea
-                        required
-                        rows={6}
-                        placeholder="Karşılaştığınız durumu veya geliştirilmesini istediğiniz özelliği detaylıca açıklayınız..."
-                        value={sikayetForm.mesaj}
-                        onChange={(e) => setSikayetForm({ ...sikayetForm, mesaj: e.target.value })}
-                        className="w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all bg-white/5 border-white/10 focus:border-purple-500 resize-y h-[146px] min-h-[146px]"
-                      />
-                      <p className="text-[10px] text-gray-500 mt-0.5">Sorunu veya talebinizi ayrıntılı olarak açıklayın.</p>
-                    </div>
 
-                    <div className="pt-1">
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <label className="block text-xs md:text-sm font-semibold text-gray-300">Detaylı Açıklama *</label>
+                        </div>
+                        <textarea
+                          required
+                          rows={6}
+                          placeholder="Karşılaştığınız durumu veya geliştirilmesini istediğiniz özelliği detaylıca açıklayınız..."
+                          value={sikayetForm.mesaj}
+                          onChange={(e) => setSikayetForm({ ...sikayetForm, mesaj: e.target.value })}
+                          className="w-full border rounded-xl py-2 md:py-3 px-3.5 text-white text-xs md:text-sm outline-none transition-all bg-white/5 border-white/10 focus:border-purple-500 resize-y h-[146px] min-h-[146px]"
+                        />
+                        <p className="text-[10px] text-gray-500 mt-0.5">Sorunu veya talebinizi ayrıntılı olarak açıklayın.</p>
+                      </div>
+
+                      <div className="pt-1">
+                        <button
+                          type="submit"
+                          disabled={sikayetLoading || !sikayetForm.baslik.trim() || !sikayetForm.mesaj.trim()}
+                          className="w-full py-2 md:py-2.5 px-4 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 glow-btn"
+                        >
+                          <Send className="w-4 h-4" />
+                          {sikayetLoading ? 'Gönderiliyor...' : 'Yöneticilere İlet'}
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* Telegram Rehberi ile Birebir Uyumlu Açılır Kapanır Accordion */}
+                    <div className="mt-5 pt-4 border-t border-white/10">
                       <button
-                        type="submit"
-                        disabled={sikayetLoading || !sikayetForm.baslik.trim() || !sikayetForm.mesaj.trim()}
-                        className="w-full py-2 md:py-2.5 px-4 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-xs md:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 glow-btn"
+                        type="button"
+                        onClick={() => setShowSikayetGuide((prev) => !prev)}
+                        className="w-full flex items-center justify-between gap-2 text-left cursor-pointer group py-1"
                       >
-                        <Send className="w-4 h-4" />
-                        {sikayetLoading ? 'Gönderiliyor...' : 'Yöneticilere İlet'}
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20 group-hover:bg-purple-500/20 transition-all flex-shrink-0">
+                            <Info className="w-4 h-4" />
+                          </div>
+                          <h4 className="text-xs md:text-sm font-bold text-white group-hover:text-purple-300 transition-colors truncate">
+                            Geri Bildirim Süreci Nasıl İşler?
+                          </h4>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-gray-400 group-hover:text-white transition-colors flex-shrink-0">
+                          <span className="text-[10px] font-medium hidden sm:inline text-purple-400">
+                            {showSikayetGuide ? 'Gizle' : 'Rehberi Göster'}
+                          </span>
+                          <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showSikayetGuide ? 'rotate-180 text-purple-400' : ''}`} />
+                        </div>
                       </button>
+
+                      {showSikayetGuide && (
+                        <div className="mt-3 bg-purple-500/[0.04] border border-purple-500/15 rounded-xl p-3.5 space-y-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                          <div className="flex items-center gap-2.5 text-xs text-gray-300">
+                            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold text-[10px] flex items-center justify-center">1</span>
+                            <span>Gönderdiğiniz tüm mesajlar doğrudan sistem yönetici paneline anlık düşer.</span>
+                          </div>
+
+                          <div className="flex items-center gap-2.5 text-xs text-gray-300">
+                            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold text-[10px] flex items-center justify-center">2</span>
+                            <span>Geliştirme ve hata düzeltme talepleri yöneticiler tarafından öncelikle değerlendirilir.</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </form>
-
-                  {/* Telegram Rehberi ile Birebir Uyumlu Açılır Kapanır Accordion */}
-                  <div className="mt-5 pt-4 border-t border-white/10">
-                    <button
-                      type="button"
-                      onClick={() => setShowSikayetGuide((prev) => !prev)}
-                      className="w-full flex items-center justify-between gap-2 text-left cursor-pointer group py-1"
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20 group-hover:bg-purple-500/20 transition-all flex-shrink-0">
-                          <Info className="w-4 h-4" />
-                        </div>
-                        <h4 className="text-xs md:text-sm font-bold text-white group-hover:text-purple-300 transition-colors truncate">
-                          Geri Bildirim Süreci Nasıl İşler?
-                        </h4>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-gray-400 group-hover:text-white transition-colors flex-shrink-0">
-                        <span className="text-[10px] font-medium hidden sm:inline text-purple-400">
-                          {showSikayetGuide ? 'Gizle' : 'Rehberi Göster'}
-                        </span>
-                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showSikayetGuide ? 'rotate-180 text-purple-400' : ''}`} />
-                      </div>
-                    </button>
-
-                    {showSikayetGuide && (
-                      <div className="mt-3 bg-purple-500/[0.04] border border-purple-500/15 rounded-xl p-3.5 space-y-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
-                        <div className="flex items-center gap-2.5 text-xs text-gray-300">
-                          <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold text-[10px] flex items-center justify-center">1</span>
-                          <span>Gönderdiğiniz tüm mesajlar doğrudan sistem yönetici paneline anlık düşer.</span>
-                        </div>
-
-                        <div className="flex items-center gap-2.5 text-xs text-gray-300">
-                          <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold text-[10px] flex items-center justify-center">2</span>
-                          <span>Geliştirme ve hata düzeltme talepleri yöneticiler tarafından öncelikle değerlendirilir.</span>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Tehlikeli Bölge / Hesabı Sil (Sadece Mobil Görünümde En Altta Görünür) */}
@@ -3809,8 +3865,42 @@ function App() {
                       <th className="px-6 py-4 font-semibold">E-Posta</th>
                       <th className="px-6 py-4 font-semibold">Rol</th>
                       <th className="px-6 py-4 font-semibold">Telegram Chat Status</th>
-                      <th className="px-6 py-4 font-semibold">Kayıt Tarihi</th>
-                      <th className="px-6 py-4 font-semibold">Son Aktiflik</th>
+                      <th
+                        onClick={() => handleAdminSort('olusturma_tarihi')}
+                        className="px-6 py-4 font-semibold cursor-pointer select-none hover:text-white transition-colors group"
+                        title="Kayıt tarihine göre sıralamak için tıklayın"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span>Kayıt Tarihi</span>
+                          {adminSortField === 'olusturma_tarihi' ? (
+                            adminSortOrder === 'desc' ? (
+                              <ArrowDown className="w-3.5 h-3.5 text-indigo-400" />
+                            ) : (
+                              <ArrowUp className="w-3.5 h-3.5 text-indigo-400" />
+                            )
+                          ) : (
+                            <ArrowUpDown className="w-3.5 h-3.5 text-gray-500/50 group-hover:text-gray-300 transition-colors" />
+                          )}
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleAdminSort('son_aktif_tarihi')}
+                        className="px-6 py-4 font-semibold cursor-pointer select-none hover:text-white transition-colors group"
+                        title="Son aktiflik tarihine göre sıralamak için tıklayın"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span>Son Aktiflik</span>
+                          {adminSortField === 'son_aktif_tarihi' ? (
+                            adminSortOrder === 'desc' ? (
+                              <ArrowDown className="w-3.5 h-3.5 text-indigo-400" />
+                            ) : (
+                              <ArrowUp className="w-3.5 h-3.5 text-indigo-400" />
+                            )
+                          ) : (
+                            <ArrowUpDown className="w-3.5 h-3.5 text-gray-500/50 group-hover:text-gray-300 transition-colors" />
+                          )}
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
@@ -3819,10 +3909,28 @@ function App() {
                         <td colSpan="7" className="px-6 py-10 text-center text-gray-400 font-medium">Sistem verileri yükleniyor...</td>
                       </tr>
                     ) : (() => {
-                      const filtered = adminUsers.filter((u) =>
-                        (u.isim || '').toLowerCase().includes(adminSearchQuery.toLowerCase()) ||
-                        (u.eposta || '').toLowerCase().includes(adminSearchQuery.toLowerCase())
-                      );
+                      const filtered = adminUsers
+                        .filter((u) =>
+                          (u.isim || '').toLowerCase().includes(adminSearchQuery.toLowerCase()) ||
+                          (u.eposta || '').toLowerCase().includes(adminSearchQuery.toLowerCase())
+                        )
+                        .sort((a, b) => {
+                          let valA, valB;
+                          if (adminSortField === 'son_aktif_tarihi') {
+                            valA = a.son_aktif_tarihi ? new Date(a.son_aktif_tarihi).getTime() : 0;
+                            valB = b.son_aktif_tarihi ? new Date(b.son_aktif_tarihi).getTime() : 0;
+                          } else {
+                            valA = a.olusturma_tarihi ? new Date(a.olusturma_tarihi).getTime() : 0;
+                            valB = b.olusturma_tarihi ? new Date(b.olusturma_tarihi).getTime() : 0;
+                          }
+
+                          if (valA === valB) {
+                            const idA = Number(a.id) || 0;
+                            const idB = Number(b.id) || 0;
+                            return adminSortOrder === 'desc' ? idB - idA : idA - idB;
+                          }
+                          return adminSortOrder === 'desc' ? valB - valA : valA - valB;
+                        });
 
                       if (filtered.length === 0) {
                         return (
@@ -3865,9 +3973,13 @@ function App() {
                           </td>
                           <td className="px-6 py-4 text-xs">
                             {u.son_aktif_tarihi ? (
-                              <span className="text-emerald-400 font-medium">{formatDate(u.son_aktif_tarihi)}</span>
+                              <span className={isTodayOrYesterday(u.son_aktif_tarihi) ? "text-emerald-400 font-medium" : "text-gray-400 font-medium"}>
+                                {formatDate(u.son_aktif_tarihi)}
+                              </span>
                             ) : u.olusturma_tarihi ? (
-                              <span className="text-gray-400">{formatDate(u.olusturma_tarihi)}</span>
+                              <span className={isTodayOrYesterday(u.olusturma_tarihi) ? "text-emerald-400 font-medium" : "text-gray-400"}>
+                                {formatDate(u.olusturma_tarihi)}
+                              </span>
                             ) : (
                               '-'
                             )}
@@ -4156,24 +4268,24 @@ function App() {
                   {(() => {
                     const itemsRaw = (adminStats && adminStats.weeklyVisits && adminStats.weeklyVisits.length === 7)
                       ? adminStats.weeklyVisits.map((item, idx) => ({
-                          day: item.day,
-                          val: item.val,
-                          isToday: item.is_today,
-                          color: item.is_today
-                            ? 'from-amber-600 via-amber-500 to-yellow-400'
-                            : idx === 5
-                              ? 'from-teal-600 via-emerald-500 to-emerald-400'
-                              : 'from-indigo-600 via-blue-500 to-cyan-400'
-                        }))
+                        day: item.day,
+                        val: item.val,
+                        isToday: item.is_today,
+                        color: item.is_today
+                          ? 'from-amber-600 via-amber-500 to-yellow-400'
+                          : idx === 5
+                            ? 'from-teal-600 via-emerald-500 to-emerald-400'
+                            : 'from-indigo-600 via-blue-500 to-cyan-400'
+                      }))
                       : [
-                          { day: 'Pzt', val: 18, color: 'from-indigo-600 via-blue-500 to-cyan-400' },
-                          { day: 'Sal', val: 24, color: 'from-indigo-600 via-blue-500 to-cyan-400' },
-                          { day: 'Çar', val: 32, color: 'from-purple-600 via-indigo-500 to-purple-400' },
-                          { day: 'Per', val: 21, color: 'from-indigo-600 via-blue-500 to-cyan-400' },
-                          { day: 'Cum', val: 28, color: 'from-indigo-600 via-blue-500 to-cyan-400' },
-                          { day: 'Cmt', val: 39, color: 'from-teal-600 via-emerald-500 to-emerald-400' },
-                          { day: 'Paz', val: adminStats ? adminStats.dailyVisits : 28, color: 'from-amber-600 via-amber-500 to-yellow-400', isToday: true }
-                        ];
+                        { day: 'Pzt', val: 18, color: 'from-indigo-600 via-blue-500 to-cyan-400' },
+                        { day: 'Sal', val: 24, color: 'from-indigo-600 via-blue-500 to-cyan-400' },
+                        { day: 'Çar', val: 32, color: 'from-purple-600 via-indigo-500 to-purple-400' },
+                        { day: 'Per', val: 21, color: 'from-indigo-600 via-blue-500 to-cyan-400' },
+                        { day: 'Cum', val: 28, color: 'from-indigo-600 via-blue-500 to-cyan-400' },
+                        { day: 'Cmt', val: 39, color: 'from-teal-600 via-emerald-500 to-emerald-400' },
+                        { day: 'Paz', val: adminStats ? adminStats.dailyVisits : 28, color: 'from-amber-600 via-amber-500 to-yellow-400', isToday: true }
+                      ];
                     const maxVal = Math.max(...itemsRaw.map(i => i.val), 1);
                     const peakItem = itemsRaw.reduce((prev, curr) => (curr.val > prev.val ? curr : prev), itemsRaw[0]);
 
@@ -4313,25 +4425,25 @@ function App() {
 
                   const trafficDataRaw = (adminStats && adminStats.hourlyTraffic && adminStats.hourlyTraffic.length === 8)
                     ? adminStats.hourlyTraffic.map((item, idx) => {
-                        const calcCy = Math.max(12, Math.min(105, Math.round(110 - (item.pct / 100) * 98)));
-                        return {
-                          time: item.time,
-                          pct: item.pct,
-                          cx: staticPositions[idx].cx,
-                          cy: calcCy,
-                          desc: item.desc
-                        };
-                      })
+                      const calcCy = Math.max(12, Math.min(105, Math.round(110 - (item.pct / 100) * 98)));
+                      return {
+                        time: item.time,
+                        pct: item.pct,
+                        cx: staticPositions[idx].cx,
+                        cy: calcCy,
+                        desc: item.desc
+                      };
+                    })
                     : [
-                        { time: '03:00', pct: 33, cx: 25, cy: 85, desc: '%33 Gece Sakinliği' },
-                        { time: '06:00', pct: 45, cx: 90, cy: 72, desc: '%45 Sabah Başlangıcı' },
-                        { time: '09:00', pct: 75, cx: 155, cy: 34, desc: '%75 Sabah Zirvesi' },
-                        { time: '12:00', pct: 52, cx: 220, cy: 62, desc: '%52 Öğle Dengesi' },
-                        { time: '15:00', pct: 40, cx: 285, cy: 76, desc: '%40 Stabil Akış' },
-                        { time: '18:00', pct: 68, cx: 350, cy: 42, desc: '%68 Akşam Yükselişi' },
-                        { time: '20:00', pct: 95, cx: 415, cy: 12, desc: '%95 ANA ZİRVE' },
-                        { time: '00:00', pct: 50, cx: 480, cy: 64, desc: '%50 Gece Dengesi' },
-                      ];
+                      { time: '03:00', pct: 33, cx: 25, cy: 85, desc: '%33 Gece Sakinliği' },
+                      { time: '06:00', pct: 45, cx: 90, cy: 72, desc: '%45 Sabah Başlangıcı' },
+                      { time: '09:00', pct: 75, cx: 155, cy: 34, desc: '%75 Sabah Zirvesi' },
+                      { time: '12:00', pct: 52, cx: 220, cy: 62, desc: '%52 Öğle Dengesi' },
+                      { time: '15:00', pct: 40, cx: 285, cy: 76, desc: '%40 Stabil Akış' },
+                      { time: '18:00', pct: 68, cx: 350, cy: 42, desc: '%68 Akşam Yükselişi' },
+                      { time: '20:00', pct: 95, cx: 415, cy: 12, desc: '%95 ANA ZİRVE' },
+                      { time: '00:00', pct: 50, cx: 480, cy: 64, desc: '%50 Gece Dengesi' },
+                    ];
 
                   const minPct = Math.min(...trafficDataRaw.map(t => t.pct));
                   const maxPct = Math.max(...trafficDataRaw.map(t => t.pct));
@@ -4339,7 +4451,7 @@ function App() {
                   const mainPeak = trafficDataRaw.reduce((prev, curr) => (curr.pct > prev.pct ? curr : prev), trafficDataRaw[0]);
                   // Distinct subPeak (second highest point at a different time)
                   const remaining = trafficDataRaw.filter(t => t.time !== mainPeak.time);
-                  const subPeak = remaining.length > 0 
+                  const subPeak = remaining.length > 0
                     ? remaining.reduce((prev, curr) => (curr.pct > prev.pct ? curr : prev), remaining[0])
                     : mainPeak;
 
@@ -4403,7 +4515,7 @@ function App() {
                         {/* SVG HASSAS GRAFİK TUVALİ */}
                         <div className="relative pt-4 pb-2">
                           {/* AKILLI ZİRVE ROZETLERİ (DİNAMİK KONUM) */}
-                          <div 
+                          <div
                             className="absolute top-0 -translate-x-1/2 z-20 pointer-events-none transition-all duration-300"
                             style={{ left: `${(subPeak.cx / 500) * 100}%` }}
                           >
@@ -4413,7 +4525,7 @@ function App() {
                             </span>
                           </div>
 
-                          <div 
+                          <div
                             className="absolute -top-1 -translate-x-1/2 z-20 pointer-events-none transition-all duration-300"
                             style={{ left: `${(mainPeak.cx / 500) * 100}%` }}
                           >
@@ -4579,12 +4691,12 @@ function App() {
                                 onMouseEnter={() => setHoveredTrafficIdx(idx)}
                                 onMouseLeave={() => setHoveredTrafficIdx(null)}
                                 className={`py-1 rounded-xl text-[10px] sm:text-xs font-mono transition-all duration-200 cursor-pointer ${isHovered
-                                    ? 'bg-emerald-500/25 text-emerald-200 font-bold border border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
-                                    : pt.isMainPeak
-                                      ? 'bg-cyan-500/15 text-cyan-300 font-extrabold border border-cyan-500/30'
-                                      : pt.isPeak
-                                        ? 'bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20'
-                                        : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
+                                  ? 'bg-emerald-500/25 text-emerald-200 font-bold border border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+                                  : pt.isMainPeak
+                                    ? 'bg-cyan-500/15 text-cyan-300 font-extrabold border border-cyan-500/30'
+                                    : pt.isPeak
+                                      ? 'bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20'
+                                      : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
                                   }`}
                               >
                                 {pt.time}
