@@ -14,6 +14,7 @@ type Kullanici struct {
 	BildirimSaati   string     `json:"bildirim_saati" gorm:"default:09:00;column:bildirim_saati"`
 	OlusturmaTarihi time.Time  `json:"olusturma_tarihi" gorm:"default:CURRENT_TIMESTAMP;column:olusturma_tarihi"`
 	SonAktifTarih   *time.Time `json:"son_aktif_tarihi" gorm:"column:son_aktif_tarihi"`
+	IsGoogle        bool       `json:"is_google" gorm:"default:false;column:is_google"`
 }
 
 func (Kullanici) TableName() string {

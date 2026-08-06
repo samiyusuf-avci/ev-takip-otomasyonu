@@ -239,6 +239,7 @@ func (h *AppHandler) Login(c *fiber.Ctx) error {
 			"eposta":           user.Eposta,
 			"role":             user.Role,
 			"telegram_chat_id": user.TelegramChatID,
+			"is_google":        user.IsGoogle,
 		},
 	})
 }
@@ -301,10 +302,11 @@ func (h *AppHandler) GoogleLogin(c *fiber.Ctx) error {
 		hashedPass, _ := bcrypt.GenerateFromPassword([]byte(randomPass), bcrypt.DefaultCost)
 
 		newUser := Kullanici{
-			Isim:   name,
-			Eposta: epostaLower,
-			Sifre:  string(hashedPass),
-			Role:   "user",
+			Isim:     name,
+			Eposta:   epostaLower,
+			Sifre:    string(hashedPass),
+			Role:     "user",
+			IsGoogle: true,
 		}
 		if err := h.DB.Create(&newUser).Error; err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": "Google kullanıcısı kaydedilirken hata oluştu."})
@@ -317,7 +319,11 @@ func (h *AppHandler) GoogleLogin(c *fiber.Ctx) error {
 	}
 
 	now := time.Now()
-	h.DB.Model(&user).Update("son_aktif_tarihi", now)
+	h.DB.Model(&user).Updates(map[string]interface{}{
+		"son_aktif_tarihi": now,
+		"is_google":        true,
+	})
+	user.IsGoogle = true
 
 	claims := jwt.MapClaims{
 		"id":     user.ID,
@@ -339,6 +345,7 @@ func (h *AppHandler) GoogleLogin(c *fiber.Ctx) error {
 			"eposta":           user.Eposta,
 			"role":             user.Role,
 			"telegram_chat_id": user.TelegramChatID,
+			"is_google":        user.IsGoogle,
 		},
 	})
 }
@@ -350,7 +357,7 @@ func (h *AppHandler) Me(c *fiber.Ctx) error {
 	h.DB.Model(&Kullanici{}).Where("id = ?", userID).Update("son_aktif_tarihi", now)
 
 	var user Kullanici
-	if err := h.DB.Select("id, isim, eposta, role, telegram_chat_id, olusturma_tarihi, son_aktif_tarihi").Where("id = ?", userID).First(&user).Error; err != nil {
+	if err := h.DB.Select("id, isim, eposta, role, telegram_chat_id, olusturma_tarihi, son_aktif_tarihi, is_google").Where("id = ?", userID).First(&user).Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Kullanıcı bulunamadı."})
 	}
 
@@ -658,18 +665,22 @@ func (h *AppHandler) DeleteAccount(c *fiber.Ctx) error {
 	userID := c.Locals("userID").(uint)
 
 	var req DeleteAccountReq
-	if err := c.BodyParser(&req); err != nil || strings.TrimSpace(req.Sifre) == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "Hesabınızı silmek için lütfen mevcut şifrenizi girin."})
-	}
+	_ = c.BodyParser(&req)
 
 	var user Kullanici
 	if err := h.DB.Where("id = ?", userID).First(&user).Error; err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Kullanıcı bulunamadı."})
 	}
 
-	// Şifreyi doğrula
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Sifre), []byte(req.Sifre)); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Girdiğiniz şifre hatalı. Hesap silinemedi."})
+	// Eğer Google hesabı değilse şifre doğrulaması yap
+	if !user.IsGoogle {
+		if strings.TrimSpace(req.Sifre) == "" {
+			return c.Status(400).JSON(fiber.Map{"error": "Hesabınızı silmek için lütfen mevcut şifrenizi girin."})
+		}
+		// Şifreyi doğrula
+		if err := bcrypt.CompareHashAndPassword([]byte(user.Sifre), []byte(req.Sifre)); err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Girdiğiniz şifre hatalı. Hesap silinemedi."})
+		}
 	}
 
 	// Kullanıcıya ait tüm bağlı kayıtları temizle

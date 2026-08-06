@@ -265,6 +265,7 @@ func initDatabase(db *gorm.DB) error {
 	db.Exec("ALTER TABLE kullanicilar ADD COLUMN role TEXT DEFAULT 'user';")
 	db.Exec("ALTER TABLE kullanicilar ADD COLUMN son_aktif_tarihi DATETIME;")
 	db.Exec("ALTER TABLE kullanicilar ADD COLUMN bildirim_saati TEXT DEFAULT '09:00';")
+	db.Exec("ALTER TABLE kullanicilar ADD COLUMN is_google BOOLEAN DEFAULT 0;")
 	db.Exec("ALTER TABLE rutinler ADD COLUMN periyot_birim TEXT DEFAULT 'ay';")
 	db.Exec("ALTER TABLE rutinler ADD COLUMN secili_gunler TEXT DEFAULT '';")
 	db.Exec("UPDATE rutinler SET periyot_birim = 'ay' WHERE periyot_birim IS NULL OR periyot_birim = '';")
@@ -280,7 +281,8 @@ func initDatabase(db *gorm.DB) error {
 			telegram_chat_id TEXT,
 			bildirim_saati TEXT DEFAULT '09:00',
 			olusturma_tarihi DATETIME DEFAULT CURRENT_TIMESTAMP,
-			son_aktif_tarihi DATETIME
+			son_aktif_tarihi DATETIME,
+			is_google BOOLEAN DEFAULT 0
 		);`,
 		`CREATE TABLE IF NOT EXISTS gidalar (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,

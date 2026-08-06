@@ -449,7 +449,7 @@ function App() {
   const handleDeleteAccount = async (e) => {
     if (e) e.preventDefault();
     setDeleteAccountError('');
-    if (!deleteAccountPassword?.trim()) {
+    if (!user?.is_google && !deleteAccountPassword?.trim()) {
       setDeleteAccountError('Lütfen onaylamak için mevcut şifrenizi girin.');
       return;
     }
@@ -5809,7 +5809,7 @@ function App() {
         </div>
       )}
 
-      {/* HESAP SİLME ONAY MODALI (ŞİFRE DOĞRULAMALI) */}
+      {/* HESAP SİLME ONAY MODALI (ŞİFRE DOĞRULAMALI / GOOGLE İLE DİREKT ONAYLI) */}
       {showDeleteAccountModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
           <div className="bg-[#13141f] border border-rose-500/30 p-6 rounded-2xl max-w-sm w-full shadow-[0_10px_40px_rgba(244,63,94,0.3)] animate-scale-in flex flex-col items-center text-center">
@@ -5819,21 +5819,33 @@ function App() {
 
             <h3 className="text-lg font-bold text-white mb-1.5">Hesabınızı Silmek İstiyor Musunuz?</h3>
             <p className="text-xs text-gray-400 mb-4 leading-relaxed">
-              Bu işlem <b className="text-rose-400">geri alınamaz</b>. Devam etmek için lütfen mevcut şifrenizi girin:
+              {user?.is_google ? (
+                <>Bu işlem <b className="text-rose-400">geri alınamaz</b>. Hesabınız ve tüm verileriniz kalıcı olarak silinecektir. (Google hesabınız ile oturum açtığınız için şifre doğrulaması gerekmemektedir)</>
+              ) : (
+                <>Bu işlem <b className="text-rose-400">geri alınamaz</b>. Devam etmek için lütfen mevcut şifrenizi girin:</>
+              )}
             </p>
 
             <form onSubmit={handleDeleteAccount} className="w-full space-y-4">
-              <div className="relative">
-                <input
-                  type="password"
-                  required
-                  autoFocus
-                  placeholder="Mevcut şifrenizi girin..."
-                  value={deleteAccountPassword}
-                  onChange={(e) => setDeleteAccountPassword(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 focus:border-rose-500/60 rounded-xl py-2.5 px-3.5 text-white text-xs md:text-sm outline-none transition-all placeholder:text-gray-500 text-center"
-                />
-              </div>
+              {!user?.is_google && (
+                <div className="relative">
+                  <input
+                    type="password"
+                    required
+                    autoFocus
+                    placeholder="Mevcut şifrenizi girin..."
+                    value={deleteAccountPassword}
+                    onChange={(e) => setDeleteAccountPassword(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 focus:border-rose-500/60 rounded-xl py-2.5 px-3.5 text-white text-xs md:text-sm outline-none transition-all placeholder:text-gray-500 text-center"
+                  />
+                </div>
+              )}
+
+              {deleteAccountError && (
+                <div className="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-lg p-2.5">
+                  {deleteAccountError}
+                </div>
+              )}
 
               <div className="flex gap-2.5 w-full">
                 <button
@@ -5851,7 +5863,7 @@ function App() {
 
                 <button
                   type="submit"
-                  disabled={deleteAccountLoading || !deleteAccountPassword.trim()}
+                  disabled={deleteAccountLoading || (!user?.is_google && !deleteAccountPassword.trim())}
                   className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all cursor-pointer text-xs md:text-sm shadow-[0_4px_20px_rgba(244,63,94,0.4)] glow-btn flex items-center justify-center gap-1.5"
                 >
                   <Trash2 className="w-4 h-4" />
