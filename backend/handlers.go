@@ -1,8 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
+	"net/http"
+	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -207,6 +210,106 @@ func (h *AppHandler) Login(c *fiber.Ctx) error {
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Sifre), []byte(req.Sifre)); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Hatalı e-posta veya şifre."})
+	}
+
+	if user.Role == "" {
+		user.Role = "user"
+	}
+
+	now := time.Now()
+	h.DB.Model(&user).Update("son_aktif_tarihi", now)
+
+	claims := jwt.MapClaims{
+		"id":     user.ID,
+		"eposta": user.Eposta,
+		"role":   user.Role,
+		"exp":    time.Now().Add(7 * 24 * time.Hour).Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(h.JWTSecret))
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Token oluşturulamadı."})
+	}
+
+	return c.JSON(fiber.Map{
+		"token": tokenString,
+		"user": fiber.Map{
+			"id":               user.ID,
+			"isim":             user.Isim,
+			"eposta":           user.Eposta,
+			"role":             user.Role,
+			"telegram_chat_id": user.TelegramChatID,
+		},
+	})
+}
+
+type GoogleLoginReq struct {
+	Credential string `json:"credential"`
+}
+
+func (h *AppHandler) GoogleLogin(c *fiber.Ctx) error {
+	var req GoogleLoginReq
+	if err := c.BodyParser(&req); err != nil || strings.TrimSpace(req.Credential) == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Geçersiz istek. Google kimlik jetonu bulunamadı."})
+	}
+
+	// Google TokenInfo API ile ID jetonunu doğrula
+	resp, err := http.Get("https://oauth2.googleapis.com/tokeninfo?id_token=" + req.Credential)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return c.Status(400).JSON(fiber.Map{"error": "Google kimlik doğrulaması başarısız oldu."})
+	}
+	defer resp.Body.Close()
+
+	var googleClaim struct {
+		Aud           string      `json:"aud"`
+		Email         string      `json:"email"`
+		EmailVerified interface{} `json:"email_verified"`
+		Name          string      `json:"name"`
+		Sub           string      `json:"sub"`
+		Picture       string      `json:"picture"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&googleClaim); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Google yanıtı işlenemedi."})
+	}
+
+	expectedClientID := os.Getenv("GOOGLE_CLIENT_ID")
+	if expectedClientID == "" {
+		expectedClientID = "937396352861-g56gevbo7ke9edlu3pq2iu1hp1jmtl8o.apps.googleusercontent.com"
+	}
+
+	if googleClaim.Aud != expectedClientID {
+		return c.Status(400).JSON(fiber.Map{"error": "Geçersiz Google Client ID."})
+	}
+
+	if strings.TrimSpace(googleClaim.Email) == "" {
+		return c.Status(400).JSON(fiber.Map{"error": "Google hesabından e-posta adresi alınamadı."})
+	}
+
+	epostaLower := strings.ToLower(googleClaim.Email)
+
+	var user Kullanici
+	err = h.DB.Where("eposta = ?", epostaLower).First(&user).Error
+	if err != nil {
+		// Kullanıcı kayıtlı değilse yeni kullanıcı hesabı oluştur
+		name := googleClaim.Name
+		if strings.TrimSpace(name) == "" {
+			name = strings.Split(epostaLower, "@")[0]
+		}
+		// Google OAuth kullanıcıları için rastgele hash şifre
+		randomPass := fmt.Sprintf("google_oauth_%s_%d", googleClaim.Sub, time.Now().UnixNano())
+		hashedPass, _ := bcrypt.GenerateFromPassword([]byte(randomPass), bcrypt.DefaultCost)
+
+		newUser := Kullanici{
+			Isim:   name,
+			Eposta: epostaLower,
+			Sifre:  string(hashedPass),
+			Role:   "user",
+		}
+		if err := h.DB.Create(&newUser).Error; err != nil {
+			return c.Status(500).JSON(fiber.Map{"error": "Google kullanıcısı kaydedilirken hata oluştu."})
+		}
+		user = newUser
 	}
 
 	if user.Role == "" {

@@ -154,6 +154,7 @@ func main() {
 	// Public Auth Rotaları
 	app.Post("/api/auth/register", h.Register)
 	app.Post("/api/auth/login", h.Login)
+	app.Post("/api/auth/google", h.GoogleLogin)
 
 	// Admin HTML Ekranı Rotası (GET /admin)
 	app.Get("/admin", serveAdminHTML)
